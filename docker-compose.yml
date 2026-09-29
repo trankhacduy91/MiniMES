@@ -1,0 +1,78 @@
+services:
+  # ─────────────────────────────────────────────
+  # SQL Server — database chính của hệ thống
+  # ─────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mes-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q ''SELECT 1'' || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mes-network
+
+  # ─────────────────────────────────────────────
+  # RabbitMQ — message broker giao tiếp giữa các module backend
+  # Kèm plugin management UI để xem queue trực quan qua trình duyệt
+  # ─────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: mes-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
+    ports:
+      - "5672:5672" # port AMQP — backend .NET kết nối qua đây
+      - "15672:15672" # port Management UI — mở trình duyệt xem queue
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - mes-network
+
+  # ─────────────────────────────────────────────
+  # Mosquitto — MQTT broker nhận dữ liệu từ Machine Simulator
+  # ─────────────────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: mes-mosquitto
+    ports:
+      - "1883:1883" # port MQTT chuẩn
+      - "9001:9001" # port MQTT qua WebSocket (dự phòng cho dashboard sau này)
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    networks:
+      - mes-network
+
+# ─────────────────────────────────────────────
+# Volumes — nơi lưu dữ liệu thật, tồn tại độc lập với container
+# ─────────────────────────────────────────────
+volumes:
+  sqlserver-data:
+  rabbitmq-data:
+  mosquitto-data:
+  mosquitto-log:
+
+# ─────────────────────────────────────────────
+# Network riêng — các container gọi nhau qua tên service
+# (VD: backend .NET chạy ngoài Docker sẽ gọi qua "localhost",
+#  nhưng nếu sau này container hóa luôn backend, nó sẽ gọi "sqlserver", "rabbitmq"...)
+# ─────────────────────────────────────────────
+networks:
+  mes-network:
+    driver: bridge

@@ -1,0 +1,18 @@
+dotnet new sln -n OpenMESSystem
+dotnet new classlib -n OpenMES.Domain -o src/OpenMES.Domain
+dotnet new classlib -n OpenMES.Application -o src/OpenMES.Application
+dotnet new classlib -n OpenMES.Infrastructure -o src/OpenMES.Infrastructure
+dotnet new webapi -n OpenMES.Api -o src/OpenMES.Api
+dotnet new xunit -n OpenMES.Domain.Tests -o tests/OpenMES.Domain.Tests
+
+# Thêm vào solution
+dotnet sln add src/**/*.csproj tests/**/*.csproj
+# ở vscode thì chạy câu lệnh.
+dotnet sln add (Get-ChildItem .\src,.\tests -Recurse -Filter *.csproj | ForEach-Object { $_.FullName })
+
+# Thiết lập reference đúng chiều (quan trọng — đúng nguyên tắc Clean Architecture)
+dotnet add src/OpenMES.Application reference src/OpenMES.Domain
+dotnet add src/OpenMES.Infrastructure reference src/OpenMES.Application
+dotnet add src/OpenMES.Api reference src/OpenMES.Infrastructure
+dotnet add src/OpenMES.Api reference src/OpenMES.Application
+dotnet add tests/OpenMES.Domain.Tests reference src/OpenMES.Domain

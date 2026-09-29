@@ -1,0 +1,25 @@
+# Secrets / environment
+.env
+.env.*
+!.env.example
+*.env
+
+# .NET build output
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+.vs/
+
+# Docker volumes data (if local folders are mounted instead of named volumes)
+docker/mosquitto/data/
+docker/mosquitto/log/
+
+# IDE
+.vscode/
+.idea/
+
+# Node (future frontend)
+node_modules/
+dist/

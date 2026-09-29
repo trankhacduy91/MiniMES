@@ -1,0 +1,6 @@
+@OpenMES.Api_HostAddress = http://localhost:5183
+
+GET {{OpenMES.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
