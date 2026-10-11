@@ -24,7 +24,7 @@ Tổng ≈ 258 giờ cho các module trên (+10 giờ polish ≈ 268 giờ, kho�
 - **[chốt 10/2026]** **.NET 10 (LTS)** cho toàn dự án (`net10.0`, WPF `net10.0-windows`), SDK ghim bằng `global.json`, solution `MiniMes.slnx`. Snippet nào ghi .NET 8 là viết trước khi đổi; API dùng trong tài liệu đều có từ .NET 8 nên vẫn đúng.
 - **[chốt 10/2026]** API dùng **Controller** (`Api/Controllers/XxxController.cs`), không dùng Minimal API. Swagger UI đọc OpenAPI có sẵn của ASP.NET Core (Module 0, mục 2.5b).
 - **[chốt 10/2026]** Ánh xạ lỗi: 400 validation, 404 không tìm thấy, 409 `ConflictException` (trùng, concurrency), 422 `DomainException` (vi phạm quy tắc), 500 còn lại. Scan bị chặn ở M3 trả 200 kèm `reasonCode`.
-- **[chốt 10/2026]** CI bằng GitHub Actions, branch `master`.
+- **[chốt 10/2026]** CI bằng GitHub Actions, branch `main`.
 
 - Đường dẫn API trong tài liệu viết rút gọn; khi code, đặt tất cả dưới tiền tố `/api` (ví dụ `/api/stations/{id}/scan`).
 - Một thư viện biểu đồ duy nhất: OxyPlot (Module 5 giới thiệu, Module 7 dùng tiếp).

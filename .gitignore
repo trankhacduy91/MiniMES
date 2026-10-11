@@ -23,3 +23,9 @@ docker/mosquitto/log/
 # Node (future frontend)
 node_modules/
 dist/
+
+# Serilog files, SQLite outbox (EdgeGateway)
+logs/
+*.db
+*.db-wal
+*.db-shm

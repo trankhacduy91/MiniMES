@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MiniMes.Api/MiniMes.Api.csproj" />
+    <Project Path="src/MiniMes.Application/MiniMes.Application.csproj" />
+    <Project Path="src/MiniMes.Contracts/MiniMes.Contracts.csproj" />
+    <Project Path="src/MiniMes.Domain/MiniMes.Domain.csproj" />
+    <Project Path="src/MiniMes.Infrastructure/MiniMes.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MiniMes.IntegrationTests/MiniMes.IntegrationTests.csproj" />
+    <Project Path="tests/MiniMes.UnitTests/MiniMes.UnitTests.csproj" />
+  </Folder>
+</Solution>

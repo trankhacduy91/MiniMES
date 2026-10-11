@@ -78,7 +78,7 @@ tests/MiniMes.UnitTests, tests/MiniMes.IntegrationTests
 - Mỗi bước có mục "Kiểm tra" trong spec → viết test tương ứng trước khi đánh dấu xong.
 - Domain rule: unit test bảng (`[Theory]`) với đúng các test case liệt kê trong spec (ví dụ route check 19 case).
 - Cần DB/MQTT thật → integration test bằng Testcontainers, không mock `DbContext`.
-- CI: GitHub Actions (`.github/workflows/ci.yml`), chạy khi push `master` và PR; SDK lấy từ `global.json`; trên `ubuntu-latest` build/test từng project backend, không build cả solution (có WPF).
+- CI: GitHub Actions (`.github/workflows/ci.yml`), chạy khi push `main` và PR; SDK lấy từ `global.json`; trên `ubuntu-latest` build/test từng project backend, không build cả solution (có WPF).
 - Sau khi sửa code: chạy `dotnet build` và test liên quan; báo kết quả thật (kể cả fail). Docker không chạy thì nói rõ, không bỏ qua test.
 
 ## 7. Cách làm việc với user

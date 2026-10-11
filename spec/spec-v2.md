@@ -409,7 +409,7 @@ DoD bổ sung: file Excel có 1 dòng sai mã UoM → không import dòng nào, 
 | 11 | Phiên bản .NET **[chốt 10/2026]** | .NET 10 (LTS, hỗ trợ đến 11/2028); `net10.0`, WPF `net10.0-windows`; SDK ghim bằng `global.json`; solution `MiniMes.slnx` |
 | 12 | Tên dự án **[chốt 10/2026]** | `MiniMes.*`; khung `OpenMES.*` tạo trước khi chốt spec sẽ bị xóa ở M0 bước 1 |
 | 13 | Kiểu API **[chốt 10/2026]** | Controller (`Api/Controllers/*Controller.cs`) cho cả dự án; OpenAPI có sẵn của ASP.NET Core + Swagger UI (`Swashbuckle.AspNetCore.SwaggerUI`) |
-| 14 | CI **[chốt 10/2026]** | GitHub Actions, branch `master`, repo đẩy lên GitHub |
+| 14 | CI **[chốt 10/2026]** | GitHub Actions, branch `main`, repo đẩy lên GitHub |
 | 15 | Lỗi HTTP và audit **[chốt 10/2026]** | 400 validation, 404, 409 `ConflictException`, 422 `DomainException`, 500. Audit Added/Deleted lưu 1 dòng `ColumnName="*"` với JSON, ghi cùng transaction |
 
 ## B11. Tài liệu chi tiết theo module (đã cập nhật theo spec v2)

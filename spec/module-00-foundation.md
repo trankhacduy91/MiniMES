@@ -617,7 +617,7 @@ public class AuditTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
 
 **Khái niệm cốt lõi.** `on` (khi nào chạy), `jobs` (nhóm bước chạy trên một máy ảo), `steps`, `uses` (dùng action có sẵn) và `run` (lệnh shell). Runner `ubuntu-latest` có sẵn Docker nên Testcontainers chạy được. Hai job: `unit` (nhanh, mọi PR) và `integration` (chậm, cần Docker).
 
-**[chốt 10/2026]** Repo được đẩy lên **GitHub** (công khai được cho nhà tuyển dụng xem). Branch chính của repo là `master`. `setup-dotnet` đọc phiên bản SDK từ `global.json`, nên CI và máy dev luôn cùng một SDK.
+**[chốt 10/2026]** Repo được đẩy lên **GitHub** (công khai được cho nhà tuyển dụng xem). Branch chính của repo là `main`. `setup-dotnet` đọc phiên bản SDK từ `global.json`, nên CI và máy dev luôn cùng một SDK.
 
 **Snippet.**
 
@@ -625,7 +625,7 @@ public class AuditTests(SqlServerFixture sql) : IClassFixture<SqlServerFixture>
 # .github/workflows/ci.yml
 name: ci
 on:
-  push: { branches: [master] }
+  push: { branches: [main] }
   pull_request:
 jobs:
   unit:
@@ -881,7 +881,7 @@ Thực thể tối thiểu của M0 (đủ để các module sau tham chiếu):
 
 **[chốt 10/2026]** Site/Area/Line/Station có `IsActive` (không xóa cứng), kế thừa `AuditableEntity` (`CreatedAt`, `CreatedBy`) và là `IAudited`. Seed: mỗi line 4 trạm theo routing (SMT, Assembly, Test, Pack) + 1 trạm Repair ngoài routing (`L1-REPAIR`, `L2-REPAIR`, M3 dùng) → **10 station**.
 
-- [ ] **Bước 1 — Dựng solution và quy ước**
+- [x] **Bước 1 — Dựng solution và quy ước**
   - Mục tiêu: có khung Clean Architecture đúng chiều phụ thuộc, build sạch.
   - Việc cần làm: **[chốt 10/2026]** xóa khung cũ tạo trước khi chốt spec (`OpenMESSystem.sln`, `src/OpenMES.*`, `tests/OpenMES.Domain.Tests`, `command/init.txt`); tạo `global.json` (SDK 10), `MiniMes.slnx`, 5 project backend `src` (Domain, Contracts, Application, Infrastructure, Api dạng controller; WPF tạo ở bước 10, Simulator ở M4, EdgeGateway ở M4b) và 2 project test; thiết lập tham chiếu như mục 2.1; `Directory.Build.props` đặt chung `Nullable`, `ImplicitUsings`; `TreatWarningsAsErrors` cho Domain; `.gitignore` thêm `logs/`; unit test kiểm tra chiều phụ thuộc bằng cách **đọc `ProjectReference`/`PackageReference` trong các `.csproj`** (không dùng `Assembly.GetReferencedAssemblies()`: trình biên dịch bỏ tham chiếu không được dùng trong code, nên tham chiếu sai vẫn lọt khi project chưa có code); từ bước 10 thêm luật Client.Core chỉ tham chiếu Contracts. Repo đã có git, không cần `git init`.
   - Phiếu giao việc chi tiết (lệnh, luật, nghiệm thu): [tasks/M0-S01-solution-setup.md](tasks/M0-S01-solution-setup.md).
@@ -889,26 +889,28 @@ Thực thể tối thiểu của M0 (đủ để các module sau tham chiếu):
   - Kiểm tra: `dotnet --version` trong thư mục repo ra `10.0.x`; `dotnet build` xanh, 0 warning; thử thêm `using Microsoft.EntityFrameworkCore;` vào Domain phải **không** dùng được (chưa có package) — chứng tỏ Domain sạch; `DependencyTests` xanh, cố ý thêm tham chiếu sai thì đỏ; tìm trong repo không còn chữ `OpenMES`.
   - Ước lượng: 1,5 giờ.
 
-- [ ] **Bước 2 — Docker Compose: SQL Server + Mosquitto**
+- [x] **Bước 2 — Docker Compose: SQL Server + Mosquitto**
   - Mục tiêu: `docker compose up` bật hai dịch vụ, cả hai `healthy`.
   - Việc cần làm: viết lại `docker-compose.yml` theo mục 2.2 (**[chốt 10/2026]** bỏ RabbitMQ của khung cũ — chỉ thêm khi làm M8; chuyển `mosquitto.conf` vào `docker/`; biến môi trường `MSSQL_SA_PASSWORD`), `.env.example` (không commit `.env`); thêm healthcheck cho cả hai; thử tắt/bật; dùng SSMS hoặc extension MSSQL của VS Code kết nối `localhost,1433`.
   - File: `docker-compose.yml`, `docker/mosquitto.conf`, `.env.example`.
   - Kiểm tra: `docker compose ps` hiện `healthy` cho cả hai; kết nối SQL bằng công cụ GUI thành công; `mosquitto_sub`/MQTT Explorer (nếu có) kết nối được cổng 1883.
   - Ước lượng: 1,5 giờ.
 
-- [ ] **Bước 3 — EF Core, migration, Site/Area/Line/Station**
+- [x] **Bước 3 — EF Core, migration, Site/Area/Line/Station**
   - Mục tiêu: DB có bảng tạo bằng migration, đặt trong Infrastructure.
   - Việc cần làm: cài tool `dotnet tool install --global dotnet-ef` (bản 10.x, cùng major với EF Core); `AppDbContext` (Infrastructure); entity `Site/Area/Line/Station` (Domain) và configuration (unique index `Site.Code`, `(Area.SiteId, Area.Code)`, `(Line.AreaId, Line.Code)`, `Station.Code`); `UseSqlServer(cs, o => o.UseCompatibilityLevel(160))` cho khớp SQL Server 2022 trong Docker, để EF không sinh cú pháp của bản SQL Server mới hơn; `user-secrets` cho connection string; `dotnet ef migrations add Init` với `--project src/MiniMes.Infrastructure --startup-project src/MiniMes.Api`; script cập nhật DB ghi vào README; seeder Development tạo 1 site, 1 area, 2 line, 10 station.
   - File: `Infrastructure/Persistence/AppDbContext.cs`, `Infrastructure/Persistence/Configurations/*.cs`, `Infrastructure/Persistence/Migrations/*`, `Infrastructure/Persistence/DevSeeder.cs`.
   - Kiểm tra: `dotnet ef database update` chạy; `SELECT * FROM Station` ra 10 dòng; thêm station trùng `Code`, hoặc line trùng `(AreaId, Code)`, gây lỗi unique index.
   - Ước lượng: 2,5 giờ.
+  - **Ghi chú khi làm (11/10/2026):** `dotnet-ef` cài dạng local tool (`dotnet-tools.json`, `dotnet tool restore`) thay vì global; `AuditableEntity` (`CreatedAt`/`CreatedBy`) tạo sớm ở bước này để khỏi phải thêm cột NOT NULL ở bước 6 (seeder điền, interceptor điền từ bước 6); bảng đặt tên số nhiều (`Sites`, `Stations`...); cổng SQL Server trên host cấu hình qua `MSSQL_PORT` (xem `docs/incidents.md`); test tự động cho unique index để Bước 8 (cần Testcontainers), bước này kiểm bằng SQL tay.
 
-- [ ] **Bước 4 — Serilog, CorrelationId, ProblemDetails**
+- [x] **Bước 4 — Serilog, CorrelationId, ProblemDetails**
   - Mục tiêu: log có cấu trúc + lỗi trả về đồng nhất.
   - Việc cần làm: cấu hình Serilog console + file (mục 2.4); middleware CorrelationId; `GlobalExceptionHandler` (mục 2.5); tạo endpoint thử ném `DomainException` và `Exception` thường; `AddProblemDetails()`; **[chốt 10/2026]** OpenAPI + Swagger UI (mục 2.5b); health check `AddHealthChecks()` + `MapHealthChecks("/health")` không cần token.
   - File: `Api/Program.cs`, `Api/Middleware/GlobalExceptionHandler.cs`, `Api/OpenApi/BearerSecuritySchemeTransformer.cs`, `Domain/Common/DomainException.cs`.
   - Kiểm tra: gọi endpoint lỗi → JSON ProblemDetails, có `correlationId`; `DomainException` → 422; file `logs/minimes-YYYYMMDD.log` có dòng cùng id; lỗi 500 **không** lộ stack trace; `/swagger` mở được; `/health` trả 200 khi không có token.
   - Ước lượng: 2 giờ.
+  - **Ghi chú khi làm (11/10/2026):** `GlobalExceptionHandler` đọc CorrelationId từ `HttpContext.Items` vì `ExceptionHandlerMiddleware` xóa response header (xem `docs/incidents.md`); `DebugController` (`/api/debug/*`) chỉ là endpoint thử, chỉ chạy ở Development, xóa khi có endpoint thật; `/health` là liveness thuần (chưa kiểm tra DB); middleware chỉ nhận `X-Correlation-Id` dạng `[A-Za-z0-9_-]{1,64}` để tránh log injection; test tự động cho phần này để Bước 8 (cần `Mvc.Testing`).
 
 - [ ] **Bước 5 — Auth: JWT + role, login user và login operator**
   - Mục tiêu: đăng nhập và phân quyền theo role hoạt động ở API.
@@ -941,7 +943,7 @@ Thực thể tối thiểu của M0 (đủ để các module sau tham chiếu):
 
 - [ ] **Bước 9 — GitHub Actions**
   - Mục tiêu: CI tự chạy khi push.
-  - Việc cần làm: workflow `ci.yml` như mục 2.9 (job `unit` rồi `integration`, chạy khi push `master`, SDK lấy từ `global.json`); **[chốt 10/2026]** tạo repo GitHub và thêm remote (giữ remote Azure DevOps hiện tại hay không là tùy bạn), đẩy branch `master`; xem log lần chạy đầu; thêm badge vào README.
+  - Việc cần làm: workflow `ci.yml` như mục 2.9 (job `unit` rồi `integration`, chạy khi push `main`, SDK lấy từ `global.json`); **[chốt 10/2026]** tạo repo GitHub và thêm remote (giữ remote Azure DevOps hiện tại hay không là tùy bạn), đẩy branch `main`; xem log lần chạy đầu; thêm badge vào README.
   - File: `.github/workflows/ci.yml`.
   - Kiểm tra: push → cả hai job xanh trên GitHub; cố tình làm hỏng một unit test → CI đỏ (rồi sửa lại).
   - Ước lượng: 1,5 giờ.
