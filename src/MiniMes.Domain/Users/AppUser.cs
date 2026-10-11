@@ -4,11 +4,12 @@ namespace MiniMes.Domain.Users;
 
 // One person can hold several roles (e.g. Supervisor + QC).
 // Operators have no password: they identify by swiping their badge (EmployeeCode) at a kiosk.
-public class AppUser : AuditableEntity
+public class AppUser : AuditableEntity, IAudited
 {
     public int Id { get; private set; }
     public string EmployeeCode { get; private set; }
     public string FullName { get; private set; }
+    [AuditIgnore]
     public string? PasswordHash { get; private set; } // only the hash is stored, never the password
     public bool IsActive { get; private set; } = true;
 

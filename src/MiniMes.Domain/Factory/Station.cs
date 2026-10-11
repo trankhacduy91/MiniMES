@@ -3,7 +3,7 @@ using MiniMes.Domain.Common;
 namespace MiniMes.Domain.Factory;
 
 // Scans always happen "at a station". Code is unique across the whole system (e.g. L1-SMT-01).
-public class Station : AuditableEntity
+public class Station : AuditableEntity, IAudited
 {
     public int Id { get; private set; }
     public int LineId { get; private set; }
@@ -21,5 +21,11 @@ public class Station : AuditableEntity
         Code = code;
         Name = name;
         Type = type;
+    }
+
+    public void Rename(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name;
     }
 }

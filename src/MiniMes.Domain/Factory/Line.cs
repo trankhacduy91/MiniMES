@@ -2,7 +2,7 @@ using MiniMes.Domain.Common;
 
 namespace MiniMes.Domain.Factory;
 
-public class Line : AuditableEntity
+public class Line : AuditableEntity, IAudited
 {
     public int Id { get; private set; }
     public int AreaId { get; private set; }

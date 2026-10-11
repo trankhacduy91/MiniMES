@@ -4,7 +4,7 @@ namespace MiniMes.Domain.Factory;
 
 // ISA-95 hierarchy: Site -> Area -> Line -> Station.
 // Codes appear in MQTT topics (M4), so keep them stable and space-free.
-public class Site : AuditableEntity
+public class Site : AuditableEntity, IAudited
 {
     public int Id { get; private set; }
     public string Code { get; private set; }

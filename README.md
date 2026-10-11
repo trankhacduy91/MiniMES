@@ -18,6 +18,18 @@ dotnet ef database update --project src/MiniMes.Infrastructure --startup-project
 dotnet run --project src/MiniMes.Api  # Development: seed factory (10 station) + user demo; Swagger: http://localhost:5157/swagger
 ```
 
+## Audit trail
+
+Mọi thay đổi trên bảng master (Site/Area/Line/Station, User, Role) tự ghi vào `AuditLog` qua `AuditSaveChangesInterceptor`; Admin xem bằng `GET /api/audit-logs?tableName=Stations&recordKey=1`.
+
+`AuditLog` chỉ được INSERT: trigger `TR_AuditLog_BlockModify` chặn UPDATE/DELETE, kể cả với `sa`. Ở môi trường thật, ứng dụng dùng tài khoản riêng (không phải sysadmin) và thêm:
+
+```sql
+DENY UPDATE, DELETE ON dbo.AuditLog TO [minimes_app];
+```
+
+Giới hạn: db_owner/sysadmin vẫn có thể `DISABLE TRIGGER` hoặc `TRUNCATE`; muốn chặn cả họ cần tách quyền DBA, SQL Server Audit hoặc Ledger table.
+
 ## Tài khoản demo (chỉ Development)
 
 | Mã | Mật khẩu | Role |

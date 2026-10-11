@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using MiniMes.Domain.Common;
 using MiniMes.Domain.Factory;
 using MiniMes.Domain.Users;
 
@@ -8,9 +7,9 @@ namespace MiniMes.Infrastructure.Persistence;
 
 // Development data. Users are seeded here, not with HasData: the hash has a random salt,
 // so HasData would produce a different migration every time.
-public class DevSeeder(AppDbContext db, TimeProvider time, IPasswordHasher<AppUser> hasher)
+// CreatedAt/CreatedBy and AuditLog rows come from the interceptor (ChangedBy = "system").
+public class DevSeeder(AppDbContext db, IPasswordHasher<AppUser> hasher)
 {
-    private const string SeedUser = "seed";
     public const string DemoPassword = "Demo@12345"; // dev only, listed in README
 
     public async Task SeedAsync(CancellationToken ct = default)
@@ -36,13 +35,6 @@ public class DevSeeder(AppDbContext db, TimeProvider time, IPasswordHasher<AppUs
             line.AddStation($"{lineCode}-REPAIR", "Repair", StationType.Repair);
         }
 
-        var lines = site.Areas.SelectMany(a => a.Lines).ToList();
-        var all = new List<AuditableEntity> { site };
-        all.AddRange(site.Areas);
-        all.AddRange(lines);
-        all.AddRange(lines.SelectMany(l => l.Stations));
-        Stamp(all);
-
         db.Sites.Add(site);
         await db.SaveChangesAsync(ct);
     }
@@ -64,7 +56,6 @@ public class DevSeeder(AppDbContext db, TimeProvider time, IPasswordHasher<AppUs
         operatorUser.AddRole(Role.Operator);
         users.Add(operatorUser);
 
-        Stamp(users);
         db.Users.AddRange(users);
         await db.SaveChangesAsync(ct);
     }
@@ -74,15 +65,5 @@ public class DevSeeder(AppDbContext db, TimeProvider time, IPasswordHasher<AppUs
         user.SetPasswordHash(hasher.HashPassword(user, DemoPassword));
         user.AddRole(role);
         return user;
-    }
-
-    private void Stamp(IEnumerable<AuditableEntity> entities)
-    {
-        var now = time.GetUtcNow().UtcDateTime;
-        foreach (var e in entities)
-        {
-            e.CreatedAt = now;
-            e.CreatedBy = SeedUser;
-        }
     }
 }
