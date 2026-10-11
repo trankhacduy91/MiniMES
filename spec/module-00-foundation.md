@@ -912,13 +912,14 @@ Thực thể tối thiểu của M0 (đủ để các module sau tham chiếu):
   - Ước lượng: 2 giờ.
   - **Ghi chú khi làm (11/10/2026):** `GlobalExceptionHandler` đọc CorrelationId từ `HttpContext.Items` vì `ExceptionHandlerMiddleware` xóa response header (xem `docs/incidents.md`); `DebugController` (`/api/debug/*`) chỉ là endpoint thử, chỉ chạy ở Development, xóa khi có endpoint thật; `/health` là liveness thuần (chưa kiểm tra DB); middleware chỉ nhận `X-Correlation-Id` dạng `[A-Za-z0-9_-]{1,64}` để tránh log injection; test tự động cho phần này để Bước 8 (cần `Mvc.Testing`).
 
-- [ ] **Bước 5 — Auth: JWT + role, login user và login operator**
+- [x] **Bước 5 — Auth: JWT + role, login user và login operator**
   - Mục tiêu: đăng nhập và phân quyền theo role hoạt động ở API.
   - Việc cần làm: entity `AppUser`, `UserRole`; băm mật khẩu bằng `PasswordHasher<AppUser>` (gói `Microsoft.Extensions.Identity.Core`); seeder tạo user demo (`admin`, `planner01`, `sup01`, `qc01`, `mt01` có mật khẩu; `EMP00123` role Operator không mật khẩu); `POST /auth/login` (mã + mật khẩu) và `POST /auth/login-operator` (mã nhân viên + `stationCode` của kiosk, token có claim `station` và hạn theo `OperatorTokenHours`); `ICurrentUser`; endpoint thử `[Authorize(Roles="Admin")]` và `[Authorize(Roles="Planner,Admin")]`.
   - Lý do seeder thay vì `HasData`: hash có salt ngẫu nhiên mỗi lần, `HasData` sẽ tạo migration thay đổi liên tục.
   - File: `Domain/Users/AppUser.cs`, `Infrastructure/Auth/JwtTokenService.cs`, `Api/Controllers/AuthController.cs`, `Api/Auth/CurrentUser.cs`.
   - Kiểm tra (Swagger hoặc file `.http`): không token → 401; token Operator gọi endpoint Admin → 403; token Admin → 200; endpoint in `User.Claims` thấy đúng `sub` và `role` (kiểm tra bẫy ánh xạ claim ở mục 2.6). Nút Authorize trong Swagger (mục 2.5b) dán được Bearer token; login operator với `stationCode` không tồn tại → 400/404.
   - Ước lượng: 3 giờ.
+  - **Ghi chú khi làm (11/10/2026):** route là `/api/auth/login` và `/api/auth/login-operator` (theo quy ước tiền tố `/api` của CLAUDE.md); tạo token bằng `JsonWebTokenHandler` (gói `Microsoft.IdentityModel.JsonWebTokens`), không dùng `System.IdentityModel.Tokens.Jwt`; **fallback policy** bắt buộc token cho mọi endpoint, chỉ `/api/auth/*`, `/health`, `/openapi` là `AllowAnonymous`; login operator chỉ nhận tài khoản **không có mật khẩu và có role Operator**, token kiosk chỉ mang role `Operator` (một tài khoản có mật khẩu như `admin` không thể vào bằng mã thẻ); bảng tên `Users`/`UserRoles`; mật khẩu demo `Demo@12345` (README); endpoint thử ở `DebugController` (`/api/debug/whoami`, `admin-only`, `planner-or-admin`). **Lưu ý Bước 6:** loại cột `PasswordHash` khỏi `AuditLog`.
 
 - [ ] **Bước 6 — Audit trail bằng interceptor**
   - Mục tiêu: sửa bảng master hoặc trạng thái WO tự sinh `AuditLog`.

@@ -186,6 +186,61 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.ToTable("Stations");
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Users.AppUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EmployeeCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeCode")
+                        .IsUnique();
+
+                    b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Users.UserRole", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("UserId", "Role");
+
+                    b.ToTable("UserRoles", (string)null);
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Factory.Area", b =>
                 {
                     b.HasOne("MiniMes.Domain.Factory.Site", null)
@@ -213,6 +268,15 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Users.UserRole", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Users.AppUser", null)
+                        .WithMany("Roles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Factory.Area", b =>
                 {
                     b.Navigation("Lines");
@@ -226,6 +290,11 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("MiniMes.Domain.Factory.Site", b =>
                 {
                     b.Navigation("Areas");
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Users.AppUser", b =>
+                {
+                    b.Navigation("Roles");
                 });
 #pragma warning restore 612, 618
         }

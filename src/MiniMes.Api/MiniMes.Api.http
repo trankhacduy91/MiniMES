@@ -1,1 +1,28 @@
 @MiniMes.Api_HostAddress = http://localhost:5157
+
+### Login (BackOffice user). Copy "token" from the response into @token below.
+POST {{MiniMes.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{ "employeeCode": "admin", "password": "Demo@12345" }
+
+### Login (kiosk operator: badge + station from kiosk appsettings)
+POST {{MiniMes.Api_HostAddress}}/api/auth/login-operator
+Content-Type: application/json
+
+{ "employeeCode": "EMP00123", "stationCode": "L1-TEST-01" }
+
+###
+@token = paste-token-here
+
+### Claims as the API sees them
+GET {{MiniMes.Api_HostAddress}}/api/debug/whoami
+Authorization: Bearer {{token}}
+
+### 200 for Admin, 403 for Operator, 401 without token
+GET {{MiniMes.Api_HostAddress}}/api/debug/admin-only
+Authorization: Bearer {{token}}
+
+### 200 for Planner or Admin
+GET {{MiniMes.Api_HostAddress}}/api/debug/planner-or-admin
+Authorization: Bearer {{token}}
