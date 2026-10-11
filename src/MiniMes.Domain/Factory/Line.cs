@@ -16,16 +16,26 @@ public class Line : AuditableEntity, IAudited
 
     internal Line(string code, string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(code);
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        FactoryRules.RequireCode(code);
+        FactoryRules.RequireName(name);
         Code = code;
         Name = name;
     }
 
     public Station AddStation(string code, string name, StationType type)
     {
+        FactoryRules.RequireActiveParent(IsActive, "Line", Code);
         var station = new Station(code, name, type);
         Stations.Add(station);
         return station;
     }
+
+    public void Rename(string name)
+    {
+        FactoryRules.RequireName(name);
+        Name = name;
+    }
+
+    // No hard delete: deactivate instead so history and audit stay intact.
+    public void SetActive(bool isActive) => IsActive = isActive;
 }

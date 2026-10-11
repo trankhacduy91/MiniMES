@@ -5,7 +5,7 @@ using MiniMes.Domain.Common;
 namespace MiniMes.Api.Middleware;
 
 // The single place where exceptions become HTTP responses (ProblemDetails, RFC 9457).
-// M1 adds ValidationException -> 400 and ConflictException -> 409.
+// M1 adds ValidationException -> 400.
 public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
@@ -13,6 +13,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         var (status, title) = exception switch
         {
             DomainException => (StatusCodes.Status422UnprocessableEntity, "Business rule violated"),
+            ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
             KeyNotFoundException => (StatusCodes.Status404NotFound, "Not found"),
             _ => (StatusCodes.Status500InternalServerError, "Unexpected error"),
         };

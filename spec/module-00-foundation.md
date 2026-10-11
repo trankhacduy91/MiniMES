@@ -929,12 +929,13 @@ Thực thể tối thiểu của M0 (đủ để các module sau tham chiếu):
   - Ước lượng: 3,5 giờ.
   - **Ghi chú khi làm (11/10/2026):** `IAudited` gắn cho Site/Area/Line/Station và cả `AppUser`/`UserRole` (câu hỏi "ai được cấp quyền gì" của customer audit); cột có `[AuditIgnore]` (`PasswordHash`) vẫn ghi dòng thay đổi nhưng giá trị là `***`; interceptor đăng ký **Scoped** (giữ state của lần lưu hiện tại), cài cả bản sync và async, thêm `SaveChangesCanceled`; giá trị ghi theo `InvariantCulture`, ngày giờ ISO 8601; `CreatedAt`/`CreatedBy` do interceptor điền (seeder không tự điền nữa, `ChangedBy`/`CreatedBy` = `system` khi không có user HTTP); bảng tên `AuditLog` (số ít, khớp trigger); `GET /api/audit-logs` có lọc `tableName`, `recordKey`, `from`/`to` (UTC, `to` không bao gồm), phân trang tối đa 200; kiểm tra rename/create bằng endpoint tạm `PUT /api/debug/stations/{code}/name`, `POST /api/debug/stations` (xóa ở Bước 7); rollback kiểm bằng CHECK constraint tạm làm hỏng lần lưu thứ hai. **Chưa kiểm ở bước này, để Bước 8:** seeder trên DB trống ghi audit cho cả cây entity; che `PasswordHash` (chưa có endpoint đổi mật khẩu/tạo user).
 
-- [ ] **Bước 7 — API cấu hình nhà máy (Site/Area/Line/Station)**
+- [x] **Bước 7 — API cấu hình nhà máy (Site/Area/Line/Station)**
   - Mục tiêu: có CRUD tối thiểu để các module sau tham chiếu.
   - Việc cần làm: `GET/POST/PUT` cho Site, Area, Line, Station (Admin được ghi; mọi role đã đăng nhập được đọc); không xóa cứng (chỉ `IsActive=false`); validate mã không có khoảng trắng (regex `^[A-Z0-9-]+$` hoặc quy ước tương tự — vì mã dùng trong topic MQTT ở M4); DTO đặt trong `Contracts`.
   - File: `Contracts/Factory/*Dto.cs`, `Application/Factory/*`, `Api/Controllers/{Sites,Areas,Lines,Stations}Controller.cs`.
   - Kiểm tra: Admin tạo được station mới, Operator gọi PUT bị 403; mã có khoảng trắng → 400; không có API DELETE; danh sách trả 1 site/1 area/2 line/10 station của seed.
   - Ước lượng: 1 giờ.
+  - **Ghi chú khi làm (11/10/2026):** route `/api/sites|areas|lines|stations` (lọc `?siteId`, `?areaId`, `?lineId`); **`Code` không sửa được sau khi tạo** (nằm trong topic MQTT), PUT chỉ đổi `Name`, `IsActive` (Station thêm `Type`); mã sai định dạng → 400 bằng DataAnnotations ở Contracts, Domain (`FactoryRules`) kiểm lại cùng regex → 422 làm lưới an toàn, unit test giữ hai bản đồng bộ; trùng mã → 409 `ConflictException` (tạo ở bước này, `Domain/Common`), kiểm trước bằng `AnyAsync` và bắt cả vi phạm unique index (SQL 2601/2627) khi hai request chạy đua; quy tắc Domain: không thêm con vào cha đang inactive → 422; service đặt ở Infrastructure sau interface ở Application (M1 chuyển sang MediatR + `IAppDbContext`); 2 endpoint Station tạm của Bước 6 đã xóa khỏi `DebugController`.
 
 - [ ] **Bước 8 — Unit test và integration test với Testcontainers**
   - Mục tiêu: có 2 lớp test chạy được cục bộ.

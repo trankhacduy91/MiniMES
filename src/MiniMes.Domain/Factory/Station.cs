@@ -16,8 +16,8 @@ public class Station : AuditableEntity, IAudited
 
     internal Station(string code, string name, StationType type)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(code);
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        FactoryRules.RequireCode(code);
+        FactoryRules.RequireName(name);
         Code = code;
         Name = name;
         Type = type;
@@ -25,7 +25,12 @@ public class Station : AuditableEntity, IAudited
 
     public void Rename(string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        FactoryRules.RequireName(name);
         Name = name;
     }
+
+    public void ChangeType(StationType type) => Type = type;
+
+    // No hard delete: deactivate instead so history and audit stay intact.
+    public void SetActive(bool isActive) => IsActive = isActive;
 }

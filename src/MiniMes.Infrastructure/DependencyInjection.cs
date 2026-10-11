@@ -4,9 +4,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Audit;
 using MiniMes.Application.Auth;
+using MiniMes.Application.Factory;
 using MiniMes.Infrastructure.Audit;
 using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Auth;
+using MiniMes.Infrastructure.Factory;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Interceptors;
 
@@ -39,6 +41,10 @@ public static class DependencyInjection
         services.AddSingleton<JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAuditLogQuery, AuditLogQuery>();
+        services.AddScoped<ISiteService, SiteService>();
+        services.AddScoped<IAreaService, AreaService>();
+        services.AddScoped<ILineService, LineService>();
+        services.AddScoped<IStationService, StationService>();
         services.AddScoped<DevSeeder>();
         return services;
     }

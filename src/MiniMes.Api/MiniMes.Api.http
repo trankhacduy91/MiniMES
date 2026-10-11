@@ -26,3 +26,21 @@ Authorization: Bearer {{token}}
 ### 200 for Planner or Admin
 GET {{MiniMes.Api_HostAddress}}/api/debug/planner-or-admin
 Authorization: Bearer {{token}}
+
+### Factory configuration (any logged-in role can read)
+GET {{MiniMes.Api_HostAddress}}/api/stations?lineId=1
+Authorization: Bearer {{token}}
+
+### Create station (Admin). Code: A-Z, 0-9, '-' only (used in MQTT topics); cannot be changed later.
+POST {{MiniMes.Api_HostAddress}}/api/stations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "lineId": 1, "code": "L1-AOI-02", "name": "AOI", "type": "Test" }
+
+### Update station (Admin). No DELETE: set isActive=false instead.
+PUT {{MiniMes.Api_HostAddress}}/api/stations/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "SMT", "type": "Smt", "isActive": true }

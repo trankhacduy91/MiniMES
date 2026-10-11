@@ -17,16 +17,26 @@ public class Site : AuditableEntity, IAudited
 
     public Site(string code, string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(code);
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        FactoryRules.RequireCode(code);
+        FactoryRules.RequireName(name);
         Code = code;
         Name = name;
     }
 
     public Area AddArea(string code, string name)
     {
+        FactoryRules.RequireActiveParent(IsActive, "Site", Code);
         var area = new Area(code, name);
         Areas.Add(area);
         return area;
     }
+
+    public void Rename(string name)
+    {
+        FactoryRules.RequireName(name);
+        Name = name;
+    }
+
+    // No hard delete: deactivate instead so history and audit stay intact.
+    public void SetActive(bool isActive) => IsActive = isActive;
 }
