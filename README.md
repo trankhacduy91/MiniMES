@@ -18,6 +18,15 @@ dotnet ef database update --project src/MiniMes.Infrastructure --startup-project
 dotnet run --project src/MiniMes.Api  # Development: seed factory (10 station) + user demo; Swagger: http://localhost:5157/swagger
 ```
 
+## Chạy test
+
+```bash
+dotnet test tests/MiniMes.UnitTests          # nhanh, không cần Docker (Domain, luật kiến trúc)
+dotnet test tests/MiniMes.IntegrationTests   # cần Docker: Testcontainers bật 1 SQL Server riêng, test xong tự xóa
+```
+
+Integration test chạy API ở môi trường `Testing`: tự `MigrateAsync()` + seed trên DB mới, secret lấy từ biến môi trường (không đọc user-secrets). Docker không chạy thì test **fail**, không bị bỏ qua.
+
 ## Audit trail
 
 Mọi thay đổi trên bảng master (Site/Area/Line/Station, User, Role) tự ghi vào `AuditLog` qua `AuditSaveChangesInterceptor`; Admin xem bằng `GET /api/audit-logs?tableName=Stations&recordKey=1`.

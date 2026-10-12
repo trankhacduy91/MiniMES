@@ -9,7 +9,6 @@ using MiniMes.Api.OpenApi;
 using MiniMes.Application.Common;
 using MiniMes.Infrastructure;
 using MiniMes.Infrastructure.Auth;
-using MiniMes.Infrastructure.Persistence;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,10 +66,12 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();                                           // /openapi/v1.json
     app.UseSwaggerUI(o => o.SwaggerEndpoint("/openapi/v1.json", "MiniMes API")); // /swagger
+}
 
-    // Migrations are applied by hand (dotnet ef database update); only seed here.
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<DevSeeder>().SeedAsync();
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
+    // Development: migrate by hand, seed here. Testing: fresh container DB -> migrate + seed.
+    await app.Services.InitializeDatabaseAsync(applyMigrations: app.Environment.IsEnvironment("Testing"));
 }
 
 app.UseAuthentication(); // must come before UseAuthorization
@@ -80,3 +81,6 @@ app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous(); // used by monitors, no token
 
 app.Run();
+
+// Lets WebApplicationFactory<Program> in the integration tests reach the entry point.
+public partial class Program;

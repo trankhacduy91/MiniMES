@@ -5,7 +5,7 @@ using MiniMes.Domain.Users;
 
 namespace MiniMes.Infrastructure.Persistence;
 
-// Development data. Users are seeded here, not with HasData: the hash has a random salt,
+// Development and Testing data. Users are seeded here, not with HasData: the hash has a random salt,
 // so HasData would produce a different migration every time.
 // CreatedAt/CreatedBy and AuditLog rows come from the interceptor (ChangedBy = "system").
 public class DevSeeder(AppDbContext db, IPasswordHasher<AppUser> hasher)

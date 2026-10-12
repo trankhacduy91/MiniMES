@@ -36,7 +36,8 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
 
         context.Response.StatusCode = status;
         context.Response.Headers[CorrelationIdMiddleware.HeaderName] = correlationId;
-        await context.Response.WriteAsJsonAsync(problem, ct);
+        // RFC 9457 media type, so clients can tell an error body from a normal JSON body.
+        await context.Response.WriteAsJsonAsync(problem, options: null, contentType: "application/problem+json", ct);
         return true;
     }
 }
