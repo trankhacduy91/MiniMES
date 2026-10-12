@@ -2,9 +2,12 @@
   <Folder Name="/src/">
     <Project Path="src/MiniMes.Api/MiniMes.Api.csproj" />
     <Project Path="src/MiniMes.Application/MiniMes.Application.csproj" />
+    <Project Path="src/MiniMes.BackOffice.Wpf/MiniMes.BackOffice.Wpf.csproj" />
+    <Project Path="src/MiniMes.Client.Core/MiniMes.Client.Core.csproj" />
     <Project Path="src/MiniMes.Contracts/MiniMes.Contracts.csproj" />
     <Project Path="src/MiniMes.Domain/MiniMes.Domain.csproj" />
     <Project Path="src/MiniMes.Infrastructure/MiniMes.Infrastructure.csproj" />
+    <Project Path="src/MiniMes.Kiosk.Wpf/MiniMes.Kiosk.Wpf.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MiniMes.IntegrationTests/MiniMes.IntegrationTests.csproj" />

@@ -1,6 +1,6 @@
 # Build + test on a clean machine for every push to main and every PR.
 # Linux runner: build backend projects one by one, never the whole solution
-# (the WPF apps added in step 10 target net10.0-windows and do not build on Linux).
+# (the WPF apps target net10.0-windows: they are built by the separate "wpf" job on Windows).
 name: ci
 
 on:
@@ -32,3 +32,15 @@ jobs:
           global-json-file: global.json
       # Testcontainers uses the runner's Docker; secrets come from env vars set by ApiFactory (Testing).
       - run: dotnet test tests/MiniMes.IntegrationTests -c Release
+
+  # WPF targets net10.0-windows: it only builds on Windows. Catches XAML/compile errors in the clients.
+  wpf:
+    runs-on: windows-latest
+    needs: unit
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - run: dotnet build src/MiniMes.BackOffice.Wpf -c Release
+      - run: dotnet build src/MiniMes.Kiosk.Wpf -c Release

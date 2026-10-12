@@ -1,0 +1,8 @@
+<!-- No StartupUri: App.xaml.cs builds the Generic Host and shows MainWindow from the container. -->
+<Application x:Class="MiniMes.Kiosk.Wpf.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </Application.Resources>
+</Application>

@@ -1,0 +1,28 @@
+<UserControl x:Class="MiniMes.Kiosk.Wpf.Views.OperatorLoginView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             FocusManager.FocusedElement="{Binding ElementName=BadgeBox}">
+    <!-- DataContext = OperatorLoginViewModel. The badge reader acts as a keyboard: it types the
+         employee code then Enter. Focus starts (and stays) in the badge box so no click is needed. -->
+    <StackPanel Width="560" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <TextBlock AutomationProperties.AutomationId="Station" Text="{Binding StationLabel}"
+                   Foreground="Gray" Margin="0,0,0,8" />
+        <TextBlock Text="{x:Static res:Strings.Kiosk_Title}" FontSize="40" FontWeight="SemiBold" Margin="0,0,0,24" />
+
+        <TextBlock Text="{x:Static res:Strings.Login_EmployeeCode}" />
+        <!-- PropertyChanged: the full scanned code is in the ViewModel before Enter arrives. -->
+        <TextBox x:Name="BadgeBox" AutomationProperties.AutomationId="Badge"
+                 Text="{Binding EmployeeCode, UpdateSourceTrigger=PropertyChanged}"
+                 FontSize="32" Padding="8" Margin="0,8,0,16" />
+
+        <!-- IsDefault: the reader's Enter triggers it. Also a large touch target when there is no reader. -->
+        <Button AutomationProperties.AutomationId="Login" Content="{x:Static res:Strings.Login_Button}"
+                Command="{Binding LoginCommand}" IsDefault="True" Padding="16" />
+
+        <TextBlock Text="{x:Static res:Strings.Login_SigningIn}" Foreground="Gray" Margin="0,12,0,0"
+                   Visibility="{Binding LoginCommand.IsRunning, Converter={StaticResource BoolToVisibility}}" />
+        <TextBlock AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
+                   Foreground="Red" TextWrapping="Wrap" Margin="0,12,0,0" />
+    </StackPanel>
+</UserControl>

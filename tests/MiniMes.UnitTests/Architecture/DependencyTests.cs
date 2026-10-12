@@ -20,6 +20,14 @@ public class DependencyTests
             ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore.SqlServer", "Serilog"]),
         new("MiniMes.Infrastructure", ["MiniMes.Application"], []),
         new("MiniMes.Api", ["MiniMes.Application", "MiniMes.Infrastructure"], []),
+        // Clients only talk to the API: no path to the database, ever.
+        new("MiniMes.Client.Core", ["MiniMes.Contracts"],
+            ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient"]),
+        // WPF apps see only Client.Core, so they cannot open a DB connection even by mistake.
+        new("MiniMes.BackOffice.Wpf", ["MiniMes.Client.Core"],
+            ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient"]),
+        new("MiniMes.Kiosk.Wpf", ["MiniMes.Client.Core"],
+            ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient"]),
     ];
 
     public static TheoryData<string> ProjectNames
@@ -75,6 +83,18 @@ public class DependencyTests
         var value = csproj.Descendants("TreatWarningsAsErrors").Select(e => e.Value.Trim()).SingleOrDefault();
 
         Assert.Equal("true", value);
+    }
+
+    // Client.Core is shared by both WPF apps but must stay plain net10.0 so its ViewModels
+    // are unit-tested on the Linux CI runner.
+    [Fact]
+    public void Client_core_has_no_windows_dependency()
+    {
+        var csproj = LoadCsproj("MiniMes.Client.Core");
+
+        Assert.Equal("net10.0", csproj.Descendants("TargetFramework").Single().Value.Trim());
+        Assert.Empty(csproj.Descendants("UseWPF"));
+        Assert.Empty(csproj.Descendants("UseWindowsForms"));
     }
 
     private static XDocument LoadCsproj(string project)

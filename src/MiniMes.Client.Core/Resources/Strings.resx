@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- UI strings (English = default/fallback). Add Strings.vi.resx later for Vietnamese. Key: Screen_Element. -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Login_Title" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Login_EmployeeCode" xml:space="preserve">
+    <value>Employee code</value>
+  </data>
+  <data name="Login_Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Login_Button" xml:space="preserve">
+    <value>Login</value>
+  </data>
+  <data name="Login_InvalidCredentials" xml:space="preserve">
+    <value>Invalid employee code or password.</value>
+    <comment>Shown for 401 on user login</comment>
+  </data>
+  <data name="Kiosk_Title" xml:space="preserve">
+    <value>Scan your badge</value>
+  </data>
+  <data name="Kiosk_Station" xml:space="preserve">
+    <value>Station: {0}</value>
+    <comment>{0} = station code from the kiosk appsettings</comment>
+  </data>
+  <data name="Kiosk_UnknownBadge" xml:space="preserve">
+    <value>Unknown badge. Scan again or call your supervisor.</value>
+    <comment>Shown for 401 on operator login</comment>
+  </data>
+  <data name="Kiosk_StationNotFound" xml:space="preserve">
+    <value>This kiosk is configured for station '{0}', which does not exist or is inactive. Call IT.</value>
+    <comment>Shown for 404 on operator login</comment>
+  </data>
+  <data name="Home_Welcome" xml:space="preserve">
+    <value>Welcome, {0} ({1})</value>
+    <comment>{0} = full name, {1} = roles</comment>
+  </data>
+  <data name="Home_Logout" xml:space="preserve">
+    <value>Logout</value>
+  </data>
+  <data name="Error_CannotReachServer" xml:space="preserve">
+    <value>Cannot reach server. Check the network and try again.</value>
+    <comment>Network error or timeout, no HTTP response</comment>
+  </data>
+  <data name="Error_SessionExpired" xml:space="preserve">
+    <value>Your session has expired. Please sign in again.</value>
+    <comment>401 on any call after login</comment>
+  </data>
+  <data name="Error_Forbidden" xml:space="preserve">
+    <value>You do not have permission for this action.</value>
+    <comment>403</comment>
+  </data>
+  <data name="Error_Unexpected" xml:space="preserve">
+    <value>Unexpected error. Please try again.</value>
+    <comment>Fallback when the server sent no usable detail</comment>
+  </data>
+  <data name="Error_WithReference" xml:space="preserve">
+    <value>{0} (ref: {1})</value>
+    <comment>{0} = message, {1} = correlation id the user reads to IT</comment>
+  </data>
+  <data name="BackOffice_Title" xml:space="preserve">
+    <value>MiniMes Back Office</value>
+  </data>
+  <data name="Login_SigningIn" xml:space="preserve">
+    <value>Signing in...</value>
+    <comment>Shown while the login request runs</comment>
+  </data>
+  <data name="App_ConfigError" xml:space="preserve">
+    <value>The application cannot start because appsettings.json is invalid:
+{0}</value>
+    <comment>{0} = validation errors; shown in a message box at startup</comment>
+  </data>
+  <data name="Kiosk_WindowTitle" xml:space="preserve">
+    <value>MiniMes Kiosk</value>
+  </data>
+</root>

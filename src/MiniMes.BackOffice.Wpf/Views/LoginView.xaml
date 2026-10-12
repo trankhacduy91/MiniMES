@@ -1,0 +1,31 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.LoginView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             FocusManager.FocusedElement="{Binding ElementName=EmployeeCodeBox}">
+    <!-- DataContext = UserLoginViewModel (from the DataTemplate in MainWindow.xaml).
+         Every visible string comes from Strings.resx; no hard-coded UI text. -->
+    <StackPanel Width="320" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <TextBlock Text="{x:Static res:Strings.Login_Title}" FontSize="24" Margin="0,0,0,16" />
+
+        <TextBlock Text="{x:Static res:Strings.Login_EmployeeCode}" />
+        <!-- PropertyChanged: the ViewModel (and the Login button's CanExecute) updates on every key. -->
+        <TextBox x:Name="EmployeeCodeBox" AutomationProperties.AutomationId="EmployeeCode"
+                 Text="{Binding EmployeeCode, UpdateSourceTrigger=PropertyChanged}"
+                 Margin="0,4,0,12" Padding="4" />
+
+        <TextBlock Text="{x:Static res:Strings.Login_Password}" />
+        <!-- PasswordBox.Password cannot be bound (security design); code-behind forwards it. -->
+        <PasswordBox x:Name="PasswordBox" AutomationProperties.AutomationId="Password"
+                     PasswordChanged="OnPasswordChanged" Margin="0,4,0,16" Padding="4" />
+
+        <!-- IsDefault: Enter in either box clicks Login. The async command disables it while running. -->
+        <Button AutomationProperties.AutomationId="Login" Content="{x:Static res:Strings.Login_Button}"
+                Command="{Binding LoginCommand}" IsDefault="True" Padding="8" />
+
+        <TextBlock Text="{x:Static res:Strings.Login_SigningIn}" Margin="0,8,0,0" Foreground="Gray"
+                   Visibility="{Binding LoginCommand.IsRunning, Converter={StaticResource BoolToVisibility}}" />
+        <TextBlock AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
+                   Foreground="Red" TextWrapping="Wrap" Margin="0,8,0,0" />
+    </StackPanel>
+</UserControl>

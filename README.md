@@ -20,6 +20,18 @@ dotnet ef database update --project src/MiniMes.Infrastructure --startup-project
 dotnet run --project src/MiniMes.Api  # Development: seed factory (10 station) + user demo; Swagger: http://localhost:5157/swagger
 ```
 
+## Chạy app WPF (Windows)
+
+API phải đang chạy (`http://localhost:5157`). Địa chỉ API và mã trạm nằm trong `appsettings.json` cạnh file exe.
+
+```bash
+dotnet run --project src/MiniMes.BackOffice.Wpf   # văn phòng: mã + mật khẩu (vd. planner01 / Demo@12345)
+dotnet run --project src/MiniMes.Kiosk.Wpf        # trạm: quẹt thẻ EMP00123 + Enter; StationCode = L1-TEST-01
+dotnet run --project src/MiniMes.Kiosk.Wpf -- --StationCode=L2-PACK-01   # ghi đè trạm khi thử
+```
+
+App WPF chỉ tham chiếu `MiniMes.Client.Core` (gọi API), không có đường nào nối thẳng DB.
+
 ## Chạy test
 
 ```bash

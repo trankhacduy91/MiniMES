@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\src\MiniMes.Domain\MiniMes.Domain.csproj" />
     <ProjectReference Include="..\..\src\MiniMes.Application\MiniMes.Application.csproj" />
     <ProjectReference Include="..\..\src\MiniMes.Contracts\MiniMes.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\MiniMes.Client.Core\MiniMes.Client.Core.csproj" />
   </ItemGroup>
 
 </Project>

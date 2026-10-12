@@ -1,0 +1,12 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+    <!-- DataContext = HomeViewModel. Placeholder main screen for M0; M1 adds real menus. -->
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+        <TextBlock AutomationProperties.AutomationId="Welcome" Text="{Binding WelcomeText}"
+                   FontSize="24" Margin="0,0,0,16" />
+        <Button AutomationProperties.AutomationId="Logout" Content="{x:Static res:Strings.Home_Logout}"
+                Command="{Binding LogoutCommand}" HorizontalAlignment="Left" Padding="8,4" />
+    </StackPanel>
+</UserControl>
