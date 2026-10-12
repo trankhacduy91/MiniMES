@@ -12,7 +12,7 @@ public class AppUserTests
         user.AddRole(Role.Supervisor);
         user.AddRole(Role.Supervisor);
 
-        Assert.Single(user.Roles);
+        Assert.Equal(2, user.Roles.Count); // deliberately wrong: proves CI turns red
     }
 
     [Fact]
