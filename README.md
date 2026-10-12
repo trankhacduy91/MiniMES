@@ -1,5 +1,7 @@
 # Mini MES
 
+[![ci](https://github.com/trankhacduy91/MiniMES/actions/workflows/ci.yml/badge.svg)](https://github.com/trankhacduy91/MiniMES/actions/workflows/ci.yml)
+
 Dự án học MES (.NET 10, SQL Server, MQTT, WPF). Chi tiết: `spec/`.
 
 ## Chạy nhanh (dev)

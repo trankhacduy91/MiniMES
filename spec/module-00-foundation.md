@@ -951,6 +951,7 @@ Thực thể tối thiểu của M0 (đủ để các module sau tham chiếu):
   - File: `.github/workflows/ci.yml`.
   - Kiểm tra: push → cả hai job xanh trên GitHub; cố tình làm hỏng một unit test → CI đỏ (rồi sửa lại).
   - Ước lượng: 1,5 giờ.
+  - **Ghi chú khi làm (12/10/2026):** repo GitHub `trankhacduy91/MiniMES` và remote `origin` đã có sẵn (user tạo); workflow dùng `actions/checkout@v5`, `actions/setup-dotnet@v5` (v4 chạy Node 20, GitHub đang ngừng hỗ trợ) + `permissions: contents: read`; đã chạy thử đúng lệnh của 2 job trong container Linux `mcr.microsoft.com/dotnet/sdk:10.0` từ `git archive` (sạch, không bin/obj Windows): SDK 10.0.401 khớp `global.json`, unit 27/27, integration 29/29 (Testcontainers qua Docker socket + `TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal`, chỉ cần khi chạy trong container; runner GitHub không cần); badge đã thêm vào README.
 
 - [ ] **Bước 10 — Khung client WPF: Client.Core + Login**
   - Mục tiêu: mở app BackOffice, login được bằng user seed; Kiosk có khung host tương tự.
