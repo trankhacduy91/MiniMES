@@ -962,11 +962,12 @@ Thực thể tối thiểu của M0 (đủ để các module sau tham chiếu):
   - **Ghi chú khi làm (12/10/2026), phần 1–2/3:** `Strings` sinh lúc build bằng MSBuild (`StronglyTypedLanguage`/`PublicClass` trên `EmbeddedResource`) thay vì `PublicResXFileCodeGenerator` của Visual Studio, để `dotnet build` và CI Linux cũng sinh được; thông báo lỗi login lấy từ resx theo mã HTTP (401 → `Login_InvalidCredentials`, lỗi mạng → `Error_CannotReachServer`), lỗi 5xx kèm `ref: <correlationId>`; `ProblemDto` ở `Contracts/Common`; thêm `HomeViewModel` (Client.Core) cho màn hình "Welcome"; điều hướng: một `MainWindow` + `ContentControl` + `DataTemplate` theo kiểu ViewModel, class `Navigation` (Singleton, là service) cài `INavigation` và tạo ViewModel Transient mỗi lần chuyển màn hình; `PasswordBox` đẩy mật khẩu vào ViewModel qua `PasswordChanged` ở code-behind; Generic Host dùng `Host.CreateApplicationBuilder` với `ContentRootPath = AppContext.BaseDirectory`; `ApiBaseUrl` sai → hộp thoại lỗi lúc khởi động (`ValidateOnStart`); `DependencyTests` thêm luật Client.Core (chỉ Contracts, `net10.0`, không `UseWPF`) và BackOffice.Wpf (chỉ Client.Core); CI thêm job `wpf` trên `windows-latest`. Kiểm tra (1)–(4) của BackOffice làm bằng UI Automation + ảnh chụp cửa sổ (PrintWindow): đạt cả 4; "Cannot reach server" hiện sau ~5–7 s vì `localhost` thử IPv6 rồi IPv4.
   - **Phần 3/3 Kiosk (12/10/2026):** `appsettings.json` có `StationCode` (thiếu → hộp thoại lỗi lúc khởi động, validate thêm ở app Kiosk); ô quẹt thẻ luôn có focus, nút Login `IsDefault` nên Enter của đầu đọc thẻ bấm nút, nút cũng dùng được trên màn hình cảm ứng; cửa sổ Maximized, chữ to; sau mỗi lần quẹt ô tự xóa. Kiểm tra bằng UI Automation: thẻ lạ và thẻ của tài khoản có mật khẩu (`admin`) → "Unknown badge"; `EMP00123` → "Welcome, Nguyen Van Nam (Operator)" + "Station: L1-TEST-01"; trạm `NOPE-01` → thông báo trạm không tồn tại; thiếu `StationCode` → hộp thoại lỗi; API tắt → "Cannot reach server", app vẫn phản hồi; XAML không có chuỗi viết cứng. CI job `wpf` build cả 2 app.
 
-- [ ] **Bước 11 — README khung và tự nghiệm thu DoD**
+- [x] **Bước 11 — README khung và tự nghiệm thu DoD**
   - Mục tiêu: người lạ clone về dựng được chỉ bằng README.
   - Việc cần làm: README có mục tiêu, sơ đồ kiến trúc (mục 2 của spec), yêu cầu cài đặt, cách chạy (`cp .env.example .env` → `docker compose up -d` → `dotnet ef database update` → `dotnet run --project src/MiniMes.Api` → mở Swagger → chạy WPF), tài khoản demo, kịch bản demo 13 bước của spec v2 mục B2 (danh sách, ghi "sẽ hoàn thiện theo từng module"); tạo `ARCHITECTURE.md` khung với 4 quyết định đầu (Clean Architecture modular monolith, WPF gọi API thay vì nối DB, audit ở interceptor, `AuditLog` chặn sửa bằng trigger).
   - Kiểm tra: xóa thư mục clone, clone lại vào thư mục mới trên cùng máy (hoặc máy khác) và làm theo README đến login được. Ghi lại mọi chỗ vấp và sửa README.
   - Ước lượng: 1 giờ.
+  - **Ghi chú khi làm (12/10/2026):** README đầy đủ (mục tiêu, sơ đồ ISA-95 + layer, yêu cầu cài đặt, 6 bước chạy lần đầu, tài khoản demo, bảng kịch bản 13 bước kèm module/trạng thái, test, audit, bảng "Gặp lỗi khi chạy", cấu trúc repo); `ARCHITECTURE.md` dạng ADR với 4 quyết định (ADR-001…004). **Nghiệm thu từ clone sạch:** clone từ GitHub vào thư mục tên khác (`MiniMES-clonetest`, để Docker tạo volume/DB mới), tắt stack dev, sao lưu rồi khôi phục user-secrets (các bản clone trên một máy dùng chung `UserSecretsId`), làm đúng từng lệnh README: **vấp 1 chỗ** — `dotnet ef database update` báo `NETSDK1004 project.assets.json not found` vì chưa restore → README thêm `dotnet build` trước lệnh `ef` (ghi `docs/incidents.md`); sau đó Swagger + login admin, DB mới đúng 10 station và 26 dòng audit từ seeder (`system`), BackOffice và Kiosk login được, unit 53/53, integration 29/29. README thêm mục lỗi: mật khẩu SA lưu trong volume ở lần chạy đầu; user-secrets dùng chung giữa các bản clone.
 
 ### Nếu bị kẹt
 
@@ -1021,17 +1022,17 @@ Thực thể tối thiểu của M0 (đủ để các module sau tham chiếu):
 
 Từ DoD của spec: *clone → `docker compose up` → chạy API → Swagger mở được; mở app WPF Back-office, login được với user seed.* Chi tiết hóa:
 
-- [ ] Solution `MiniMes.slnx` có đủ project như spec mục 2 (Domain, Application, Infrastructure, Api, Contracts, Client.Core, Kiosk.Wpf, BackOffice.Wpf; MachineSimulator tạo ở M4, EdgeGateway tạo ở M4b), 2 project test; .NET 10 ghim bằng `global.json`; `Nullable` bật, `TreatWarningsAsErrors` cho Domain; test chiều phụ thuộc xanh.
-- [ ] `docker compose up` bật SQL Server và Mosquitto, cả hai `healthy`; `.env` không nằm trong git.
-- [ ] `dotnet ef database update` (lệnh ghi trong README) tạo đủ bảng; migration nằm ở Infrastructure.
-- [ ] Connection string và `Jwt:Key` chỉ ở user-secrets/biến môi trường; không có secret nào trong git history.
-- [ ] Log ra console và file, mỗi dòng có `CorrelationId`; lỗi trả `application/problem+json` có `correlationId`, lỗi 500 không lộ chi tiết.
-- [ ] Login user (mã + mật khẩu) và login operator (mã nhân viên) trả JWT; 6 role hoạt động; 401/403 đúng ở endpoint mẫu.
-- [ ] Sửa Site/Line/Station (hoặc entity master khác) sinh `AuditLog` đúng cũ/mới, đúng người, UTC; không có API sửa/xóa `AuditLog`; **[v2]** trigger chặn UPDATE/DELETE `AuditLog` kể cả khi dùng `sa`, có integration test chứng minh.
-- [ ] Có dữ liệu seed: 1 site, 1 area, 2 line, 10 station (gồm 2 trạm Repair), user demo cho từng role.
-- [ ] Unit test và integration test (Testcontainers) chạy xanh cục bộ và trên GitHub Actions.
-- [ ] WPF BackOffice login được; Kiosk có khung host và ô nhập mã nhân viên; mọi chuỗi UI nằm trong `Strings.resx`; sai mật khẩu và mất API hiện thông báo tiếng Anh dễ hiểu.
-- [ ] README khung (mục tiêu, kiến trúc, cách chạy, tài khoản demo, kịch bản 13 bước) và ARCHITECTURE.md khung; đã thử dựng lại từ clone sạch.
+- [x] Solution `MiniMes.slnx` có đủ project như spec mục 2 (Domain, Application, Infrastructure, Api, Contracts, Client.Core, Kiosk.Wpf, BackOffice.Wpf; MachineSimulator tạo ở M4, EdgeGateway tạo ở M4b), 2 project test; .NET 10 ghim bằng `global.json`; `Nullable` bật, `TreatWarningsAsErrors` cho Domain; test chiều phụ thuộc xanh.
+- [x] `docker compose up` bật SQL Server và Mosquitto, cả hai `healthy`; `.env` không nằm trong git.
+- [x] `dotnet ef database update` (lệnh ghi trong README) tạo đủ bảng; migration nằm ở Infrastructure.
+- [x] Connection string và `Jwt:Key` chỉ ở user-secrets/biến môi trường; không có secret nào trong git history.
+- [x] Log ra console và file, mỗi dòng có `CorrelationId`; lỗi trả `application/problem+json` có `correlationId`, lỗi 500 không lộ chi tiết.
+- [x] Login user (mã + mật khẩu) và login operator (mã nhân viên) trả JWT; 6 role hoạt động; 401/403 đúng ở endpoint mẫu.
+- [x] Sửa Site/Line/Station (hoặc entity master khác) sinh `AuditLog` đúng cũ/mới, đúng người, UTC; không có API sửa/xóa `AuditLog`; **[v2]** trigger chặn UPDATE/DELETE `AuditLog` kể cả khi dùng `sa`, có integration test chứng minh.
+- [x] Có dữ liệu seed: 1 site, 1 area, 2 line, 10 station (gồm 2 trạm Repair), user demo cho từng role.
+- [x] Unit test và integration test (Testcontainers) chạy xanh cục bộ và trên GitHub Actions.
+- [x] WPF BackOffice login được; Kiosk có khung host và ô nhập mã nhân viên; mọi chuỗi UI nằm trong `Strings.resx`; sai mật khẩu và mất API hiện thông báo tiếng Anh dễ hiểu.
+- [x] README khung (mục tiêu, kiến trúc, cách chạy, tài khoản demo, kịch bản 13 bước) và ARCHITECTURE.md khung; đã thử dựng lại từ clone sạch.
 
 ### 5.2 Tự kiểm tra
 
