@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MiniMes.Domain.Audit;
 using MiniMes.Domain.Factory;
 using MiniMes.Domain.MasterData.Boms;
@@ -39,4 +40,8 @@ public interface IAppDbContext
     // A unique-index violation (two requests racing past the "already exists" check) comes out as
     // ConflictException (409), so handlers never see provider-specific SQL errors.
     Task<int> SaveChangesAsync(CancellationToken ct = default);
+
+    // For the few use cases that must save more than once atomically (the Excel import needs item ids
+    // before it can write BOM lines). The audit interceptor joins this transaction instead of opening one.
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default);
 }

@@ -23,24 +23,30 @@ public sealed class CreateRoutingDraftValidator : AbstractValidator<CreateRoutin
     public CreateRoutingDraftValidator() => RuleFor(x => x.ItemId).GreaterThan(0);
 }
 
-public sealed class SaveRoutingStepsValidator : AbstractValidator<SaveRoutingStepsCommand>
+// One step; also used row by row by the Excel import.
+public sealed class RoutingStepInputValidator : AbstractValidator<RoutingStepInput>
 {
     // Spec M1 1.5 (5): minutes typed as seconds, or a panel time instead of one board, gives absurd OEE.
     public const decimal MaxCycleTimeSec = 3600m;
 
+    public RoutingStepInputValidator()
+    {
+        RuleFor(s => s.Seq).GreaterThan(0);
+        RuleFor(s => s.OperationCode).NotEmpty().MaximumLength(MasterDataRules.CodeMaxLength)
+            .Matches(MasterDataRules.CodePattern);
+        RuleFor(s => s.WorkCenterId).GreaterThan(0);
+        RuleFor(s => s.IdealCycleTimeSec).GreaterThan(0).LessThanOrEqualTo(MaxCycleTimeSec)
+            .WithMessage($"IdealCycleTimeSec is seconds per unit: 0 < value <= {MaxCycleTimeSec}.");
+        RuleFor(s => s.SopUrl).MaximumLength(RoutingStep.SopUrlMaxLength);
+    }
+}
+
+public sealed class SaveRoutingStepsValidator : AbstractValidator<SaveRoutingStepsCommand>
+{
     public SaveRoutingStepsValidator()
     {
         RuleFor(x => x.Steps).NotNull();
-        RuleForEach(x => x.Steps).ChildRules(step =>
-        {
-            step.RuleFor(s => s.Seq).GreaterThan(0);
-            step.RuleFor(s => s.OperationCode).NotEmpty().MaximumLength(MasterDataRules.CodeMaxLength)
-                .Matches(MasterDataRules.CodePattern);
-            step.RuleFor(s => s.WorkCenterId).GreaterThan(0);
-            step.RuleFor(s => s.IdealCycleTimeSec).GreaterThan(0).LessThanOrEqualTo(MaxCycleTimeSec)
-                .WithMessage($"IdealCycleTimeSec is seconds per unit: 0 < value <= {MaxCycleTimeSec}.");
-            step.RuleFor(s => s.SopUrl).MaximumLength(RoutingStep.SopUrlMaxLength);
-        });
+        RuleForEach(x => x.Steps).SetValidator(new RoutingStepInputValidator());
         RuleFor(x => x.Steps)
             .Must(steps => steps.Select(s => s.Seq).Distinct().Count() == steps.Count)
             .When(x => x.Steps is not null)

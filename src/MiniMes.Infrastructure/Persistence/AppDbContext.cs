@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MiniMes.Application.Common;
 using MiniMes.Domain.Audit;
 using MiniMes.Domain.Common;
@@ -35,6 +36,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PlantCalendarDay> PlantCalendar => Set<PlantCalendarDay>();
     public DbSet<DefectCode> DefectCodes => Set<DefectCode>();
     public DbSet<DowntimeReason> DowntimeReasons => Set<DowntimeReason>();
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
+        => Database.BeginTransactionAsync(ct);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

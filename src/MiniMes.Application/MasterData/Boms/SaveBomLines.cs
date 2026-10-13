@@ -11,19 +11,25 @@ namespace MiniMes.Application.MasterData.Boms;
 // Replaces all lines of a Draft. Approved -> 422 (locked: make a new version).
 public sealed record SaveBomLinesCommand(int BomId, IReadOnlyList<BomLineInput> Lines) : IRequest<BomDto>;
 
+// One line; also used row by row by the Excel import, so both paths share the same rules.
+public sealed class BomLineInputValidator : AbstractValidator<BomLineInput>
+{
+    public BomLineInputValidator()
+    {
+        RuleFor(l => l.ComponentItemId).GreaterThan(0);
+        RuleFor(l => l.QtyPer).GreaterThan(0);
+        RuleFor(l => l.ScrapRate).GreaterThanOrEqualTo(0).LessThan(1)
+            .WithMessage("ScrapRate is a fraction: 0 <= ScrapRate < 1 (2% = 0.02).");
+        RuleFor(l => l.OperationSeq).GreaterThan(0);
+    }
+}
+
 public sealed class SaveBomLinesValidator : AbstractValidator<SaveBomLinesCommand>
 {
     public SaveBomLinesValidator()
     {
         RuleFor(x => x.Lines).NotNull();
-        RuleForEach(x => x.Lines).ChildRules(line =>
-        {
-            line.RuleFor(l => l.ComponentItemId).GreaterThan(0);
-            line.RuleFor(l => l.QtyPer).GreaterThan(0);
-            line.RuleFor(l => l.ScrapRate).GreaterThanOrEqualTo(0).LessThan(1)
-                .WithMessage("ScrapRate is a fraction: 0 <= ScrapRate < 1 (2% = 0.02).");
-            line.RuleFor(l => l.OperationSeq).GreaterThan(0);
-        });
+        RuleForEach(x => x.Lines).SetValidator(new BomLineInputValidator());
         RuleFor(x => x.Lines)
             .Must(lines => lines.Select(l => l.ComponentItemId).Distinct().Count() == lines.Count)
             .When(x => x.Lines is not null)
