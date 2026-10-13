@@ -27,14 +27,14 @@ public class RoutingTests
 
     [Fact]
     public void Routing_without_steps_cannot_be_approved()
-        => Assert.Throws<DomainException>(() => Routing.CreateDraft(1, 1).Approve(Now));
+        => Assert.Throws<DomainException>(() => Routing.CreateDraft(1, 1).Approve(Now, previous: null));
 
     [Fact]
     public void Approved_routing_is_locked()
     {
         var routing = Routing.CreateDraft(1, 1);
         routing.AddStep(10, "SMT", 1, 30m, false, true);
-        routing.Approve(Now);
+        routing.Approve(Now, previous: null);
 
         Assert.Throws<DomainException>(() => routing.AddStep(20, "ASSY", 2, 60m, false, true));
     }
@@ -42,6 +42,33 @@ public class RoutingTests
     [Fact]
     public void Blank_sop_url_is_stored_as_null()
         => Assert.Null(Routing.CreateDraft(1, 1).AddStep(10, "SMT", 1, 30m, false, true, sopUrl: "  ").SopUrl);
+
+    // Same validity rules as BOM (spec M1 1.2.6): v2 closes v1 at its own start, never earlier.
+    [Fact]
+    public void Approving_v2_closes_v1_and_rejects_an_earlier_start()
+    {
+        var v1 = Routing.CreateDraft(1, 1);
+        v1.AddStep(10, "SMT", 1, 30m, false, true);
+        v1.Approve(Now, previous: null);
+        var v2 = Routing.CreateDraft(1, 2);
+        v2.AddStep(10, "SMT", 1, 28m, false, true);
+
+        Assert.Throws<DomainException>(() => v2.Approve(Now, v1));
+        v2.Approve(Now.AddDays(7), v1);
+
+        Assert.Equal(Now.AddDays(7), v1.EffectiveTo);
+        Assert.Null(v2.EffectiveTo);
+    }
+
+    [Fact]
+    public void Clearing_steps_of_an_approved_routing_is_rejected()
+    {
+        var routing = Routing.CreateDraft(1, 1);
+        routing.AddStep(10, "SMT", 1, 30m, false, true);
+        routing.Approve(Now, previous: null);
+
+        Assert.Throws<DomainException>(routing.ClearSteps);
+    }
 }
 
 public class MachineTests

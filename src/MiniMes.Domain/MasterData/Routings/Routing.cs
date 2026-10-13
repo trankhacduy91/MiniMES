@@ -35,10 +35,27 @@ public class Routing : AuditableEntity, IAudited
         return step;
     }
 
-    public void Approve(DateTime effectiveFromUtc)
+    public void ClearSteps()
+    {
+        EnsureDraft();
+        Steps.Clear();
+    }
+
+    // Same validity rule as Bom.Approve: previous is the open Approved version, closed where this one starts.
+    public void Approve(DateTime effectiveFromUtc, Routing? previous)
     {
         EnsureDraft();
         if (Steps.Count == 0) throw new DomainException("A routing needs at least one step.");
+        if (previous is not null)
+        {
+            if (previous.ItemId != ItemId || previous.Status != VersionStatus.Approved || previous.EffectiveTo is not null)
+                throw new InvalidOperationException("previous must be the open Approved routing of the same item.");
+            if (effectiveFromUtc <= previous.EffectiveFrom)
+                throw new DomainException(
+                    $"EffectiveFrom must be after the start of version {previous.Version} ({previous.EffectiveFrom:yyyy-MM-dd HH:mm} UTC).");
+            previous.EffectiveTo = effectiveFromUtc;
+        }
+
         Status = VersionStatus.Approved;
         EffectiveFrom = effectiveFromUtc;
     }

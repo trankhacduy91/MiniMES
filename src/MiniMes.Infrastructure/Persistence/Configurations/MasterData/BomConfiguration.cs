@@ -11,6 +11,11 @@ public class BomConfiguration : IEntityTypeConfiguration<Bom>
     {
         b.ToTable("Boms");
         b.HasIndex(x => new { x.ItemId, x.Version }).IsUnique();
+        // Version rules enforced by the database too, so two racing requests cannot break them (-> 409):
+        // at most one Draft per item, and at most one Approved version still open (EffectiveTo NULL).
+        b.HasIndex(x => x.ItemId, "UX_Boms_OneDraftPerItem").IsUnique().HasFilter("[Status] = 'Draft'");
+        b.HasIndex(x => x.ItemId, "UX_Boms_OneOpenApprovedPerItem").IsUnique()
+            .HasFilter("[Status] = 'Approved' AND [EffectiveTo] IS NULL");
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.CreatedBy).HasMaxLength(100);
 

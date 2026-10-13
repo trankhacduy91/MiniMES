@@ -270,6 +270,14 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.HasIndex("ItemId", "Version")
                         .IsUnique();
 
+                    b.HasIndex(new[] { "ItemId" }, "UX_Boms_OneDraftPerItem")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Draft'");
+
+                    b.HasIndex(new[] { "ItemId" }, "UX_Boms_OneOpenApprovedPerItem")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Approved' AND [EffectiveTo] IS NULL");
+
                     b.ToTable("Boms", (string)null);
                 });
 
@@ -681,6 +689,14 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ItemId", "Version")
                         .IsUnique();
+
+                    b.HasIndex(new[] { "ItemId" }, "UX_Routings_OneDraftPerItem")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Draft'");
+
+                    b.HasIndex(new[] { "ItemId" }, "UX_Routings_OneOpenApprovedPerItem")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Approved' AND [EffectiveTo] IS NULL");
 
                     b.ToTable("Routings", (string)null);
                 });

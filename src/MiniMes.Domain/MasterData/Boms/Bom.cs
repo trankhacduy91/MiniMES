@@ -36,12 +36,30 @@ public class Bom : AuditableEntity, IAudited
         return line;
     }
 
-    // Checks that only need this BOM. Cross-BOM checks (no cycle, active components, closing the
-    // previous version's validity) belong to the Approve use case (M1 step 5).
-    public void Approve(DateTime effectiveFromUtc)
+    // Saving a draft replaces all its lines (the editor sends the full list).
+    public void ClearLines()
+    {
+        EnsureDraft();
+        Lines.Clear();
+    }
+
+    // previous = the item's currently open Approved version (EffectiveTo null), or null for the first one.
+    // Its validity is closed exactly where this one starts: [From, To) ranges never overlap (spec M1 rule 5).
+    // Cross-BOM checks (active components, no cycle) need the database and live in the Approve use case.
+    public void Approve(DateTime effectiveFromUtc, Bom? previous)
     {
         EnsureDraft();
         if (Lines.Count == 0) throw new DomainException("An empty BOM cannot be approved.");
+        if (previous is not null)
+        {
+            if (previous.ItemId != ItemId || previous.Status != VersionStatus.Approved || previous.EffectiveTo is not null)
+                throw new InvalidOperationException("previous must be the open Approved BOM of the same item.");
+            if (effectiveFromUtc <= previous.EffectiveFrom)
+                throw new DomainException(
+                    $"EffectiveFrom must be after the start of version {previous.Version} ({previous.EffectiveFrom:yyyy-MM-dd HH:mm} UTC).");
+            previous.EffectiveTo = effectiveFromUtc;
+        }
+
         Status = VersionStatus.Approved;
         EffectiveFrom = effectiveFromUtc;
     }
