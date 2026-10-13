@@ -47,12 +47,8 @@ public class FactoryRulesTests
         Assert.Throws<DomainException>(() => line.AddStation("L1-SMT-01", "SMT", StationType.Smt));
     }
 
-    // Contracts cannot reference Domain, so these two tests keep the duplicated rules in sync.
+    // Contracts cannot reference Domain, so this test keeps the duplicated list (for WPF pick lists) in sync.
     [Fact]
     public void Contract_station_types_match_domain_enum()
         => Assert.Equal(Enum.GetNames<StationType>().Order(), StationTypes.All.Order());
-
-    [Fact]
-    public void Contract_code_pattern_matches_domain()
-        => Assert.Equal(FactoryRules.CodePattern, CodeRules.Pattern);
 }

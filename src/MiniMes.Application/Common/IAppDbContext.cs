@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using MiniMes.Domain.Audit;
+using MiniMes.Domain.Factory;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.MasterData.DefectCodes;
@@ -6,6 +8,7 @@ using MiniMes.Domain.MasterData.Downtime;
 using MiniMes.Domain.MasterData.Equipment;
 using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Routings;
+using MiniMes.Domain.Users;
 
 namespace MiniMes.Application.Common;
 
@@ -14,6 +17,15 @@ namespace MiniMes.Application.Common;
 // Infrastructure decides how it reaches SQL Server.
 public interface IAppDbContext
 {
+    // M0: factory model, users, audit
+    DbSet<Site> Sites { get; }
+    DbSet<Area> Areas { get; }
+    DbSet<Line> Lines { get; }
+    DbSet<Station> Stations { get; }
+    DbSet<AppUser> Users { get; }
+    DbSet<AuditLog> AuditLogs { get; }
+
+    // M1: master data
     DbSet<Item> Items { get; }
     DbSet<Bom> Boms { get; }
     DbSet<Routing> Routings { get; }

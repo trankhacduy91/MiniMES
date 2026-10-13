@@ -1,13 +1,7 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace MiniMes.Contracts.Factory;
 
-// Same rule as Domain FactoryRules: checked here so the API answers 400 before any business logic.
-public static class CodeRules
-{
-    public const string Pattern = "^[A-Z0-9-]+$";
-    public const string Message = "Code must contain only A-Z, 0-9 or '-' (no spaces): it is used in MQTT topics.";
-}
+// Plain DTOs: the rules (code pattern, lengths, station type) are FluentValidation validators in
+// Application, reusing Domain FactoryRules, so there is one place that decides what is valid.
 
 // ---------- read models ----------
 
@@ -20,10 +14,7 @@ public sealed record StationDto(int Id, int LineId, string Code, string Name, st
 
 public class CreateFactoryItemRequest
 {
-    [Required, StringLength(50), RegularExpression(CodeRules.Pattern, ErrorMessage = CodeRules.Message)]
     public string Code { get; init; } = string.Empty;
-
-    [Required, StringLength(200)]
     public string Name { get; init; } = string.Empty;
 }
 
@@ -31,22 +22,17 @@ public sealed class CreateSiteRequest : CreateFactoryItemRequest;
 
 public sealed class CreateAreaRequest : CreateFactoryItemRequest
 {
-    [Range(1, int.MaxValue)]
     public int SiteId { get; init; }
 }
 
 public sealed class CreateLineRequest : CreateFactoryItemRequest
 {
-    [Range(1, int.MaxValue)]
     public int AreaId { get; init; }
 }
 
 public sealed class CreateStationRequest : CreateFactoryItemRequest
 {
-    [Range(1, int.MaxValue)]
     public int LineId { get; init; }
-
-    [Required, AllowedValues(StationTypes.Smt, StationTypes.Assembly, StationTypes.Test, StationTypes.Repair, StationTypes.Pack)]
     public string Type { get; init; } = string.Empty;
 }
 
@@ -54,9 +40,7 @@ public sealed class CreateStationRequest : CreateFactoryItemRequest
 
 public class UpdateFactoryItemRequest
 {
-    [Required, StringLength(200)]
     public string Name { get; init; } = string.Empty;
-
     public bool IsActive { get; init; } = true;
 }
 
@@ -66,7 +50,6 @@ public sealed class UpdateLineRequest : UpdateFactoryItemRequest;
 
 public sealed class UpdateStationRequest : UpdateFactoryItemRequest
 {
-    [Required, AllowedValues(StationTypes.Smt, StationTypes.Assembly, StationTypes.Test, StationTypes.Repair, StationTypes.Pack)]
     public string Type { get; init; } = string.Empty;
 }
 

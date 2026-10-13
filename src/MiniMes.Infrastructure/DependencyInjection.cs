@@ -2,14 +2,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using MiniMes.Application.Audit;
 using MiniMes.Application.Auth;
 using MiniMes.Application.Common;
-using MiniMes.Application.Factory;
-using MiniMes.Infrastructure.Audit;
 using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Auth;
-using MiniMes.Infrastructure.Factory;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Interceptors;
 
@@ -40,13 +36,9 @@ public static class DependencyInjection
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
+        services.AddSingleton<IPasswordVerifier, PasswordVerifier>();
         services.AddSingleton<JwtTokenService>();
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IAuditLogQuery, AuditLogQuery>();
-        services.AddScoped<ISiteService, SiteService>();
-        services.AddScoped<IAreaService, AreaService>();
-        services.AddScoped<ILineService, LineService>();
-        services.AddScoped<IStationService, StationService>();
+        services.AddSingleton<ITokenIssuer>(sp => sp.GetRequiredService<JwtTokenService>());
         services.AddScoped<DevSeeder>();
         return services;
     }

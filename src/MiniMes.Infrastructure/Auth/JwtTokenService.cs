@@ -3,16 +3,26 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using MiniMes.Application.Auth;
+using MiniMes.Domain.Users;
 
 namespace MiniMes.Infrastructure.Auth;
 
 // Uses JsonWebTokenHandler: the same handler JwtBearer uses to read tokens since .NET 8.
-public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider time)
+public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider time) : ITokenIssuer
 {
     public const string RoleClaim = "role";
     public const string StationClaim = "station";
 
-    public (string Token, DateTime ExpiresAtUtc) CreateToken(
+    public IssuedToken IssueUserToken(string employeeCode, string fullName, IReadOnlyList<string> roles)
+        => CreateToken(employeeCode, fullName, roles, stationCode: null,
+            TimeSpan.FromMinutes(options.Value.UserTokenMinutes));
+
+    public IssuedToken IssueOperatorToken(string employeeCode, string fullName, string stationCode)
+        => CreateToken(employeeCode, fullName, [nameof(Role.Operator)], stationCode,
+            TimeSpan.FromHours(options.Value.OperatorTokenHours));
+
+    public IssuedToken CreateToken(
         string employeeCode, string fullName, IEnumerable<string> roles, string? stationCode, TimeSpan lifetime)
     {
         var o = options.Value;
@@ -35,6 +45,6 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider t
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(o.Key)), SecurityAlgorithms.HmacSha256),
         };
 
-        return (new JsonWebTokenHandler().CreateToken(descriptor), expires);
+        return new IssuedToken(new JsonWebTokenHandler().CreateToken(descriptor), expires);
     }
 }

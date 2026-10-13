@@ -4,7 +4,7 @@ using MiniMes.Domain.Common;
 namespace MiniMes.Domain.Factory;
 
 // Codes go into MQTT topics (minimes/{site}/{area}/{line}/...), so no spaces, slashes or '+'/'#'.
-// The API validates the same pattern (Contracts CodeRules) and answers 400; this is the safety net
+// Application validators reuse these constants and answer 400; this is the safety net
 // for any other path (seeder, Excel import in M1).
 public static partial class FactoryRules
 {
