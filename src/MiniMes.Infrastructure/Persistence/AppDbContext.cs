@@ -1,5 +1,8 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using MiniMes.Application.Common;
 using MiniMes.Domain.Audit;
+using MiniMes.Domain.Common;
 using MiniMes.Domain.Factory;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
@@ -12,7 +15,7 @@ using MiniMes.Domain.Users;
 
 namespace MiniMes.Infrastructure.Persistence;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IAppDbContext
 {
     // M0: factory model, users, audit
     public DbSet<Site> Sites => Set<Site>();
@@ -35,4 +38,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+    // The one place that knows SQL Server error numbers: a unique-index violation means two requests
+    // raced past the handler's "already exists" check, which is a 409 for the caller, not a 500.
+    public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await base.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            throw new ConflictException("This record already exists (it may have just been created by someone else). Reload and try again.");
+        }
+    }
 }

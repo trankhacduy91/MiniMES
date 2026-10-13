@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using MiniMes.Api.Auth;
 using MiniMes.Api.Middleware;
 using MiniMes.Api.OpenApi;
+using MiniMes.Application;
 using MiniMes.Application.Common;
 using MiniMes.Infrastructure;
 using MiniMes.Infrastructure.Auth;
@@ -28,6 +29,7 @@ builder.Services.AddOpenApi(o => o.AddDocumentTransformer<BearerSecuritySchemeTr
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddHealthChecks();
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();

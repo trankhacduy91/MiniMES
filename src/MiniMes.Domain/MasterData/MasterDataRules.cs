@@ -7,10 +7,11 @@ namespace MiniMes.Domain.MasterData;
 // so they are upper-case and limited to A-Z 0-9 - _ . (spec M1 1.4 rule 1).
 public static partial class MasterDataRules
 {
+    public const string CodePattern = "^[A-Z0-9._-]+$";
     public const int CodeMaxLength = 50;
     public const int NameMaxLength = 200;
 
-    [GeneratedRegex("^[A-Z0-9._-]+$")]
+    [GeneratedRegex(CodePattern)]
     private static partial Regex CodeRegex();
 
     public static void RequireCode(string code, string what)

@@ -17,7 +17,7 @@ public class DependencyTests
         new("MiniMes.Domain", [], null),
         new("MiniMes.Contracts", [], null),
         new("MiniMes.Application", ["MiniMes.Domain", "MiniMes.Contracts"],
-            ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore.SqlServer", "Serilog"]),
+            ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore.SqlServer", "Microsoft.Data.SqlClient", "Serilog"]),
         new("MiniMes.Infrastructure", ["MiniMes.Application"], []),
         new("MiniMes.Api", ["MiniMes.Application", "MiniMes.Infrastructure"], []),
         // Clients only talk to the API: no path to the database, ever.
@@ -95,6 +95,17 @@ public class DependencyTests
         Assert.Equal("net10.0", csproj.Descendants("TargetFramework").Single().Value.Trim());
         Assert.Empty(csproj.Descendants("UseWPF"));
         Assert.Empty(csproj.Descendants("UseWindowsForms"));
+    }
+
+    // MediatR 13+ is commercially licensed; the project stays on 12.x (Apache 2.0), see CLAUDE.md.
+    [Fact]
+    public void MediatR_stays_on_version_12()
+    {
+        var version = LoadCsproj("MiniMes.Application").Descendants("PackageReference")
+            .Single(e => (string?)e.Attribute("Include") == "MediatR")
+            .Attribute("Version")!.Value;
+
+        Assert.StartsWith("12.", version);
     }
 
     private static XDocument LoadCsproj(string project)

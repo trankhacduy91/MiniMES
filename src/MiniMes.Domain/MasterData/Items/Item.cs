@@ -37,7 +37,31 @@ public class Item : AuditableEntity, IAudited
         };
     }
 
+    // Code, Type, Uom and traceability flags never change after creation: BOMs, lots and serials rely on them.
+    public void Rename(string name)
+    {
+        MasterDataRules.RequireName(name);
+        Name = name;
+    }
+
+    // QC decides which purchased parts skip incoming inspection (M6).
+    public void SetSkipIqc(bool skipIqc)
+    {
+        if (skipIqc && Type != ItemType.Raw)
+            throw new DomainException("SkipIqc is only valid for Raw items (IQC inspects purchased material).");
+        SkipIqc = skipIqc;
+    }
+
     public void SetActive(bool isActive) => IsActive = isActive;
+
+    // How each type is traced (spec M1 1.2.1): raw material by lot, finished goods by serial,
+    // semi-finished follows the finished good's serial (assigned at WO release) so has neither.
+    public static (bool IsSerialized, bool IsLotControlled) ExpectedTraceability(ItemType type) => type switch
+    {
+        ItemType.Raw => (false, true),
+        ItemType.Finished => (true, false),
+        _ => (false, false),
+    };
 
     private static void RequireUom(string uom)
     {
@@ -45,16 +69,9 @@ public class Item : AuditableEntity, IAudited
             throw new DomainException($"Unit '{uom}' is not supported. Use one of: {string.Join(", ", Units.All)}.");
     }
 
-    // How each type is traced (spec M1 1.2.1): raw material by lot, finished goods by serial,
-    // semi-finished follows the finished good's serial (assigned at WO release) so has neither.
     private static void RequireTraceability(ItemType type, bool isSerialized, bool isLotControlled, bool skipIqc)
     {
-        var (serial, lot) = type switch
-        {
-            ItemType.Raw => (false, true),
-            ItemType.Finished => (true, false),
-            _ => (false, false),
-        };
+        var (serial, lot) = ExpectedTraceability(type);
         if (isSerialized != serial || isLotControlled != lot)
             throw new DomainException(
                 $"{type} items must have IsSerialized={serial} and IsLotControlled={lot}.");

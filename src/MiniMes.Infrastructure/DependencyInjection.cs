@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Audit;
 using MiniMes.Application.Auth;
+using MiniMes.Application.Common;
 using MiniMes.Application.Factory;
 using MiniMes.Infrastructure.Audit;
 using MiniMes.Domain.Users;
@@ -23,6 +24,7 @@ public static class DependencyInjection
 
         // Scoped like the DbContext: the interceptor keeps per-save state (pending Added entries, own transaction).
         services.AddScoped<AuditSaveChangesInterceptor>();
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>()); // same instance per request
 
         // Compatibility level 160 = SQL Server 2022, so EF does not emit newer syntax.
         // No EnableRetryOnFailure: the retrying strategy rejects the transaction the interceptor opens.

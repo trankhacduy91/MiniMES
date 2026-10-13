@@ -6,6 +6,8 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 
 **Stack:** .NET 10 (LTS) · ASP.NET Core (Controller) · EF Core 10 + SQL Server 2022 · WPF (MVVM, CommunityToolkit.Mvvm) · Serilog · JWT · xUnit + Testcontainers · Docker Compose (SQL Server, Mosquitto) · GitHub Actions.
 
+**License thư viện:** MediatR được ghim ở **12.x** (Apache 2.0); từ v13 MediatR chuyển sang license thương mại (có bản Community cần đăng ký key), nên không nâng cấp. Test `MediatR_stays_on_version_12` chặn việc vô tình nâng. FluentValidation, ClosedXML: Apache 2.0 / MIT.
+
 **Trạng thái:** Module 0 (nền tảng) xong: solution Clean Architecture, Docker, đăng nhập theo role, audit trail không sửa được, API cấu hình nhà máy, CI, 2 app WPF đăng nhập được. Các module nghiệp vụ (M1 → M7) làm tiếp theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
