@@ -1,0 +1,61 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.MasterData.ItemListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+    <!-- DataContext = ItemListViewModel. Filtering and paging happen on the server. -->
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.ItemList_Title}" Style="{StaticResource PageTitle}" />
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBox AutomationProperties.AutomationId="Search" Width="220" Padding="3"
+                     ToolTip="{x:Static res:Strings.ItemList_SearchHint}"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Enter" Command="{Binding SearchCommand}" />
+                </TextBox.InputBindings>
+            </TextBox>
+            <ComboBox AutomationProperties.AutomationId="TypeFilter" Width="110" Margin="6,0,0,0"
+                      ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding TypeFilter}" />
+            <CheckBox AutomationProperties.AutomationId="ShowInactive" Content="{x:Static res:Strings.Common_ShowInactive}"
+                      IsChecked="{Binding ShowInactive}" VerticalAlignment="Center" Margin="10,0" />
+            <Button AutomationProperties.AutomationId="SearchButton" Content="{x:Static res:Strings.Common_Search}"
+                    Command="{Binding SearchCommand}" Style="{StaticResource ToolButton}" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button AutomationProperties.AutomationId="New" Content="{x:Static res:Strings.Common_New}"
+                    Command="{Binding NewCommand}" Style="{StaticResource ToolButton}" />
+            <Button AutomationProperties.AutomationId="Edit" Content="{x:Static res:Strings.Common_Edit}"
+                    Command="{Binding EditCommand}" Style="{StaticResource ToolButton}" />
+            <Button AutomationProperties.AutomationId="Deactivate" Content="{x:Static res:Strings.Common_Deactivate}"
+                    Command="{Binding DeactivateCommand}" Style="{StaticResource ToolButton}" />
+        </StackPanel>
+
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="{x:Static res:Strings.Common_Previous}" Command="{Binding PreviousPageCommand}" Style="{StaticResource ToolButton}" />
+                <Button Content="{x:Static res:Strings.Common_Next}" Command="{Binding NextPageCommand}" Style="{StaticResource ToolButton}" />
+            </StackPanel>
+            <TextBlock AutomationProperties.AutomationId="PageInfo" Text="{Binding PageText}" VerticalAlignment="Center" />
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
+                   Style="{StaticResource PageError}" />
+
+        <DataGrid AutomationProperties.AutomationId="ItemsGrid" ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}"
+                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column">
+            <DataGrid.InputBindings>
+                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditCommand}" />
+            </DataGrid.InputBindings>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{x:Static res:Strings.Item_Code}" Binding="{Binding Code}" Width="160" />
+                <DataGridTextColumn Header="{x:Static res:Strings.Item_Name}" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="{x:Static res:Strings.Item_Type}" Binding="{Binding Type}" Width="80" />
+                <DataGridTextColumn Header="{x:Static res:Strings.Item_Uom}" Binding="{Binding Uom}" Width="60" />
+                <DataGridCheckBoxColumn Header="{x:Static res:Strings.Item_IsSerialized}" Binding="{Binding IsSerialized}" Width="80" />
+                <DataGridCheckBoxColumn Header="{x:Static res:Strings.Item_IsLotControlled}" Binding="{Binding IsLotControlled}" Width="100" />
+                <DataGridCheckBoxColumn Header="{x:Static res:Strings.Item_SkipIqc}" Binding="{Binding SkipIqc}" Width="70" />
+                <DataGridCheckBoxColumn Header="{x:Static res:Strings.Common_Active}" Binding="{Binding IsActive}" Width="60" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

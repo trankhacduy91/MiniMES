@@ -3,10 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
         xmlns:vm="clr-namespace:MiniMes.Client.Core.ViewModels;assembly=MiniMes.Client.Core"
+        xmlns:md="clr-namespace:MiniMes.Client.Core.ViewModels.MasterData;assembly=MiniMes.Client.Core"
         xmlns:views="clr-namespace:MiniMes.BackOffice.Wpf.Views"
+        xmlns:mdviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.MasterData"
         Title="{x:Static res:Strings.BackOffice_Title}"
         AutomationProperties.Name="{x:Static res:Strings.BackOffice_Title}"
-        Width="900" Height="600" WindowStartupLocation="CenterScreen">
+        Width="1200" Height="760" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <!-- ViewModel type -> View. Navigation swaps CurrentViewModel; WPF picks the matching template. -->
         <DataTemplate DataType="{x:Type vm:UserLoginViewModel}">
@@ -14,6 +16,16 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:HomeViewModel}">
             <views:HomeView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:BackOfficeShellViewModel}">
+            <views:ShellView />
+        </DataTemplate>
+        <!-- Pages shown inside the shell -->
+        <DataTemplate DataType="{x:Type md:ItemListViewModel}">
+            <mdviews:ItemListView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type md:ItemEditViewModel}">
+            <mdviews:ItemEditView />
         </DataTemplate>
     </Window.Resources>
 

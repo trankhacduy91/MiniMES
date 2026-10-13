@@ -1,9 +1,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MiniMes.Client.Core.Api;
 using MiniMes.Client.Core.Auth;
 using MiniMes.Client.Core.Http;
+using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.ViewModels;
+using MiniMes.Client.Core.ViewModels.MasterData;
 
 namespace MiniMes.Client.Core;
 
@@ -34,6 +37,19 @@ public static class DependencyInjection
         services.AddTransient<UserLoginViewModel>();
         services.AddTransient<OperatorLoginViewModel>();
         services.AddTransient<HomeViewModel>();
+        return services;
+    }
+
+    // BackOffice only: the Kiosk has no master data screens and no IDialogService, and DI validation
+    // (ValidateOnBuild in Development) would fail on ViewModels it cannot build.
+    public static IServiceCollection AddBackOfficeViewModels(this IServiceCollection services)
+    {
+        services.AddTransient<IMasterDataApi, MasterDataApi>();
+        services.AddSingleton<IPageNavigator, PageNavigator>(); // one content area; the shell clears it on logout
+
+        services.AddTransient<BackOfficeShellViewModel>();
+        services.AddTransient<ItemListViewModel>();
+        services.AddTransient<ItemEditViewModel>();
         return services;
     }
 }

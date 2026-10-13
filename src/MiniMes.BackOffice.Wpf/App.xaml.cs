@@ -25,8 +25,10 @@ public partial class App : Application
         });
 
         builder.Services.AddMiniMesClientCore(builder.Configuration);
+        builder.Services.AddBackOfficeViewModels();
         builder.Services.AddSingleton<Navigation>();
         builder.Services.AddSingleton<INavigation>(sp => sp.GetRequiredService<Navigation>());
+        builder.Services.AddSingleton<IDialogService, DialogService>();
         builder.Services.AddSingleton<MainWindow>();
         _host = builder.Build();
 

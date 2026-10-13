@@ -20,7 +20,34 @@ public sealed class ApiClient(HttpClient http)
     public Task<TResponse> PutAsync<TRequest, TResponse>(string url, TRequest body, CancellationToken ct = default)
         => SendAsync<TResponse>(new HttpRequestMessage(HttpMethod.Put, url) { Content = JsonContent.Create(body) }, ct);
 
+    // Commands that answer 204 No Content (deactivate, delete).
+    public async Task PostAsync(string url, CancellationToken ct = default)
+        => (await SendCoreAsync(new HttpRequestMessage(HttpMethod.Post, url), ct)).Dispose();
+
+    public async Task DeleteAsync(string url, CancellationToken ct = default)
+        => (await SendCoreAsync(new HttpRequestMessage(HttpMethod.Delete, url), ct)).Dispose();
+
+    public async Task<byte[]> GetBytesAsync(string url, CancellationToken ct = default)
+    {
+        using var response = await SendCoreAsync(new HttpRequestMessage(HttpMethod.Get, url), ct);
+        return await response.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    // multipart/form-data with one file field (the Excel import).
+    public Task<TResponse> PostFileAsync<TResponse>(string url, string field, string fileName, byte[] content, CancellationToken ct = default)
+        => SendAsync<TResponse>(new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = new MultipartFormDataContent { { new ByteArrayContent(content), field, fileName } },
+        }, ct);
+
     private async Task<T> SendAsync<T>(HttpRequestMessage request, CancellationToken ct)
+    {
+        using var response = await SendCoreAsync(request, ct);
+        return (await response.Content.ReadFromJsonAsync<T>(ct))!;
+    }
+
+    // Success: the open response (caller disposes). Failure: ApiException with a user-facing message.
+    private async Task<HttpResponseMessage> SendCoreAsync(HttpRequestMessage request, CancellationToken ct)
     {
         HttpResponseMessage response;
         try
@@ -33,13 +60,9 @@ public sealed class ApiClient(HttpClient http)
             throw new ApiException(null, Strings.Error_CannotReachServer);
         }
 
+        if (response.IsSuccessStatusCode) return response;
         using (response)
-        {
-            if (response.IsSuccessStatusCode)
-                return (await response.Content.ReadFromJsonAsync<T>(ct))!;
-
             throw await ToApiExceptionAsync(response, ct);
-        }
     }
 
     private static async Task<ApiException> ToApiExceptionAsync(HttpResponseMessage response, CancellationToken ct)
@@ -61,7 +84,7 @@ public sealed class ApiClient(HttpClient http)
         if ((int)response.StatusCode >= 500 && correlationId is not null)
             message = string.Format(Strings.Error_WithReference, message, correlationId);
 
-        return new ApiException(response.StatusCode, message, correlationId);
+        return new ApiException(response.StatusCode, message, correlationId, problem?.Errors);
     }
 
     private static async Task<ProblemDto?> TryReadProblemAsync(HttpResponseMessage response, CancellationToken ct)

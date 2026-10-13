@@ -2,8 +2,35 @@
      (with StartupUri WPF would also open its own MainWindow -> two windows). -->
 <Application x:Class="MiniMes.BackOffice.Wpf.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:MiniMes.BackOffice.Wpf">
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <local:InverseBooleanConverter x:Key="Not" />
+
+        <!-- Shared look of the master data pages -->
+        <Style x:Key="PageTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,8,0,2" />
+        </Style>
+        <!-- The message under a box; bound to FieldErrors[Name] (client rule or server answer). -->
+        <Style x:Key="FieldError" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="Firebrick" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="PageError" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="Firebrick" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,8,0,0" />
+        </Style>
+        <Style x:Key="ToolButton" TargetType="Button">
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="MinWidth" Value="80" />
+        </Style>
     </Application.Resources>
 </Application>

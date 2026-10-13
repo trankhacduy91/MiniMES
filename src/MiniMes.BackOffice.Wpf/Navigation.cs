@@ -15,5 +15,11 @@ public sealed partial class Navigation(IServiceProvider services) : ObservableOb
 
     public void ShowLogin() => CurrentViewModel = services.GetRequiredService<UserLoginViewModel>();
 
-    public void ShowHome() => CurrentViewModel = services.GetRequiredService<HomeViewModel>();
+    // BackOffice home = the master data shell (menu + pages); it opens the item list itself.
+    public void ShowHome()
+    {
+        var shell = services.GetRequiredService<BackOfficeShellViewModel>();
+        CurrentViewModel = shell;
+        _ = shell.StartAsync(); // page errors are shown inside the page, never thrown from here
+    }
 }

@@ -1,0 +1,22 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.ShellView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+    <!-- DataContext = BackOfficeShellViewModel. Menu left, current page right (DataTemplates in MainWindow). -->
+    <DockPanel>
+        <Border DockPanel.Dock="Left" Width="180" Background="#F2F4F7" Padding="8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Bottom">
+                    <TextBlock Text="{Binding WelcomeText}" TextWrapping="Wrap" FontSize="11" Foreground="Gray" Margin="0,0,0,6" />
+                    <Button AutomationProperties.AutomationId="Logout" Content="{x:Static res:Strings.Menu_Logout}"
+                            Command="{Binding LogoutCommand}" Padding="6,3" />
+                </StackPanel>
+                <StackPanel>
+                    <Button AutomationProperties.AutomationId="MenuItems" Content="{x:Static res:Strings.Menu_Items}"
+                            Command="{Binding ShowItemsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+        <ContentControl Content="{Binding Pages.CurrentPage}" Margin="16" />
+    </DockPanel>
+</UserControl>

@@ -86,4 +86,94 @@
   <data name="Kiosk_WindowTitle" xml:space="preserve">
     <value>MiniMes Kiosk</value>
   </data>
+  <data name="Common_All" xml:space="preserve">
+    <value>(All)</value>
+  </data>
+  <data name="Common_Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Common_New" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="Common_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Common_Deactivate" xml:space="preserve">
+    <value>Deactivate</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common_ShowInactive" xml:space="preserve">
+    <value>Show inactive</value>
+  </data>
+  <data name="Common_Previous" xml:space="preserve">
+    <value>&lt; Previous</value>
+  </data>
+  <data name="Common_Next" xml:space="preserve">
+    <value>Next &gt;</value>
+  </data>
+  <data name="Common_PageInfo" xml:space="preserve">
+    <value>Page {0} of {1} ({2} rows)</value>
+  </data>
+  <data name="Common_ConfirmDeactivate" xml:space="preserve">
+    <value>Deactivate {0}? It stays in history but can no longer be picked for new data.</value>
+  </data>
+  <data name="Common_Active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Menu_Items" xml:space="preserve">
+    <value>Items</value>
+  </data>
+  <data name="Menu_Logout" xml:space="preserve">
+    <value>Log out</value>
+  </data>
+  <data name="Item_Code" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="Item_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Item_Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Item_Uom" xml:space="preserve">
+    <value>UoM</value>
+  </data>
+  <data name="Item_IsSerialized" xml:space="preserve">
+    <value>Serialized</value>
+  </data>
+  <data name="Item_IsLotControlled" xml:space="preserve">
+    <value>Lot-controlled</value>
+  </data>
+  <data name="Item_SkipIqc" xml:space="preserve">
+    <value>Skip IQC</value>
+  </data>
+  <data name="ItemList_Title" xml:space="preserve">
+    <value>Items</value>
+  </data>
+  <data name="ItemList_SearchHint" xml:space="preserve">
+    <value>Code or name contains</value>
+  </data>
+  <data name="ItemEdit_TitleNew" xml:space="preserve">
+    <value>New item</value>
+  </data>
+  <data name="ItemEdit_TitleEdit" xml:space="preserve">
+    <value>Edit item {0}</value>
+  </data>
+  <data name="ItemEdit_TraceabilityHint" xml:space="preserve">
+    <value>Raw = lot-controlled, Finished = serialized, Semi = neither. Code, type, UoM and traceability cannot change after saving.</value>
+  </data>
+  <data name="Validation_Required" xml:space="preserve">
+    <value>{0} is required.</value>
+  </data>
+  <data name="Validation_MaxLength" xml:space="preserve">
+    <value>{0} must be at most {1} characters.</value>
+  </data>
+  <data name="Validation_CodeFormat" xml:space="preserve">
+    <value>Use only A-Z, 0-9, '.', '_' and '-' (no spaces).</value>
+  </data>
 </root>
