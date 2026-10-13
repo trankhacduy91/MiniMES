@@ -166,6 +166,6 @@ Bẫy cần test: quên scrap ở cấp giữa thì điện trở ra 2448 (thi�
 4. **`Category` của DefectCode là chuỗi** (danh mục mở: Solder, Component, Functional, Cosmetic…); `Category` của DowntimeReason là enum `Planned`/`Unplanned` (công thức OEE ở M5 dựa vào nó).
 5. **Mã Item** dùng `A–Z 0–9 - _ .` (spec 1.4 quy tắc 1), khác mã Site/Line/Station của M0 (`A–Z 0–9 -`, vì mã M0 nằm trong topic MQTT).
 
-### Câu hỏi mở (chốt trước bước 6)
+### Câu hỏi mở (đã chốt ở bước 6, 13/10/2026)
 
-- **Làm tròn NVL đơn vị liên tục (`kg`):** giá trị chính xác là 0,12726 kg, spec ghi 0,127 kg. Spec chỉ nói "giữ thập phân". Đề xuất: API trả **giá trị chính xác** (không làm tròn, để không cấp thiếu), WPF hiển thị 3 chữ số thập phân; test DoD so `Math.Round(x, 3) == 0.127`.
+- **Làm tròn NVL đơn vị liên tục (`kg`):** chốt theo đề xuất. API explode trả `ExactQty` (chính xác) và `RequiredQty` (`pcs` làm tròn lên, `kg/g/m` giữ giá trị chính xác 0,12726 để không cấp thiếu); WPF hiển thị 3 chữ số thập phân; test DoD so `Math.Round(x, 3) == 0.127`. Xem ADR-005.

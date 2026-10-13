@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniMes.Application.MasterData.Boms;
 using MiniMes.Application.MasterData.Items;
 using MiniMes.Contracts.Common;
 using MiniMes.Contracts.MasterData;
@@ -20,6 +21,16 @@ public class ItemsController(ISender sender) : ControllerBase
 
     [HttpGet("{id:int}")]
     public Task<ItemDto> Get(int id, CancellationToken ct) => sender.Send(new GetItemByIdQuery(id), ct);
+
+    // Total material need for qty units, every level (one recursive CTE). Semi without a BOM -> 422.
+    [HttpGet("{id:int}/explosion")]
+    public Task<BomExplosionDto> Explosion(int id, [FromQuery] ExplosionFilter f, CancellationToken ct)
+        => sender.Send(new GetBomExplosionQuery(id, f.Qty, f.AsOfUtc), ct);
+
+    // The same explosion kept as a tree, for the BOM TreeView.
+    [HttpGet("{id:int}/bom-tree")]
+    public Task<BomTreeNodeDto> BomTree(int id, [FromQuery] ExplosionFilter f, CancellationToken ct)
+        => sender.Send(new GetBomTreeQuery(id, f.Qty, f.AsOfUtc), ct);
 
     [Authorize(Roles = nameof(Role.Admin))]
     [HttpPost]

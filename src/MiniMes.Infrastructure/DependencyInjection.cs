@@ -4,10 +4,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Auth;
 using MiniMes.Application.Common;
+using MiniMes.Application.MasterData.Boms;
 using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Auth;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Interceptors;
+using MiniMes.Infrastructure.Persistence.Queries;
 
 namespace MiniMes.Infrastructure;
 
@@ -39,6 +41,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordVerifier, PasswordVerifier>();
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<ITokenIssuer>(sp => sp.GetRequiredService<JwtTokenService>());
+        services.AddScoped<IBomExplosionQuery, BomExplosionQuery>();
         services.AddScoped<DevSeeder>();
         return services;
     }

@@ -99,3 +99,24 @@ API chỉ có `GET /api/audit-logs` (Admin). Integration test chạy `UPDATE`/`D
 - *Ledger table (SQL Server 2022):* chống giả mạo mạnh hơn (hash chain), nhưng nặng hơn cần thiết ở MVP; là bước tiếp theo nếu cần.
 
 **Đánh đổi / giới hạn (nói thật khi phỏng vấn).** Người có quyền `ALTER` bảng (db_owner, sysadmin) vẫn có thể `DISABLE TRIGGER` hoặc `TRUNCATE` (TRUNCATE không kích hoạt trigger DELETE). Muốn chặn cả họ cần tách quyền DBA và quyền ứng dụng, bật SQL Server Audit để ghi lại chính các lệnh đó, hoặc dùng Ledger table.
+
+## ADR-005: Explode BOM bằng recursive CTE, cây BOM dựng trong bộ nhớ
+
+**Bối cảnh.** Explode BOM (tổng nhu cầu NVL cho N thành phẩm, mọi cấp) là truy vấn lõi của M1, sẽ được M2 (snapshot khi release WO) và M6 (truy xuất) dùng lại. Cách ngây thơ là gọi DB cho từng cấp/từng Item: cây 3 cấp × 9 dòng đã là hàng chục round-trip (N+1), cây thật vài trăm dòng thì chậm theo độ sâu.
+
+**Quyết định.**
+
+1. `GET /api/items/{id}/explosion?qty=&asOfUtc=` chạy **một** recursive CTE (`Infrastructure/Persistence/Queries/BomExplosionQuery.cs`): anchor = con trực tiếp của gốc, phần đệ quy nhân dồn `QtyPer × (1 + ScrapRate)` xuống từng cấp, cuối cùng `GROUP BY` để **cộng các nhánh**. Chỉ dùng version Approved hiệu lực tại `asOf` (`[EffectiveFrom, EffectiveTo)`). `CAST(... AS decimal(28,9))` để không mất lẻ; `OPTION (MAXRECURSION 50)` để dữ liệu lỡ có vòng thì báo lỗi 530 (đổi thành 422) thay vì chạy mãi.
+2. Application chỉ thấy interface `IBomExplosionQuery`; SQL thô là chi tiết của Infrastructure.
+3. Làm tròn **một lần, trên tổng**, trong Domain (`Units.RoundRequirement`): `pcs` làm tròn lên; `kg/g/m` giữ giá trị chính xác (0,12726 kg, không làm tròn xuống 0,127 để khỏi cấp thiếu; UI hiển thị 3 số lẻ). API trả cả `ExactQty` và `RequiredQty`.
+4. `GET /api/items/{id}/bom-tree` (cho WPF `TreeView`) tải mọi BOM hiệu lực trong **một** truy vấn rồi đệ quy trong bộ nhớ (`Domain/MasterData/Boms/BomExplosion.cs`, hàm thuần, có unit test với bảng PCB-A).
+5. Semi không có BOM hiệu lực → 422 kèm danh sách mã (nếu không, cả nhánh biến mất khỏi kết quả mà không ai biết).
+
+Integration test (Testcontainers SQL Server) so CTE với bảng của spec (202, 204, 2473, 4121, 204, 0,127 kg, 201, 201, 200) và **đối chiếu** tổng cộng từ cây với kết quả CTE: hai cách tính độc lập phải ra cùng số.
+
+**Phương án đã loại.**
+- *Đệ quy trong C# gọi DB mỗi cấp:* N+1 round-trip.
+- *Tải hết BOM vào bộ nhớ rồi tính cho cả explode:* đơn giản và đủ nhanh với dữ liệu MVP (đã dùng cho `bom-tree`), nhưng kéo cả bảng BOM về ứng dụng khi chỉ cần một cây; CTE để DB lọc và tổng hợp.
+- *Bảng tính sẵn (materialized/closure table):* nhanh khi đọc nhưng phải đồng bộ mỗi lần Approve; thừa cho MVP.
+
+**Đánh đổi / giới hạn.** Có hai cài đặt cùng một phép tính (SQL và C#): phải giữ chúng khớp, nên có test đối chiếu. SQL thô không được compiler kiểm tra tên bảng/cột: test tích hợp chạy trên SQL Server thật là lưới an toàn. Dữ liệu lớn sẽ cần index `Boms(ItemId, Status, EffectiveFrom)` (đo ở M3).

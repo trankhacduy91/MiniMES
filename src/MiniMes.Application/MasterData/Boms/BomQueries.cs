@@ -1,12 +1,29 @@
 using Microsoft.EntityFrameworkCore;
 using MiniMes.Application.Common;
 using MiniMes.Contracts.MasterData;
+using MiniMes.Domain.Common;
+using MiniMes.Domain.MasterData;
+using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Boms;
 
 namespace MiniMes.Application.MasterData.Boms;
 
 internal static class BomQueries
 {
+    // The version in force at asOf: Approved and asOf inside [EffectiveFrom, EffectiveTo). Rule 5 makes it unique.
+    public static IQueryable<Bom> EffectiveAt(this IQueryable<Bom> boms, DateTime asOfUtc)
+        => boms.Where(b => b.Status == VersionStatus.Approved && b.EffectiveFrom <= asOfUtc
+                           && (b.EffectiveTo == null || asOfUtc < b.EffectiveTo));
+
+    // Spec M1 2.5 trap: a Semi without an effective BOM silently drops its whole branch from the result.
+    public static void EnsureSemisHaveBom(IEnumerable<Item> items, ISet<int> itemsWithBom, DateTime asOfUtc)
+    {
+        var missing = items.Where(i => i.Type == ItemType.Semi && !itemsWithBom.Contains(i.Id)).Select(i => i.Code).ToList();
+        if (missing.Count > 0)
+            throw new DomainException(
+                $"Semi-finished item(s) without an approved BOM at {asOfUtc:yyyy-MM-dd HH:mm} UTC: {string.Join(", ", missing)}.");
+    }
+
     public static async Task<Bom> LoadBomAsync(this IAppDbContext db, int id, CancellationToken ct)
         => await db.Boms.Include(b => b.Lines).SingleOrDefaultAsync(b => b.Id == id, ct)
            ?? throw new KeyNotFoundException($"BOM {id} not found.");

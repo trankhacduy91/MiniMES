@@ -15,4 +15,9 @@ public static class Units
 
     // Discrete units are counted, so requirements round UP to whole numbers (only at the end of an explosion).
     public static bool IsDiscrete(string uom) => uom == Pieces;
+
+    // Applied once, to the exploded total. Continuous units keep the exact value: rounding 0.12726 kg
+    // down to 0.127 would issue too little; the UI shows 3 decimals.
+    public static decimal RoundRequirement(string uom, decimal exactQty)
+        => IsDiscrete(uom) ? Math.Ceiling(exactQty) : exactQty;
 }
