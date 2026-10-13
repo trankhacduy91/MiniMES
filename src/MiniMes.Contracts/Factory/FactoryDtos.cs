@@ -8,7 +8,7 @@ namespace MiniMes.Contracts.Factory;
 public sealed record SiteDto(int Id, string Code, string Name, bool IsActive);
 public sealed record AreaDto(int Id, int SiteId, string Code, string Name, bool IsActive);
 public sealed record LineDto(int Id, int AreaId, string Code, string Name, bool IsActive);
-public sealed record StationDto(int Id, int LineId, string Code, string Name, string Type, bool IsActive);
+public sealed record StationDto(int Id, int LineId, string Code, string Name, string Type, bool IsActive, int? WorkCenterId);
 
 // ---------- create (Code is set once: it is part of MQTT topics, so it cannot be changed later) ----------
 
@@ -34,6 +34,7 @@ public sealed class CreateStationRequest : CreateFactoryItemRequest
 {
     public int LineId { get; init; }
     public string Type { get; init; } = string.Empty;
+    public int? WorkCenterId { get; init; }   // M1: the routing operation this station does; null for Repair
 }
 
 // ---------- update (no Code; IsActive=false replaces delete) ----------
@@ -51,6 +52,7 @@ public sealed class UpdateLineRequest : UpdateFactoryItemRequest;
 public sealed class UpdateStationRequest : UpdateFactoryItemRequest
 {
     public string Type { get; init; } = string.Empty;
+    public int? WorkCenterId { get; init; }
 }
 
 // Mirrors Domain StationType names (Contracts cannot reference Domain); a unit test keeps them in sync.

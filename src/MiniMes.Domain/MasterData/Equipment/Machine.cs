@@ -30,6 +30,16 @@ public class Machine : AuditableEntity, IAudited
         DataSource = dataSource;
     }
 
+    // Code and MqttTopicKey are fixed: the gateway and the simulator subscribe/publish with them (M4).
+    public void Update(string name, string type, MachineDataSource dataSource)
+    {
+        MasterDataRules.RequireName(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(type);
+        Name = name;
+        Type = type;
+        DataSource = dataSource;
+    }
+
     public void SetActive(bool isActive) => IsActive = isActive;
 
     // '/' is the MQTT level separator, '+' and '#' are wildcards: any of them breaks subscriptions (M4).

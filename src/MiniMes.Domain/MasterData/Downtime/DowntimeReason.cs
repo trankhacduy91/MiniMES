@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using MiniMes.Domain.Common;
 
 namespace MiniMes.Domain.MasterData.Downtime;
@@ -22,11 +23,18 @@ public class DowntimeReason : AuditableEntity, IAudited
     public DowntimeReason(string code, string name, DowntimeCategory category, bool countsAgainstAvailability)
     {
         MasterDataRules.RequireCode(code, "Downtime reason");
+        Code = code;
+        Update(name, category, countsAgainstAvailability);
+    }
+
+    // Changing the OEE switch affects reports from now on; history keeps the stops it already has (M5).
+    [MemberNotNull(nameof(Name))]
+    public void Update(string name, DowntimeCategory category, bool countsAgainstAvailability)
+    {
         MasterDataRules.RequireName(name);
         // An unplanned stop can never be "excused" from Availability (spec M1 1.4 rule 12).
         if (category == DowntimeCategory.Unplanned && !countsAgainstAvailability)
             throw new DomainException("Unplanned downtime always counts against availability.");
-        Code = code;
         Name = name;
         Category = category;
         CountsAgainstAvailability = countsAgainstAvailability;

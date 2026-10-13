@@ -21,12 +21,12 @@ public class StationsController(ISender sender) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<StationDto>> Create(CreateStationRequest r, CancellationToken ct)
     {
-        var dto = await sender.Send(new CreateStationCommand(r.LineId, r.Code, r.Name, r.Type), ct);
+        var dto = await sender.Send(new CreateStationCommand(r.LineId, r.Code, r.Name, r.Type, r.WorkCenterId), ct);
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 
     [Authorize(Roles = nameof(Role.Admin))]
     [HttpPut("{id:int}")]
     public Task<StationDto> Update(int id, UpdateStationRequest r, CancellationToken ct)
-        => sender.Send(new UpdateStationCommand(id, r.Name, r.Type, r.IsActive), ct);
+        => sender.Send(new UpdateStationCommand(id, r.Name, r.Type, r.IsActive, r.WorkCenterId), ct);
 }

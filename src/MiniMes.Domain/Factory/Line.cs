@@ -25,7 +25,7 @@ public class Line : AuditableEntity, IAudited
     public Station AddStation(string code, string name, StationType type)
     {
         FactoryRules.RequireActiveParent(IsActive, "Line", Code);
-        var station = new Station(code, name, type);
+        var station = new Station(Id, code, name, type); // LineId known now, not only after SaveChanges
         Stations.Add(station);
         return station;
     }

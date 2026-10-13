@@ -26,5 +26,14 @@ public class WorkCenter : AuditableEntity, IAudited
         Type = type;
     }
 
+    // Code and LineId are fixed: routings, machines and stations point at this work center.
+    public void Update(string name, string type)
+    {
+        MasterDataRules.RequireName(name);
+        MasterDataRules.RequireCode(type, "Work center type");
+        Name = name;
+        Type = type;
+    }
+
     public void SetActive(bool isActive) => IsActive = isActive;
 }

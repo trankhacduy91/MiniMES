@@ -222,12 +222,17 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<int?>("WorkCenterId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
                         .IsUnique();
 
                     b.HasIndex("LineId");
+
+                    b.HasIndex("WorkCenterId");
 
                     b.ToTable("Stations");
                 });
@@ -830,6 +835,11 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .HasForeignKey("LineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.MasterData.Equipment.WorkCenter", null)
+                        .WithMany()
+                        .HasForeignKey("WorkCenterId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("MiniMes.Domain.MasterData.Boms.Bom", b =>

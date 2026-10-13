@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MiniMes.Domain.Factory;
+using MiniMes.Domain.MasterData.Equipment;
 
 namespace MiniMes.Infrastructure.Persistence.Configurations;
 
@@ -50,5 +51,7 @@ public class StationConfiguration : IEntityTypeConfiguration<Station>
         // Stored as text so SELECT * FROM Stations is readable.
         b.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
         b.HasIndex(x => x.Code).IsUnique();
+        // M1: which work center (routing operation) the station serves; null for Repair. Nullable FK.
+        b.HasOne<WorkCenter>().WithMany().HasForeignKey(x => x.WorkCenterId).OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -12,7 +12,7 @@ internal static class FactoryMapping
     public static SiteDto ToDto(this Site x) => new(x.Id, x.Code, x.Name, x.IsActive);
     public static AreaDto ToDto(this Area x) => new(x.Id, x.SiteId, x.Code, x.Name, x.IsActive);
     public static LineDto ToDto(this Line x) => new(x.Id, x.AreaId, x.Code, x.Name, x.IsActive);
-    public static StationDto ToDto(this Station x) => new(x.Id, x.LineId, x.Code, x.Name, x.Type.ToString(), x.IsActive);
+    public static StationDto ToDto(this Station x) => new(x.Id, x.LineId, x.Code, x.Name, x.Type.ToString(), x.IsActive, x.WorkCenterId);
 }
 
 // Same rules as Domain FactoryRules, checked first so the caller gets 400 with a message per field.

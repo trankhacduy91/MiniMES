@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using MiniMes.Domain.Common;
 
 namespace MiniMes.Domain.MasterData.DefectCodes;
@@ -18,11 +19,18 @@ public class DefectCode : AuditableEntity, IAudited
     public DefectCode(string code, string name, string category)
     {
         MasterDataRules.RequireCode(code, "Defect");
+        Code = code;
+        Update(name, category);
+    }
+
+    // Code is fixed: NG records and Pareto reports group by it.
+    [MemberNotNull(nameof(Name), nameof(Category))]
+    public void Update(string name, string category)
+    {
         MasterDataRules.RequireName(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(category);
         if (category.Length > CategoryMaxLength)
             throw new DomainException($"Category must be at most {CategoryMaxLength} characters.");
-        Code = code;
         Name = name;
         Category = category;
     }

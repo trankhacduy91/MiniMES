@@ -27,3 +27,11 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Cách tìm:** nghiệm thu đúng nghĩa: clone vào thư mục **tên khác** (để Docker tạo volume và DB mới), sao lưu user-secrets rồi đặt lại theo README, tắt stack dev đang chạy, và làm từng lệnh một như người lạ.
 - **Cách sửa:** README thêm `dotnet build` trước `dotnet ef database update`. Thêm vào mục "Gặp lỗi": mật khẩu SA lưu trong volume ở lần chạy đầu; user-secrets dùng chung giữa các bản clone trên một máy.
 - **Bài học:** máy dev có rất nhiều trạng thái ẩn (package đã restore, secrets, volume DB, container đang chạy). Tài liệu "cách cài đặt" chỉ đáng tin khi đã chạy thử trên môi trường sạch; đó cũng là lý do CI chạy trên máy sạch.
+
+## 2026-10-13 — Quy tắc Domain so khóa ngoại trước khi EF kịp gán (M1 bước 7)
+
+- **Triệu chứng (bắt được trước khi chạy, xác nhận bằng mutation):** tạo trạm mới kèm `WorkCenterId` của **đúng** line vẫn bị 422 "Work center is on another line".
+- **Nguyên nhân:** `line.AddStation(...)` chỉ thêm `Station` vào collection `Line.Stations`; EF chỉ điền `Station.LineId` lúc `SaveChanges` (relationship fix-up). Quy tắc `Station.AssignWorkCenter` chạy *trước* `SaveChanges` nên thấy `LineId = 0`.
+- **Cách tìm:** đọc lại luồng tạo entity con qua aggregate cha và hỏi "lúc quy tắc chạy, giá trị này đã có chưa?"; thử lại bằng mutation (truyền 0 như cũ) → integration test đỏ đúng chỗ.
+- **Cách sửa:** `Line.AddStation` truyền `Id` của line vào constructor của `Station`, nên `LineId` có ngay trong bộ nhớ.
+- **Bài học:** với EF, khóa ngoại của entity mới thêm qua navigation chưa có giá trị cho tới `SaveChanges`. Quy tắc Domain cần dữ liệu đó thì entity phải tự giữ nó, đừng dựa vào ORM. Unit test Domain không bắt được lỗi này (không có EF); integration test chạy qua API thật thì bắt được.
