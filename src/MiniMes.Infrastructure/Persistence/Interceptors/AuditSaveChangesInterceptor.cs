@@ -196,6 +196,8 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUser currentUser, TimePr
     {
         null => null,
         DateTime d => d.ToString("O", CultureInfo.InvariantCulture),
+        DateOnly d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        TimeOnly t => t.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
         IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
         _ => value.ToString(),
     };

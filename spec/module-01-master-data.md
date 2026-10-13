@@ -1103,11 +1103,12 @@ Luồng đọc:  GET /api/items/{id}/explosion?qty=200&asOf=...
 
 Tổng cộng khoảng 30 giờ (**[v2]** +4 giờ: bước 7 thêm `PlantCalendar`, bước 8b import Excel, SOP và máy mới trong seed). Mỗi bước kết thúc bằng một thứ chạy/kiểm tra được; commit sau mỗi bước.
 
-- [ ] **Bước 1 — ERD và chốt dữ liệu mẫu trên giấy** (1,5 giờ)
+- [x] **Bước 1 — ERD và chốt dữ liệu mẫu trên giấy** (1,5 giờ)
   - Mục tiêu: nhìn thấy toàn bộ bảng và quan hệ trước khi viết code.
   - Việc cần làm: vẽ ERD bằng Mermaid (hoặc dbdiagram.io); viết ra bảng số liệu `PCB-A` (mục 1.2.3, 1.2.4, 1.2.7) và kết quả explode 200 con làm "đáp án" cho test sau này; quyết định `Station.WorkCenterId` (mục 1.2.8).
   - File: `docs/erd-master-data.md`.
   - Kiểm tra: đối chiếu từng entity/cột trong spec mục "Entity chính" của M1 với ERD, không thiếu cột nào.
+  - **Ghi chú khi làm (13/10/2026):** `docs/erd-master-data.md` có ERD Mermaid, bảng cột + ràng buộc từng bảng, đối chiếu với "Entity chính" của spec (đủ), dữ liệu seed, đáp án explode (tính lại bằng code, khớp spec ở mọi NVL `pcs`). Quyết định: `Station.WorkCenterId` nullable ở M1 bước 7; Routing có `EffectiveFrom/To` như BOM (theo mục 1.2.6); Machine lấy Line qua WorkCenter (không có `LineId` riêng); `DefectCode.Category` là chuỗi, `DowntimeReason.Category` là enum. Câu hỏi mở: làm tròn NVL đơn vị liên tục (`SOLDER-PASTE` chính xác 0,12726 kg, spec ghi 0,127 kg).
   - ERD gợi ý:
 
 ```mermaid
@@ -1129,12 +1130,13 @@ erDiagram
     PLANT_CALENDAR { date Date PK  bool IsWorkingDay  string ShiftCodes  string Note }
 ```
 
-- [ ] **Bước 2 — Domain entities, EF configuration, migration** (3 giờ)
+- [x] **Bước 2 — Domain entities, EF configuration, migration** (3 giờ)
   - Mục tiêu: DB có đủ bảng master với ràng buộc đúng.
   - Việc cần làm: enum `ItemType`, `BomStatus`, `DowntimeCategory`, `[Flags] DaysOfWeek`; entity có constructor/factory giữ bất biến (`Item.Create`, `Bom.AddLine` chỉ khi Draft); `IEntityTypeConfiguration` cho từng entity (mục 2.3); unique index `Item.Code`, `(Bom.ItemId, Version)`, `Machine.MqttTopicKey`; check constraint `ScrapRate`; `OnDelete(Restrict)` cho FK tới Item; đăng ký bảng master vào danh sách audit của M0; migration `M1_MasterData`.
   - File: `src/MiniMes.Domain/MasterData/{Items,Boms,Routings,Equipment,Calendar,DefectCodes,Downtime}/*.cs`; `src/MiniMes.Infrastructure/Persistence/Configurations/*Configuration.cs`; `src/MiniMes.Infrastructure/Persistence/Migrations/`.
   - Kiểm tra: `dotnet ef database update` chạy; xem bảng trong SSMS/Azure Data Studio thấy index unique và check constraint; thử insert tay 2 Item cùng `Code` phải lỗi.
   - Unit test: `Bom.AddLine` trên BOM Approved ném lỗi; `Item.Create(Raw, isSerialized: true)` ném lỗi.
+  - **Ghi chú khi làm (13/10/2026):** đặt tên khác snippet: một enum `VersionStatus` (Draft/Approved) dùng chung cho BOM và Routing thay vì `BomStatus`; `[Flags] WorkDays` thay vì `DaysOfWeek` (tránh trùng `System.DayOfWeek`); class `Units` (pcs/kg/g/m, `IsDiscrete`) cho UoM, không có `reel` (reel là số lượng của lot, M6); entity `PlantCalendarDay` (bảng `PlantCalendar`, khóa là `Date`). Bảng số nhiều như M0 (`Items`, `Boms`...). Bất biến trong entity ném `DomainException`: cờ serial/lot theo Type, `SkipIqc` chỉ Raw, mã `A–Z 0–9 - _ .`, BOM/Routing chỉ sửa khi Draft, không tự tham chiếu, không trùng component/Seq, `ScrapRate` trong [0,1), Unplanned luôn tính Availability; `Bom.Approve`/`Routing.Approve` chỉ kiểm phần trong aggregate (kiểm chéo ở bước 5). Ràng buộc DB: 11 unique index, 4 check constraint (`ScrapRate`, `QtyPer>0`, cycle time > 0, Unplanned), FK tới Item/WorkCenter `Restrict`, `ShiftBreak` owned. Audit: mọi entity gắn `IAudited`; interceptor ghi `DateOnly`/`TimeOnly` dạng ISO. Kiểm tra: chèn trùng mã (kể cả khác hoa/thường), `ScrapRate = 2`, Unplanned không tính, xóa Item đang có BOM → đều bị DB chặn; 52 unit test mới (105/105), integration 29/29 (migration chạy được trên DB trống).
 
 - [ ] **Bước 3 — Một pattern CRUD hoàn chỉnh cho Item** (3 giờ)
   - Mục tiêu: có khuôn mẫu duy nhất để nhân ra các entity khác.
