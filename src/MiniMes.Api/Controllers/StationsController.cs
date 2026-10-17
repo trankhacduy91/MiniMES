@@ -45,4 +45,23 @@ public class StationsController(ISender sender) : ControllerBase
     [HttpPost("{id:int}/repair")]
     public Task<RepairResponse> Repair(int id, RepairRequest r, CancellationToken ct)
         => sender.Send(new CompleteRepairCommand(id, r.SerialNo, r.DefectCode, r.Action, r.ComponentReplaced, r.ReturnToSeq), ct);
+
+    // M3: the operator logs in at the station on a WO (from the line's dispatch list). Closes the station's previous
+    // session. 422 = WO of another line or not on the line; 409 = another kiosk opened one at the same instant.
+    [Authorize(Roles = $"{nameof(Role.Operator)},{nameof(Role.Admin)}")]
+    [HttpPost("{id:int}/sessions")]
+    public async Task<ActionResult<StationSessionDto>> OpenSession(int id, OpenSessionRequest r, CancellationToken ct)
+    {
+        var session = await sender.Send(new OpenStationSessionCommand(id, r.WorkOrderId), ct);
+        return StatusCode(StatusCodes.Status201Created, session);
+    }
+
+    // M3: logout / end of shift. 422 = already closed (the next shift's login closes it too).
+    [Authorize(Roles = $"{nameof(Role.Operator)},{nameof(Role.Supervisor)},{nameof(Role.Admin)}")]
+    [HttpDelete("{id:int}/sessions/{sessionId:long}")]
+    public async Task<IActionResult> CloseSession(int id, long sessionId, CancellationToken ct)
+    {
+        await sender.Send(new CloseStationSessionCommand(id, sessionId), ct);
+        return NoContent();
+    }
 }

@@ -30,3 +30,10 @@ public sealed record RepairResponse(string SerialNo, string Status, int? NextSte
 
 // POST /api/serials/{serialNo}/scrap (Supervisor).
 public sealed record ScrapRequest(string Reason);
+
+// POST /api/stations/{id}/sessions: the operator (badge login, JWT) starts working on a WO at this station.
+// Closes the station's previous session, if any.
+public sealed record OpenSessionRequest(int WorkOrderId);
+
+public sealed record StationSessionDto(long Id, int StationId, string StationCode, int WorkOrderId, string WoNo,
+    string OperatorCode, DateTime OpenedAt, DateTime? ClosedAt);

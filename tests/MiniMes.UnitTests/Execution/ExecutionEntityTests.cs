@@ -45,4 +45,22 @@ public class ExecutionEntityTests
         Assert.Equal(Now.AddHours(8), session.ClosedAt);
         Assert.Throws<DomainException>(() => session.Close(Now.AddHours(9)));
     }
+
+    // Step 5: a station runs only a WO of its own line that is on the line (the M2 dispatch list).
+    [Theory]
+    [InlineData(1, WorkOrderStatus.Released, true)]
+    [InlineData(1, WorkOrderStatus.InProgress, true)]
+    [InlineData(1, WorkOrderStatus.OnHold, true)]      // log in allowed; route check blocks the scans
+    [InlineData(2, WorkOrderStatus.Released, false)]   // another line
+    [InlineData(1, WorkOrderStatus.Draft, false)]
+    [InlineData(1, WorkOrderStatus.Completed, false)]
+    [InlineData(1, WorkOrderStatus.Closed, false)]
+    [InlineData(1, WorkOrderStatus.Cancelled, false)]
+    public void A_station_runs_only_an_order_of_its_line_that_is_on_the_line(int woLineId, WorkOrderStatus status, bool allowed)
+    {
+        var check = Record.Exception(() => StationSession.EnsureCanRun(stationLineId: 1, woLineId, "WO-2610-00001", status));
+
+        Assert.Equal(allowed, check is null);
+        if (!allowed) Assert.IsType<DomainException>(check);
+    }
 }

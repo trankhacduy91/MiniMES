@@ -12,7 +12,7 @@ namespace MiniMes.IntegrationTests.Execution;
 
 // Spec M3 step 3: POST /api/stations/{id}/scan end to end on SQL Server, seeded Line 1 stations
 // (L1-SMT-01 -> WC-SMT 10, L1-ASM-01 -> WC-ASSY 20, L1-TEST-01 -> WC-TEST 30, L1-PACK-01 -> WC-PACK 40, L1-REPAIR).
-// Station sessions are opened directly in the database until step 5 adds their API.
+// Station sessions are opened through their API (step 5).
 [Collection(ApiCollection.Name)]
 public class ScanTests(ApiFixture api)
 {
@@ -242,19 +242,16 @@ public class ScanTests(ApiFixture api)
 
     internal Task<int> StationIdAsync(string code) => api.WithDbAsync(db => db.Stations.Where(s => s.Code == code).Select(s => s.Id).SingleAsync());
 
-    // One open session per station: close whatever another test left open, then open ours.
-    internal async Task OpenSessionAsync(string stationCode, int woId)
+    // Through the API (step 5): opening a session closes whatever another test left open at the station.
+    internal async Task<StationSessionDto> OpenSessionAsync(string stationCode, int woId)
     {
-        var stationId = await StationIdAsync(stationCode);
-        await api.WithDbAsync(async db =>
-        {
-            foreach (var open in await db.StationSessions.Where(s => s.StationId == stationId && s.ClosedAt == null).ToListAsync())
-                open.Close(DateTime.UtcNow);
-            await db.SaveChangesAsync();
-            db.StationSessions.Add(new StationSession(stationId, woId, "EMP00123", DateTime.UtcNow));
-            return await db.SaveChangesAsync();
-        });
+        sessionOpener ??= await api.LoginOperatorAsync();
+        var response = await sessionOpener.PostAsJsonAsync($"/api/stations/{await StationIdAsync(stationCode)}/sessions", new OpenSessionRequest(woId));
+        Assert.True(response.StatusCode == HttpStatusCode.Created, $"{stationCode}: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
+        return (await response.Content.ReadFromJsonAsync<StationSessionDto>())!;
     }
+
+    private HttpClient? sessionOpener;
 
     private async Task CloseSessionsAsync(string stationCode)
     {

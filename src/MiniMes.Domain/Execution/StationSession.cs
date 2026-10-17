@@ -1,4 +1,5 @@
 using MiniMes.Domain.Common;
+using MiniMes.Domain.Planning;
 
 namespace MiniMes.Domain.Execution;
 
@@ -23,6 +24,16 @@ public class StationSession : IAudited
         WorkOrderId = workOrderId;
         OperatorCode = operatorCode;
         OpenedAt = utcNow;
+    }
+
+    // M3 step 5: a station only runs a WO of its own line that is on the line now (the dispatch list of M2:
+    // Released, InProgress, OnHold). OnHold is allowed so the line can log in; route check blocks its scans.
+    public static void EnsureCanRun(int stationLineId, int woLineId, string woNo, WorkOrderStatus woStatus)
+    {
+        if (woLineId != stationLineId)
+            throw new DomainException($"Work order {woNo} runs on another line.");
+        if (woStatus is not (WorkOrderStatus.Released or WorkOrderStatus.InProgress or WorkOrderStatus.OnHold))
+            throw new DomainException($"Work order {woNo} is {woStatus}; it is not on the line.");
     }
 
     public bool IsOpen => ClosedAt is null;
