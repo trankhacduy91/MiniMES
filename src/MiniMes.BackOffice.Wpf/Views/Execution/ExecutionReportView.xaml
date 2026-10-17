@@ -1,0 +1,62 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.Execution.ExecutionReportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+    <!-- DataContext = ExecutionReportViewModel (spec M3 step 9). FPY per routing step from the first scan of each
+         serial; WIP = boards started and not finished, by position on the line. -->
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Report_Title}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="{x:Static res:Strings.Report_WorkOrder}" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ComboBox AutomationProperties.AutomationId="ReportWorkOrder" Width="320" ItemsSource="{Binding WorkOrders}"
+                      SelectedItem="{Binding SelectedWorkOrder}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock>
+                            <Run Text="{Binding WoNo, Mode=OneWay}" /> <Run Text="{Binding ItemCode, Mode=OneWay}" Foreground="Gray" />
+                            <Run Text="{Binding Status, Mode=OneWay}" Foreground="Gray" />
+                        </TextBlock>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button AutomationProperties.AutomationId="ReportRefresh" Content="{x:Static res:Strings.Common_Refresh}"
+                    Command="{Binding RefreshCommand}" Padding="10,3" Margin="8,0,0,0" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}" Foreground="Red" TextWrapping="Wrap" />
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Text="{x:Static res:Strings.Report_Fpy}" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="1" AutomationProperties.AutomationId="ReportSummary" Text="{Binding Summary}" Margin="0,0,0,4" />
+            <DataGrid Grid.Row="2" AutomationProperties.AutomationId="FpyGrid" ItemsSource="{Binding FpySteps}"
+                      AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Margin="0,0,0,12">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_Seq}" Binding="{Binding Step.Seq}" Width="60" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_Operation}" Binding="{Binding Step.OperationCode}" Width="*" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_Entered}" Binding="{Binding Step.Entered}" Width="120" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_PassedFirstTime}" Binding="{Binding Step.PassedFirstTime}" Width="140" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_FpyPct}" Binding="{Binding Fpy}" Width="100" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <DockPanel Grid.Row="3" Margin="0,0,0,4">
+                <TextBlock DockPanel.Dock="Right" AutomationProperties.AutomationId="WipTotal" Text="{Binding WipTotal}" />
+                <TextBlock Text="{x:Static res:Strings.Report_Wip}" FontWeight="SemiBold" />
+            </DockPanel>
+            <DataGrid Grid.Row="4" AutomationProperties.AutomationId="WipGrid" ItemsSource="{Binding WipRows}"
+                      AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_LastStep}" Binding="{Binding LastStep}" Width="*" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_NextStep}" Binding="{Binding NextStep}" Width="*" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_Status}" Binding="{Binding Status}" Width="120" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Report_Qty}" Binding="{Binding Qty}" Width="80" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+</UserControl>

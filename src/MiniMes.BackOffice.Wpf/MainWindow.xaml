@@ -8,6 +8,8 @@
         xmlns:mdviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.MasterData"
         xmlns:pl="clr-namespace:MiniMes.Client.Core.ViewModels.Planning;assembly=MiniMes.Client.Core"
         xmlns:plviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Planning"
+        xmlns:ex="clr-namespace:MiniMes.Client.Core.ViewModels.Execution;assembly=MiniMes.Client.Core"
+        xmlns:exviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Execution"
         Title="{x:Static res:Strings.BackOffice_Title}"
         AutomationProperties.Name="{x:Static res:Strings.BackOffice_Title}"
         Width="1200" Height="760" WindowStartupLocation="CenterScreen">
@@ -41,6 +43,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type md:ImportViewModel}">
             <mdviews:ImportView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type ex:ExecutionReportViewModel}">
+            <exviews:ExecutionReportView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type pl:WorkOrderListViewModel}">
             <plviews:WorkOrderListView />

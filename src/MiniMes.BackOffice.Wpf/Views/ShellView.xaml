@@ -14,6 +14,8 @@
                 <StackPanel>
                     <Button AutomationProperties.AutomationId="MenuWorkOrders" Content="{x:Static res:Strings.Menu_WorkOrders}"
                             Command="{Binding ShowWorkOrdersCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuReports" Content="{x:Static res:Strings.Menu_Reports}"
+                            Command="{Binding ShowReportsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Separator Margin="0,6" />
                     <Button AutomationProperties.AutomationId="MenuItems" Content="{x:Static res:Strings.Menu_Items}"
                             Command="{Binding ShowItemsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />

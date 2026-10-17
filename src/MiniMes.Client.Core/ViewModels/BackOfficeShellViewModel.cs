@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using MiniMes.Client.Core.Auth;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.Resources;
+using MiniMes.Client.Core.ViewModels.Execution;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
 
@@ -23,6 +24,9 @@ public partial class BackOfficeShellViewModel(ITokenStore tokens, IAuthClient au
 
     [RelayCommand]
     private Task ShowWorkOrdersAsync() => pages.ShowAsync<WorkOrderListViewModel>();
+
+    [RelayCommand]
+    private Task ShowReportsAsync() => pages.ShowAsync<ExecutionReportViewModel>();
 
     [RelayCommand]
     private Task ShowItemsAsync() => pages.ShowAsync<ItemListViewModel>();

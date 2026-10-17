@@ -8,6 +8,7 @@ using MiniMes.Client.Core.Http;
 using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.ViewModels;
+using MiniMes.Client.Core.ViewModels.Execution;
 using MiniMes.Client.Core.ViewModels.Kiosk;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
@@ -70,6 +71,10 @@ public static class DependencyInjection
         services.AddTransient<WorkOrderListViewModel>();
         services.AddTransient<WorkOrderCreateViewModel>();
         services.AddTransient<WorkOrderDetailViewModel>();
+
+        // M3: production reports
+        services.AddTransient<IReportApi, ReportApi>();
+        services.AddTransient<ExecutionReportViewModel>();
         return services;
     }
 

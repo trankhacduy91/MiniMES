@@ -866,4 +866,54 @@
   <data name="Repair_ScanHint" xml:space="preserve">
     <value>Scan the NG board to check it in.</value>
   </data>
+  <data name="Menu_Reports" xml:space="preserve">
+    <value>Reports</value>
+  </data>
+  <data name="Report_Title" xml:space="preserve">
+    <value>Production reports</value>
+  </data>
+  <data name="Report_WorkOrder" xml:space="preserve">
+    <value>Work order</value>
+  </data>
+  <data name="Report_Fpy" xml:space="preserve">
+    <value>First pass yield (FPY) per step</value>
+  </data>
+  <data name="Report_Summary" xml:space="preserve">
+    <value>RTY {0}   Final yield {1}   (completed {2}, scrapped {3})</value>
+    <comment>{0} = RTY %, {1} = final yield %, {2}/{3} = counts</comment>
+  </data>
+  <data name="Report_Seq" xml:space="preserve">
+    <value>Step</value>
+  </data>
+  <data name="Report_Operation" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="Report_Entered" xml:space="preserve">
+    <value>Entered</value>
+  </data>
+  <data name="Report_PassedFirstTime" xml:space="preserve">
+    <value>Passed first time</value>
+  </data>
+  <data name="Report_FpyPct" xml:space="preserve">
+    <value>FPY</value>
+  </data>
+  <data name="Report_Wip" xml:space="preserve">
+    <value>Work in process (WIP)</value>
+  </data>
+  <data name="Report_WipTotal" xml:space="preserve">
+    <value>Total WIP: {0}</value>
+    <comment>{0} = boards started and not finished</comment>
+  </data>
+  <data name="Report_LastStep" xml:space="preserve">
+    <value>Last step passed</value>
+  </data>
+  <data name="Report_NextStep" xml:space="preserve">
+    <value>Next step</value>
+  </data>
+  <data name="Report_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Report_Qty" xml:space="preserve">
+    <value>Qty</value>
+  </data>
 </root>
