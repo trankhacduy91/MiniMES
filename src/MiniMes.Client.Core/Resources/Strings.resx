@@ -266,4 +266,58 @@
   <data name="Bom_RequiredQty" xml:space="preserve">
     <value>To issue</value>
   </data>
+  <data name="Menu_Routings" xml:space="preserve">
+    <value>Routing</value>
+  </data>
+  <data name="Routing_Title" xml:space="preserve">
+    <value>Routing</value>
+  </data>
+  <data name="Routing_StepCount" xml:space="preserve">
+    <value>Steps</value>
+  </data>
+  <data name="Routing_Seq" xml:space="preserve">
+    <value>Seq</value>
+  </data>
+  <data name="Routing_Operation" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="Routing_WorkCenter" xml:space="preserve">
+    <value>Work center</value>
+  </data>
+  <data name="Routing_CycleTime" xml:space="preserve">
+    <value>Ideal cycle (s)</value>
+  </data>
+  <data name="Routing_Inspection" xml:space="preserve">
+    <value>Inspection</value>
+  </data>
+  <data name="Routing_Mandatory" xml:space="preserve">
+    <value>Mandatory</value>
+  </data>
+  <data name="Routing_SopUrl" xml:space="preserve">
+    <value>SOP URL</value>
+  </data>
+  <data name="Routing_AddStep" xml:space="preserve">
+    <value>Add step</value>
+  </data>
+  <data name="Routing_RemoveStep" xml:space="preserve">
+    <value>Remove step</value>
+  </data>
+  <data name="Routing_MoveUp" xml:space="preserve">
+    <value>Up</value>
+  </data>
+  <data name="Routing_MoveDown" xml:space="preserve">
+    <value>Down</value>
+  </data>
+  <data name="Routing_SaveSteps" xml:space="preserve">
+    <value>Save steps</value>
+  </data>
+  <data name="Routing_Saved" xml:space="preserve">
+    <value>Saved {0} steps.</value>
+  </data>
+  <data name="Routing_ConfirmApprove" xml:space="preserve">
+    <value>Approve routing version {0} of {1}? It is locked from now on and replaces the version in force.</value>
+  </data>
+  <data name="Routing_Hint" xml:space="preserve">
+    <value>Up/Down renumbers the steps 10, 20, 30... Ideal cycle time is seconds per unit (one board, not one panel).</value>
+  </data>
 </root>

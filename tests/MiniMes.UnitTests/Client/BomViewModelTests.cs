@@ -200,4 +200,15 @@ public class BomViewModelTests
         Assert.Null(api.ExplodedQty);
         Assert.Equal(Strings.Bom_QtyInvalid, vm.ErrorMessage);
     }
+
+    // Same regression as the routing editor: saving with an unchanged line count reloads an equal record.
+    [Fact]
+    public async Task After_save_the_lines_are_reloaded_even_if_the_version_looks_the_same()
+    {
+        var (vm, _) = await OpenPcbAAsync();
+
+        await vm.SaveLinesCommand.ExecuteAsync(null);
+
+        Assert.Single(vm.Lines);
+    }
 }

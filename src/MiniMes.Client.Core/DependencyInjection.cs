@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddTransient<ItemListViewModel>();
         services.AddTransient<ItemEditViewModel>();
         services.AddTransient<BomViewModel>();
+        services.AddTransient<RoutingEditorViewModel>();
         return services;
     }
 }

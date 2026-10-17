@@ -82,6 +82,9 @@ public partial class BomViewModel(IMasterDataApi api, IDialogService dialogs) : 
         if (SelectedParent is not { } parent) return;
 
         foreach (var v in await api.GetBomsAsync(parent.Id)) Versions.Add(v);
+        // DTOs are records: a reloaded version equal to the old one would not raise "changed" and its
+        // lines would never reload. Clearing first forces a real change.
+        SelectedVersion = null;
         SelectedVersion = Versions.FirstOrDefault(v => v.Id == selectVersionId) ?? Versions.FirstOrDefault();
         await _linesLoading; // the lines of the version just selected (never this task itself)
         await LoadTreeAsync();

@@ -16,6 +16,8 @@
                             Command="{Binding ShowItemsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Button AutomationProperties.AutomationId="MenuBoms" Content="{x:Static res:Strings.Menu_Boms}"
                             Command="{Binding ShowBomsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuRoutings" Content="{x:Static res:Strings.Menu_Routings}"
+                            Command="{Binding ShowRoutingsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                 </StackPanel>
             </DockPanel>
         </Border>

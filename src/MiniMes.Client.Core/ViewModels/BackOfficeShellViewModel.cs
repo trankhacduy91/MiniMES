@@ -27,6 +27,9 @@ public partial class BackOfficeShellViewModel(ITokenStore tokens, IAuthClient au
     private Task ShowBomsAsync() => pages.ShowAsync<BomViewModel>();
 
     [RelayCommand]
+    private Task ShowRoutingsAsync() => pages.ShowAsync<RoutingEditorViewModel>();
+
+    [RelayCommand]
     private void Logout()
     {
         pages.Clear(); // the next user must not see this user's last page
