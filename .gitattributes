@@ -1,0 +1,4 @@
+# Binary files: never convert line endings (a PDF stores byte offsets of its objects).
+*.pdf binary
+*.xlsx binary
+*.png binary
