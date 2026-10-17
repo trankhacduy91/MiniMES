@@ -55,7 +55,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     }
 
     // The one place that turns save conflicts into 409: a stale RowVersion (lost update), or a unique-index
-    // violation (two requests raced past the handler's "already exists" check). A 409 for the caller, not a 500.
+    // violation (two requests raced past the handler's "already exists" check, or two releases of one WO: EF sends
+    // the child INSERTs before the parent UPDATE, so the loser hits a child index first). A 409, not a 500.
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
         try
@@ -69,7 +70,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
         {
-            throw new ConflictException("This record already exists (it may have just been created by someone else). Reload and try again.");
+            throw new ConflictException("This record was just created or changed by someone else. Reload and try again.");
         }
     }
 }
