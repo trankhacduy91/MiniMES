@@ -320,4 +320,157 @@
   <data name="Routing_Hint" xml:space="preserve">
     <value>Up/Down renumbers the steps 10, 20, 30... Ideal cycle time is seconds per unit (one board, not one panel).</value>
   </data>
+  <data name="Menu_WorkCenters" xml:space="preserve">
+    <value>Work centers</value>
+  </data>
+  <data name="Menu_Machines" xml:space="preserve">
+    <value>Machines</value>
+  </data>
+  <data name="Menu_Shifts" xml:space="preserve">
+    <value>Shifts</value>
+  </data>
+  <data name="Menu_PlantCalendar" xml:space="preserve">
+    <value>Plant calendar</value>
+  </data>
+  <data name="Menu_DefectCodes" xml:space="preserve">
+    <value>Defect codes</value>
+  </data>
+  <data name="Menu_DowntimeReasons" xml:space="preserve">
+    <value>Downtime reasons</value>
+  </data>
+  <data name="Menu_Import" xml:space="preserve">
+    <value>Import from Excel</value>
+  </data>
+  <data name="Common_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Common_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Catalog_Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Catalog_Line" xml:space="preserve">
+    <value>Line</value>
+  </data>
+  <data name="Downtime_Counts" xml:space="preserve">
+    <value>Counts against availability</value>
+  </data>
+  <data name="Downtime_Hint" xml:space="preserve">
+    <value>Unplanned stops always count against availability (OEE). Planned stops may be excluded from planned time.</value>
+  </data>
+  <data name="WorkCenter_TypeHint" xml:space="preserve">
+    <value>Same words as the routing operation: SMT, ASSY, TEST, PACK.</value>
+  </data>
+  <data name="Machine_Hint" xml:space="preserve">
+    <value>Code and MQTT topic key cannot change after saving: the gateway and the simulator use them.</value>
+  </data>
+  <data name="Machine_TopicKey" xml:space="preserve">
+    <value>MQTT topic key</value>
+  </data>
+  <data name="Machine_DataSource" xml:space="preserve">
+    <value>Data source</value>
+  </data>
+  <data name="Machine_TopicKeyHint" xml:space="preserve">
+    <value>Part of the MQTT topic: no '/', '+', '#' or spaces.</value>
+  </data>
+  <data name="Shift_Hint" xml:space="preserve">
+    <value>Times are factory local time. A shift ending before it starts runs past midnight.</value>
+  </data>
+  <data name="Shift_Start" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="Shift_End" xml:space="preserve">
+    <value>End</value>
+  </data>
+  <data name="Shift_Planned" xml:space="preserve">
+    <value>Planned (min)</value>
+  </data>
+  <data name="Shift_CrossesMidnight" xml:space="preserve">
+    <value>Night shift</value>
+  </data>
+  <data name="Shift_Days" xml:space="preserve">
+    <value>Days (Mon,Tue,...)</value>
+  </data>
+  <data name="Shift_Breaks" xml:space="preserve">
+    <value>Breaks</value>
+  </data>
+  <data name="Shift_BreaksHint" xml:space="preserve">
+    <value>Like 10:00-10:15, 11:30-12:15 (empty = no breaks).</value>
+  </data>
+  <data name="Shift_TimeFormat" xml:space="preserve">
+    <value>Use HH:mm, for example 06:00.</value>
+  </data>
+  <data name="Calendar_Hint" xml:space="preserve">
+    <value>Only exceptions: holidays (not a working day) and overtime days (working day, optional shifts). Other days follow the shifts' weekdays.</value>
+  </data>
+  <data name="Calendar_ConfirmRemove" xml:space="preserve">
+    <value>Remove the calendar exception of {0}? That day follows the normal shift days again.</value>
+  </data>
+  <data name="Calendar_Date" xml:space="preserve">
+    <value>Date (yyyy-MM-dd)</value>
+  </data>
+  <data name="Calendar_WorkingDay" xml:space="preserve">
+    <value>Working day</value>
+  </data>
+  <data name="Calendar_ShiftCodes" xml:space="preserve">
+    <value>Shifts</value>
+  </data>
+  <data name="Calendar_Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="Calendar_ShiftCodesHint" xml:space="preserve">
+    <value>Only for a working day, like S1 or S1,S2. Empty = every shift.</value>
+  </data>
+  <data name="Calendar_DateFormat" xml:space="preserve">
+    <value>Use yyyy-MM-dd, for example 2026-04-30.</value>
+  </data>
+  <data name="Import_Title" xml:space="preserve">
+    <value>Import items, BOM and routing from Excel</value>
+  </data>
+  <data name="Import_Hint" xml:space="preserve">
+    <value>1. Download the template. 2. Fill the three sheets. 3. Validate: nothing is written. 4. Import: all rows or none; BOM and routing arrive as Draft.</value>
+  </data>
+  <data name="Import_NoFile" xml:space="preserve">
+    <value>(no file chosen)</value>
+  </data>
+  <data name="Import_PickFile" xml:space="preserve">
+    <value>Choose file...</value>
+  </data>
+  <data name="Import_Validate" xml:space="preserve">
+    <value>Validate</value>
+  </data>
+  <data name="Import_Import" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="Import_DownloadTemplate" xml:space="preserve">
+    <value>Download template...</value>
+  </data>
+  <data name="Import_ValidOk" xml:space="preserve">
+    <value>No errors: {0} items, {1} BOMs, {2} routings ready to import.</value>
+  </data>
+  <data name="Import_ValidErrors" xml:space="preserve">
+    <value>{0} error(s). Fix them in the file and validate again; nothing was written.</value>
+  </data>
+  <data name="Import_Done" xml:space="preserve">
+    <value>Imported {0} items, {1} BOMs and {2} routings (BOM and routing as Draft).</value>
+  </data>
+  <data name="Import_TemplateSaved" xml:space="preserve">
+    <value>Template saved to {0}.</value>
+  </data>
+  <data name="Import_FileError" xml:space="preserve">
+    <value>Cannot read or write the file: {0}</value>
+  </data>
+  <data name="Import_Sheet" xml:space="preserve">
+    <value>Sheet</value>
+  </data>
+  <data name="Import_Row" xml:space="preserve">
+    <value>Row</value>
+  </data>
+  <data name="Import_Column" xml:space="preserve">
+    <value>Column</value>
+  </data>
+  <data name="Import_Message" xml:space="preserve">
+    <value>Message</value>
+  </data>
 </root>

@@ -18,6 +18,22 @@
                             Command="{Binding ShowBomsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Button AutomationProperties.AutomationId="MenuRoutings" Content="{x:Static res:Strings.Menu_Routings}"
                             Command="{Binding ShowRoutingsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Separator Margin="0,6" />
+                    <Button AutomationProperties.AutomationId="MenuWorkCenters" Content="{x:Static res:Strings.Menu_WorkCenters}"
+                            Command="{Binding ShowWorkCentersCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuMachines" Content="{x:Static res:Strings.Menu_Machines}"
+                            Command="{Binding ShowMachinesCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuShifts" Content="{x:Static res:Strings.Menu_Shifts}"
+                            Command="{Binding ShowShiftsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuPlantCalendar" Content="{x:Static res:Strings.Menu_PlantCalendar}"
+                            Command="{Binding ShowPlantCalendarCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuDefectCodes" Content="{x:Static res:Strings.Menu_DefectCodes}"
+                            Command="{Binding ShowDefectCodesCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuDowntimeReasons" Content="{x:Static res:Strings.Menu_DowntimeReasons}"
+                            Command="{Binding ShowDowntimeReasonsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Separator Margin="0,6" />
+                    <Button AutomationProperties.AutomationId="MenuImport" Content="{x:Static res:Strings.Menu_Import}"
+                            Command="{Binding ShowImportCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                 </StackPanel>
             </DockPanel>
         </Border>

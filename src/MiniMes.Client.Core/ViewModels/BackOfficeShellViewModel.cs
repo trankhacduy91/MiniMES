@@ -30,6 +30,27 @@ public partial class BackOfficeShellViewModel(ITokenStore tokens, IAuthClient au
     private Task ShowRoutingsAsync() => pages.ShowAsync<RoutingEditorViewModel>();
 
     [RelayCommand]
+    private Task ShowWorkCentersAsync() => pages.ShowAsync<WorkCentersViewModel>();
+
+    [RelayCommand]
+    private Task ShowMachinesAsync() => pages.ShowAsync<MachinesViewModel>();
+
+    [RelayCommand]
+    private Task ShowShiftsAsync() => pages.ShowAsync<ShiftsViewModel>();
+
+    [RelayCommand]
+    private Task ShowPlantCalendarAsync() => pages.ShowAsync<PlantCalendarViewModel>();
+
+    [RelayCommand]
+    private Task ShowDefectCodesAsync() => pages.ShowAsync<DefectCodesViewModel>();
+
+    [RelayCommand]
+    private Task ShowDowntimeReasonsAsync() => pages.ShowAsync<DowntimeReasonsViewModel>();
+
+    [RelayCommand]
+    private Task ShowImportAsync() => pages.ShowAsync<ImportViewModel>();
+
+    [RelayCommand]
     private void Logout()
     {
         pages.Clear(); // the next user must not see this user's last page

@@ -17,8 +17,21 @@
             <Setter Property="Margin" Value="0,8,0,2" />
         </Style>
         <!-- The message under a box; bound to FieldErrors[Name] (client rule or server answer). -->
-        <Style x:Key="FieldError" TargetType="TextBlock">
+        <!-- Takes no space while empty, so forms stay compact until there is something to say. -->
+        <Style x:Key="CollapsedWhenEmpty" TargetType="TextBlock">
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="FieldError" TargetType="TextBlock" BasedOn="{StaticResource CollapsedWhenEmpty}">
             <Setter Property="Foreground" Value="Firebrick" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="FieldHint" TargetType="TextBlock" BasedOn="{StaticResource CollapsedWhenEmpty}">
+            <Setter Property="Foreground" Value="Gray" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>

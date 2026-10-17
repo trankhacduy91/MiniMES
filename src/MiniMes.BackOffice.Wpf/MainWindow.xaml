@@ -33,6 +33,13 @@
         <DataTemplate DataType="{x:Type md:RoutingEditorViewModel}">
             <mdviews:RoutingEditorView />
         </DataTemplate>
+        <!-- One template for every catalog: WPF matches DataTemplates on base types too. -->
+        <DataTemplate DataType="{x:Type md:CatalogViewModel}">
+            <mdviews:CatalogView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type md:ImportViewModel}">
+            <mdviews:ImportView />
+        </DataTemplate>
     </Window.Resources>
 
     <!-- DataContext = Navigation (set in App.xaml.cs) -->

@@ -43,3 +43,11 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Cách tìm:** test "di chuyển bước rồi Save" đọc lưới sau khi lưu và thấy chuỗi rỗng; fake trả về một instance `record` mới nhưng cùng giá trị, đúng như HTTP thật làm.
 - **Cách sửa:** gán `SelectedVersion = null` trước khi chọn lại, để luôn có một lần đổi thật. Thêm test hồi quy cho cả hai màn hình.
 - **Bài học:** `record` so sánh theo giá trị là tính năng; nhưng các thứ dựa trên "giá trị có đổi không" (setter của MVVM toolkit, `SelectedItem` của WPF, `distinct`) sẽ coi hai lần tải là một. Khi cần phản ứng với *lần tải mới* chứ không phải *giá trị mới*, hãy tạo thay đổi tường minh. Fake trong test nên trả instance mới như mạng thật, không trả lại cùng một object.
+
+## 2026-10-17 — Màn hình Calendar trống vì client hỏi 2 năm, API chỉ cho 1 năm (M1 bước 8, WPF)
+
+- **Triệu chứng (bắt khi chạy app thật):** thêm một ngày tăng ca, lưu thành công, nhưng lưới Plant calendar vẫn trống; mọi unit test ViewModel đều xanh.
+- **Nguyên nhân:** `PlantCalendarViewModel` xin `from = 1/1 năm nay`, `to = 31/12 năm sau` (2 năm). `GetPlantCalendarValidator` ở API (viết ở bước 7) giới hạn tối đa 366 ngày, nên trả 400 và lưới không có dữ liệu. Fake `IMasterDataApi` trong unit test trả dữ liệu cho mọi khoảng, không biết luật của server.
+- **Cách tìm:** gọi đúng URL đó bằng `Invoke-RestMethod` → `400 "Ask for at most one year at a time."`.
+- **Cách sửa:** client gọi 2 lần, mỗi lần một năm (năm sau vẫn cần vì Tết thường rơi vào tháng 1–2). Fake trong test giờ cũng từ chối khoảng > 366 ngày, và test kiểm tra 2 lần gọi.
+- **Bài học:** fake chỉ tốt bằng hiểu biết của người viết về hợp đồng (contract) của server. Luật nằm ở validator phía server thì fake nên mô phỏng nó, hoặc phải có một lần chạy đầu-cuối thật (app + API) trước khi coi là xong.

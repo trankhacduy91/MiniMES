@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MiniMes.Client.Core.Api;
 using MiniMes.Client.Core.Auth;
@@ -45,6 +46,7 @@ public static class DependencyInjection
     public static IServiceCollection AddBackOfficeViewModels(this IServiceCollection services)
     {
         services.AddTransient<IMasterDataApi, MasterDataApi>();
+        services.TryAddSingleton(TimeProvider.System); // "this year" of the plant calendar; tests use a fake
         services.AddSingleton<IPageNavigator, PageNavigator>(); // one content area; the shell clears it on logout
 
         services.AddTransient<BackOfficeShellViewModel>();
@@ -52,6 +54,13 @@ public static class DependencyInjection
         services.AddTransient<ItemEditViewModel>();
         services.AddTransient<BomViewModel>();
         services.AddTransient<RoutingEditorViewModel>();
+        services.AddTransient<WorkCentersViewModel>();
+        services.AddTransient<MachinesViewModel>();
+        services.AddTransient<ShiftsViewModel>();
+        services.AddTransient<PlantCalendarViewModel>();
+        services.AddTransient<DefectCodesViewModel>();
+        services.AddTransient<DowntimeReasonsViewModel>();
+        services.AddTransient<ImportViewModel>();
         return services;
     }
 }

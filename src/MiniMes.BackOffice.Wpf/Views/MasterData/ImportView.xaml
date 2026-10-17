@@ -1,0 +1,38 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.MasterData.ImportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+    <!-- DataContext = ImportViewModel. The file is uploaded; the server reads and checks it (one set of rules). -->
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Import_Title}" Style="{StaticResource PageTitle}" />
+        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Import_Hint}" Foreground="Gray" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button AutomationProperties.AutomationId="DownloadTemplate" Content="{x:Static res:Strings.Import_DownloadTemplate}"
+                    Command="{Binding DownloadTemplateCommand}" Style="{StaticResource ToolButton}" />
+            <Button AutomationProperties.AutomationId="PickFile" Content="{x:Static res:Strings.Import_PickFile}"
+                    Command="{Binding PickFileCommand}" Style="{StaticResource ToolButton}" />
+            <TextBlock AutomationProperties.AutomationId="FileName" Text="{Binding FileName}" VerticalAlignment="Center" Margin="4,0,12,0" />
+            <Button AutomationProperties.AutomationId="Validate" Content="{x:Static res:Strings.Import_Validate}"
+                    Command="{Binding ValidateCommand}" Style="{StaticResource ToolButton}" />
+            <!-- Enabled only after this file validated with 0 errors -->
+            <Button AutomationProperties.AutomationId="Import" Content="{x:Static res:Strings.Import_Import}"
+                    Command="{Binding ImportCommand}" Style="{StaticResource ToolButton}" />
+        </StackPanel>
+
+        <TextBlock DockPanel.Dock="Top" AutomationProperties.AutomationId="Result" Text="{Binding ResultMessage}"
+                   TextWrapping="Wrap" Margin="0,0,0,8" FontWeight="SemiBold" />
+        <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
+                   Style="{StaticResource PageError}" />
+
+        <DataGrid AutomationProperties.AutomationId="ImportErrors" ItemsSource="{Binding Errors}" AutoGenerateColumns="False"
+                  IsReadOnly="True" HeadersVisibility="Column">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{x:Static res:Strings.Import_Sheet}" Binding="{Binding Sheet}" Width="110" />
+                <DataGridTextColumn Header="{x:Static res:Strings.Import_Row}" Binding="{Binding Row}" Width="50" />
+                <DataGridTextColumn Header="{x:Static res:Strings.Import_Column}" Binding="{Binding Column}" Width="130" />
+                <DataGridTextColumn Header="{x:Static res:Strings.Import_Message}" Binding="{Binding Message}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>
