@@ -112,6 +112,9 @@ public sealed record WorkOrderTransitionRequest(string RowVersion, string? Reaso
 // [v2] PUT /api/work-orders/{id}/priority. 1 = most urgent.
 public sealed record ChangePriorityRequest(int Priority, string RowVersion);
 
+// [v2] POST /api/work-orders/{id}/fai/result (QC): temporary until M7 adds the FAI checklist.
+public sealed record FaiResultRequest(bool Passed);
+
 // [v2] GET /api/lines/{id}/dispatch-list: what the line should run next (kiosk, M3). Released, InProgress
 // and OnHold orders, most urgent first, then by planned start.
 public sealed record DispatchListItemDto(

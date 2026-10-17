@@ -134,6 +134,24 @@ public sealed class ChangeWorkOrderPriorityHandler(IAppDbContext db) : IRequestH
         => Transition.RunAsync(db, cmd.Id, cmd.RowVersion, wo => wo.ChangePriority(cmd.Priority), ct);
 }
 
+// ---------- [v2] FAI result (QC), temporary until M7 ----------
+
+// M3 step 3b: lets QC open the line (passed) or ask for a new sample (failed) before M7 brings the FAI checklist.
+// No RowVersion from the client: QC judges the sample, not a version of the form; a concurrent change of the WO
+// still fails on the loaded RowVersion (409).
+public sealed record RecordFaiResultCommand(int Id, bool Passed) : IRequest<WorkOrderDetailDto>;
+
+public sealed class RecordFaiResultHandler(IAppDbContext db) : IRequestHandler<RecordFaiResultCommand, WorkOrderDetailDto>
+{
+    public async Task<WorkOrderDetailDto> Handle(RecordFaiResultCommand cmd, CancellationToken ct)
+    {
+        var wo = await db.LoadWorkOrderAsync(cmd.Id, ct);
+        wo.RecordFaiResult(cmd.Passed);   // no sample yet / not pending -> 422
+        await db.SaveChangesAsync(ct);
+        return await db.GetWorkOrderDtoAsync(wo.Id, ct);
+    }
+}
+
 // ---------- [v2] Dispatch list of a line (every role; the kiosk in M3) ----------
 
 public sealed record GetDispatchListQuery(int LineId) : IRequest<IReadOnlyList<DispatchListItemDto>>;

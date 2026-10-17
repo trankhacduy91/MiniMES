@@ -698,4 +698,7 @@
   <data name="Serial_CurrentSeq" xml:space="preserve">
     <value>Last step</value>
   </data>
+  <data name="Scan_ReasonFaiNotApproved" xml:space="preserve">
+    <value>Waiting for first article approval (QC)</value>
+  </data>
 </root>
