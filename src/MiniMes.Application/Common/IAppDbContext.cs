@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
+using MiniMes.Domain.Andon;
 using MiniMes.Domain.Audit;
 using MiniMes.Domain.Execution;
 using MiniMes.Domain.Factory;
+using MiniMes.Domain.Machines;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.MasterData.DefectCodes;
@@ -51,6 +53,14 @@ public interface IAppDbContext
     DbSet<ScanLog> ScanLogs { get; }
     DbSet<RepairLog> RepairLogs { get; }
     DbSet<StationSession> StationSessions { get; }
+
+    // M4: machine connectivity and Andon
+    DbSet<MachineEvent> MachineEvents { get; }
+    DbSet<MachineStateHistory> MachineStateHistory { get; }
+    DbSet<MachineTag> MachineTags { get; }
+    DbSet<ProcessValue> ProcessValues { get; }
+    DbSet<AndonCall> AndonCalls { get; }
+    DbSet<AndonEscalationRule> AndonEscalationRules { get; }
 
     // A unique-index violation (two requests racing past the "already exists" check) comes out as
     // ConflictException (409), so handlers never see provider-specific SQL errors.

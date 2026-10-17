@@ -26,6 +26,115 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
             modelBuilder.HasSequence("WoNoSeq");
 
+            modelBuilder.Entity("MiniMes.Domain.Andon.AndonCall", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("AckAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AckBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int?>("DowntimeReasonId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EscalationLevel")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastEscalatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RaisedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RaisedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ResolvedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DowntimeReasonId");
+
+                    b.HasIndex("MachineId", "Type")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AndonCalls_OpenPerMachineType")
+                        .HasFilter("[Status] <= 1");
+
+                    b.HasIndex("Status", "RaisedAt");
+
+                    b.ToTable("AndonCalls", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Andon.AndonEscalationRule", b =>
+                {
+                    b.Property<byte>("AndonType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AfterMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NotifyRoles")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.HasKey("AndonType", "Level");
+
+                    b.ToTable("AndonEscalationRules", (string)null);
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Audit.AuditLog", b =>
                 {
                     b.Property<long>("Id")
@@ -396,6 +505,194 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.HasIndex("WorkCenterId");
 
                     b.ToTable("Stations");
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Machines.MachineEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AlarmCode")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<long?>("Counter")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("Delta")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("GoodDelta")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsReset")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("MachineTs")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("MsgId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("NgDelta")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte?>("State")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MsgId")
+                        .IsUnique();
+
+                    b.HasIndex("MachineId", "MachineTs");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("MachineId", "MachineTs"), new[] { "Kind", "Delta" });
+
+                    b.ToTable("MachineEvents", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Machines.MachineStateHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("EndAt")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartAt")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte>("State")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MachineId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MachineStateHistory_OpenPerMachine")
+                        .HasFilter("[EndAt] IS NULL");
+
+                    b.HasIndex("MachineId", "StartAt");
+
+                    b.ToTable("MachineStateHistory", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Machines.MachineTag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<double>("LowerPlausible")
+                        .HasColumnType("float");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SpcCharacteristicId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SpcSampleEverySec")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TagName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<double>("UpperPlausible")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MachineId", "TagName")
+                        .IsUnique();
+
+                    b.ToTable("MachineTags", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MachineTags_Plausible", "[LowerPlausible] < [UpperPlausible]");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Machines.ProcessValue", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("MachineTagId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("MsgId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Quality")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("SourceTs")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<double>("Value")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MsgId")
+                        .IsUnique();
+
+                    b.HasIndex("MachineTagId", "SourceTs");
+
+                    b.ToTable("ProcessValues", (string)null);
                 });
 
             modelBuilder.Entity("MiniMes.Domain.MasterData.Boms.Bom", b =>
@@ -1287,6 +1584,20 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Andon.AndonCall", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Downtime.DowntimeReason", null)
+                        .WithMany()
+                        .HasForeignKey("DowntimeReasonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MiniMes.Domain.MasterData.Equipment.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Execution.RepairLog", b =>
                 {
                     b.HasOne("MiniMes.Domain.Planning.Serial", null)
@@ -1341,6 +1652,24 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("WorkCenterId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Machines.MachineStateHistory", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Equipment.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Machines.MachineTag", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Equipment.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MiniMes.Domain.MasterData.Boms.Bom", b =>

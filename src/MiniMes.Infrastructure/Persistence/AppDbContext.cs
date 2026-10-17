@@ -2,10 +2,12 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MiniMes.Application.Common;
+using MiniMes.Domain.Andon;
 using MiniMes.Domain.Audit;
 using MiniMes.Domain.Common;
 using MiniMes.Domain.Execution;
 using MiniMes.Domain.Factory;
+using MiniMes.Domain.Machines;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.MasterData.DefectCodes;
@@ -51,6 +53,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ScanLog> ScanLogs => Set<ScanLog>();
     public DbSet<RepairLog> RepairLogs => Set<RepairLog>();
     public DbSet<StationSession> StationSessions => Set<StationSession>();
+
+    public DbSet<MachineEvent> MachineEvents => Set<MachineEvent>();
+    public DbSet<MachineStateHistory> MachineStateHistory => Set<MachineStateHistory>();
+    public DbSet<MachineTag> MachineTags => Set<MachineTag>();
+    public DbSet<ProcessValue> ProcessValues => Set<ProcessValue>();
+    public DbSet<AndonCall> AndonCalls => Set<AndonCall>();
+    public DbSet<AndonEscalationRule> AndonEscalationRules => Set<AndonEscalationRule>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
         => Database.BeginTransactionAsync(ct);
