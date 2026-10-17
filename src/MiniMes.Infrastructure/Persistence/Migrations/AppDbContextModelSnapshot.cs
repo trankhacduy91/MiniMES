@@ -22,6 +22,10 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("SerialSeq");
+
+            modelBuilder.HasSequence("WoNoSeq");
+
             modelBuilder.Entity("MiniMes.Domain.Audit.AuditLog", b =>
                 {
                     b.Property<long>("Id")
@@ -755,6 +759,266 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Planning.Serial", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("CurrentSeq")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ScrapReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SerialNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("SerialNo")
+                        .IsUnique();
+
+                    b.HasIndex("WorkOrderId", "Status");
+
+                    b.ToTable("Serials", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Planning.WorkOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BomVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CompleteReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ExternalRef")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("FaiSerialNo")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("FaiStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("HoldReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LineId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PlannedEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PlannedQty")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PlannedStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("RequireFai")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("RoutingVersion")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("WoNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("WoNo")
+                        .IsUnique();
+
+                    b.HasIndex("LineId", "Status", "Priority", "PlannedStart");
+
+                    b.ToTable("WorkOrders", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WorkOrders_PlannedQty", "[PlannedQty] > 0");
+
+                            t.HasCheckConstraint("CK_WorkOrders_PlannedWindow", "[PlannedEnd] > [PlannedStart]");
+
+                            t.HasCheckConstraint("CK_WorkOrders_Priority", "[Priority] BETWEEN 1 AND 9");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Planning.WorkOrderMaterial", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ComponentItemId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ConsumedQty")
+                        .HasPrecision(28, 9)
+                        .HasColumnType("decimal(28,9)");
+
+                    b.Property<decimal>("IssuedQty")
+                        .HasPrecision(28, 9)
+                        .HasColumnType("decimal(28,9)");
+
+                    b.Property<int>("OperationSeq")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("QtyPerUnit")
+                        .HasPrecision(28, 9)
+                        .HasColumnType("decimal(28,9)");
+
+                    b.Property<decimal>("RequiredQty")
+                        .HasPrecision(28, 9)
+                        .HasColumnType("decimal(28,9)");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComponentItemId");
+
+                    b.HasIndex("WorkOrderId", "ComponentItemId", "OperationSeq")
+                        .IsUnique();
+
+                    b.ToTable("WorkOrderMaterials", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WorkOrderMaterials_QtyPerUnit", "[QtyPerUnit] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Planning.WorkOrderOperation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("IdealCycleTimeSec")
+                        .HasPrecision(9, 3)
+                        .HasColumnType("decimal(9,3)");
+
+                    b.Property<bool>("IsInspection")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsMandatory")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OperationCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("QtyGood")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QtyNg")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Seq")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SopUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("WorkCenterId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkCenterId");
+
+                    b.HasIndex("WorkOrderId", "Seq")
+                        .IsUnique();
+
+                    b.ToTable("WorkOrderOperations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WorkOrderOperations_Counters", "[QtyGood] >= 0 AND [QtyNg] >= 0");
+
+                            t.HasCheckConstraint("CK_WorkOrderOperations_IdealCycleTime", "[IdealCycleTimeSec] > 0");
+                        });
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Users.AppUser", b =>
                 {
                     b.Property<int>("Id")
@@ -940,6 +1204,66 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Planning.Serial", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.WorkOrder", null)
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Planning.WorkOrder", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Factory.Line", null)
+                        .WithMany()
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Planning.WorkOrderMaterial", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ComponentItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.WorkOrder", null)
+                        .WithMany("Materials")
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Planning.WorkOrderOperation", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Equipment.WorkCenter", null)
+                        .WithMany()
+                        .HasForeignKey("WorkCenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.WorkOrder", null)
+                        .WithMany("Operations")
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Users.UserRole", b =>
                 {
                     b.HasOne("MiniMes.Domain.Users.AppUser", null)
@@ -972,6 +1296,13 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("MiniMes.Domain.MasterData.Routings.Routing", b =>
                 {
                     b.Navigation("Steps");
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Planning.WorkOrder", b =>
+                {
+                    b.Navigation("Materials");
+
+                    b.Navigation("Operations");
                 });
 
             modelBuilder.Entity("MiniMes.Domain.Users.AppUser", b =>

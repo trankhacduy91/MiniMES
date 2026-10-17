@@ -12,7 +12,9 @@ using MiniMes.Domain.MasterData.Downtime;
 using MiniMes.Domain.MasterData.Equipment;
 using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Routings;
+using MiniMes.Domain.Planning;
 using MiniMes.Domain.Users;
+using MiniMes.Infrastructure.Persistence.Configurations;
 
 namespace MiniMes.Infrastructure.Persistence;
 
@@ -37,11 +39,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DefectCode> DefectCodes => Set<DefectCode>();
     public DbSet<DowntimeReason> DowntimeReasons => Set<DowntimeReason>();
 
+    // M2: work orders and serials
+    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+    public DbSet<WorkOrderMaterial> WorkOrderMaterials => Set<WorkOrderMaterial>();
+    public DbSet<WorkOrderOperation> WorkOrderOperations => Set<WorkOrderOperation>();
+    public DbSet<Serial> Serials => Set<Serial>();
+
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
         => Database.BeginTransactionAsync(ct);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
-        => modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        WorkOrderConfiguration.AddSequences(modelBuilder);
+    }
 
     // The one place that knows SQL Server error numbers: a unique-index violation means two requests
     // raced past the handler's "already exists" check, which is a 409 for the caller, not a 500.

@@ -9,6 +9,7 @@ using MiniMes.Domain.MasterData.Downtime;
 using MiniMes.Domain.MasterData.Equipment;
 using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Routings;
+using MiniMes.Domain.Planning;
 using MiniMes.Domain.Users;
 
 namespace MiniMes.Application.Common;
@@ -36,6 +37,12 @@ public interface IAppDbContext
     DbSet<PlantCalendarDay> PlantCalendar { get; }
     DbSet<DefectCode> DefectCodes { get; }
     DbSet<DowntimeReason> DowntimeReasons { get; }
+
+    // M2: work orders and serials
+    DbSet<WorkOrder> WorkOrders { get; }
+    DbSet<WorkOrderMaterial> WorkOrderMaterials { get; }
+    DbSet<WorkOrderOperation> WorkOrderOperations { get; }
+    DbSet<Serial> Serials { get; }
 
     // A unique-index violation (two requests racing past the "already exists" check) comes out as
     // ConflictException (409), so handlers never see provider-specific SQL errors.
