@@ -698,9 +698,6 @@
   <data name="Serial_CurrentSeq" xml:space="preserve">
     <value>Last step</value>
   </data>
-  <data name="Scan_ReasonFaiNotApproved" xml:space="preserve">
-    <value>Waiting for first article approval (QC)</value>
-  </data>
   <data name="Kiosk_Operator" xml:space="preserve">
     <value>{0} ({1})</value>
     <comment>{0} = full name, {1} = employee code</comment>
@@ -730,5 +727,85 @@
   </data>
   <data name="Scan_ChangeWorkOrder" xml:space="preserve">
     <value>Change WO</value>
+  </data>
+  <data name="Block_NoOpenSession" xml:space="preserve">
+    <value>No operator session at this station. Log in again.</value>
+  </data>
+  <data name="Block_SerialNotFound" xml:space="preserve">
+    <value>Unknown serial number. Check the label.</value>
+  </data>
+  <data name="Block_WoNotActive" xml:space="preserve">
+    <value>The work order of this board is not running.</value>
+  </data>
+  <data name="Block_WrongWo" xml:space="preserve">
+    <value>This board belongs to another work order.</value>
+  </data>
+  <data name="Block_SerialHold" xml:space="preserve">
+    <value>Board on HOLD. Put it aside and call QC.</value>
+  </data>
+  <data name="Block_SerialScrapped" xml:space="preserve">
+    <value>Board is scrapped. Do not use it.</value>
+  </data>
+  <data name="Block_SerialCompleted" xml:space="preserve">
+    <value>Board is already completed.</value>
+  </data>
+  <data name="Block_MustGoRepair" xml:space="preserve">
+    <value>Board is NG: send it to Repair.</value>
+  </data>
+  <data name="Block_NotDefective" xml:space="preserve">
+    <value>Board is not NG: Repair only takes NG boards.</value>
+  </data>
+  <data name="Block_StationNotInRoute" xml:space="preserve">
+    <value>This station is not in the routing of this board.</value>
+  </data>
+  <data name="Block_FaiNotApproved" xml:space="preserve">
+    <value>Waiting for first article approval (QC)</value>
+  </data>
+  <data name="Block_SkippedStep" xml:space="preserve">
+    <value>Wrong step: the board skipped a station.</value>
+  </data>
+  <data name="Block_AlreadyPassed" xml:space="preserve">
+    <value>This step is already done for this board.</value>
+  </data>
+  <data name="Scan_Input" xml:space="preserve">
+    <value>Scan serial</value>
+    <comment>Automation name of the scan box</comment>
+  </data>
+  <data name="Scan_Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Scan_Ng" xml:space="preserve">
+    <value>NG</value>
+  </data>
+  <data name="Scan_Blocked" xml:space="preserve">
+    <value>BLOCKED</value>
+  </data>
+  <data name="Scan_NoResponse" xml:space="preserve">
+    <value>NO RESPONSE</value>
+  </data>
+  <data name="Scan_ResultUnknown" xml:space="preserve">
+    <value>Result unknown - scan again when online.</value>
+  </data>
+  <data name="Scan_Duplicate" xml:space="preserve">
+    <value>Duplicate scan ignored.</value>
+  </data>
+  <data name="Scan_Next" xml:space="preserve">
+    <value>Next: {0}</value>
+    <comment>{0} = operation code of the next step</comment>
+  </data>
+  <data name="Scan_Completed" xml:space="preserve">
+    <value>Board completed.</value>
+  </data>
+  <data name="Scan_Offline" xml:space="preserve">
+    <value>OFFLINE - scanning disabled</value>
+  </data>
+  <data name="Scan_FaiPending" xml:space="preserve">
+    <value>FAI pending: only the first article may run until QC approves it.</value>
+  </data>
+  <data name="Scan_Sop" xml:space="preserve">
+    <value>SOP</value>
+  </data>
+  <data name="Scan_CloseSop" xml:space="preserve">
+    <value>Close</value>
   </data>
 </root>

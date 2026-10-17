@@ -73,12 +73,13 @@ public static class DependencyInjection
         return services;
     }
 
-    // Kiosk only (M3): the station screens. The app registers IKioskNavigation itself.
+    // Kiosk only (M3): the station screens. The app registers IKioskNavigation and IKioskFeedback itself.
     public static IServiceCollection AddKioskViewModels(this IServiceCollection services)
     {
         services.AddTransient<IExecutionApi, ExecutionApi>();
         services.AddTransient<IWorkOrderApi, WorkOrderApi>();
         services.AddSingleton<IKioskContext, KioskContext>(); // state, not a ViewModel; cleared at logout
+        services.TryAddSingleton(TimeProvider.System);        // flash duration, scan timeout; tests use a fake
 
         services.AddTransient<StationSelectViewModel>();
         services.AddTransient<ScanViewModel>();

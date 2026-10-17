@@ -8,9 +8,11 @@ using MiniMes.Api.Middleware;
 using MiniMes.Api.OpenApi;
 using MiniMes.Application;
 using MiniMes.Application.Common;
+using MiniMes.Application.Execution;
 using MiniMes.Application.Labels;
 using MiniMes.Infrastructure;
 using MiniMes.Infrastructure.Auth;
+using MiniMes.Infrastructure.Execution;
 using MiniMes.Infrastructure.Labels;
 using Serilog;
 
@@ -40,6 +42,10 @@ builder.Services.AddHttpClient<ILabelPreview, LabelaryPreviewClient>(c =>
     c.BaseAddress = new Uri(LabelaryPreviewClient.BaseAddress);
     c.Timeout = TimeSpan.FromSeconds(10);
 });
+
+// [v2] SOP folder (M3), relative to the API project: the repo's docs/sop in development and tests.
+builder.Services.AddSingleton<ISopFileStore>(new SopFileStore(
+    Path.GetFullPath(builder.Configuration["Sop:RootPath"] ?? "../../docs/sop", builder.Environment.ContentRootPath)));
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();

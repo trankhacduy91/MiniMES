@@ -17,7 +17,7 @@ public sealed partial class Navigation(IServiceProvider services) : ObservableOb
 
     public void ShowHome() => Show(services.GetRequiredService<StationSelectViewModel>());
 
-    public void ShowScan() => CurrentViewModel = services.GetRequiredService<ScanViewModel>();
+    public void ShowScan() => Show(services.GetRequiredService<ScanViewModel>());
 
     // Shown first so its "loading" text is visible; LoadAsync never throws (errors go to the screen).
     private void Show(object viewModel)

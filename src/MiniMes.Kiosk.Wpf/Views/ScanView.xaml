@@ -2,15 +2,46 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
-             Background="#FF2B2B2B" Foreground="White">
-    <!-- DataContext = ScanViewModel. Idle state: READY on dark grey, readable from a step away (spec 2.8).
-         Step 7 adds the scan box and the green/red result. -->
-    <DockPanel Margin="32">
-        <DockPanel DockPanel.Dock="Top">
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             Foreground="White" KeyboardNavigation.TabNavigation="None">
+    <!-- DataContext = ScanViewModel (spec M3 2.7-2.9, 2.8b). The barcode scanner is a keyboard: everything it types
+         must land in ScanBox, so no control here can take the focus (buttons Focusable=False, no IsDefault, Tab off)
+         and the code-behind pulls the focus back. Errors are shown in the screen itself, never in a MessageBox. -->
+    <Grid>
+        <Grid.Style>
+            <!-- The ViewModel only knows the state; the colours live here. -->
+            <Style TargetType="Grid">
+                <Setter Property="Background" Value="#FF2B2B2B" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding State}" Value="Ok">
+                        <Setter Property="Background" Value="#FF1B8F3A" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="Ng">
+                        <Setter Property="Background" Value="#FFC62828" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="Blocked">
+                        <Setter Property="Background" Value="#FFC62828" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="32,32,32,16">
             <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Logout" Content="{x:Static res:Strings.Home_Logout}"
-                    Command="{Binding LogoutCommand}" Padding="24,8" Margin="12,0,0,0" />
+                    Command="{Binding LogoutCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
             <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="ChangeWorkOrder" Content="{x:Static res:Strings.Scan_ChangeWorkOrder}"
-                    Command="{Binding ChangeWorkOrderCommand}" Padding="24,8" />
+                    Command="{Binding ChangeWorkOrderCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
+            <!-- Hidden when the step has no SOP. -->
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Sop" Content="{x:Static res:Strings.Scan_Sop}"
+                    Command="{Binding OpenSopCommand}" Focusable="False" Padding="32,8"
+                    Visibility="{Binding HasSop, Converter={StaticResource BoolToVisibility}}" />
             <StackPanel>
                 <TextBlock AutomationProperties.AutomationId="Station" Text="{Binding StationCode}" FontSize="32" FontWeight="SemiBold" />
                 <TextBlock AutomationProperties.AutomationId="WorkOrder" Text="{Binding WorkOrderText}" />
@@ -18,7 +49,44 @@
             </StackPanel>
         </DockPanel>
 
-        <TextBlock AutomationProperties.AutomationId="ScanStatus" Text="{Binding StatusText}"
-                   FontSize="160" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
-    </DockPanel>
+        <Border Grid.Row="1" Background="#FFB71C1C" Padding="16" Visibility="{Binding IsOffline, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock AutomationProperties.AutomationId="OfflineBanner" Text="{x:Static res:Strings.Scan_Offline}"
+                       FontSize="36" FontWeight="Bold" HorizontalAlignment="Center" />
+        </Border>
+        <Border Grid.Row="2" Background="#FFFFC107" Padding="12" Visibility="{Binding IsFaiPending, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock AutomationProperties.AutomationId="FaiBanner" Text="{x:Static res:Strings.Scan_FaiPending}"
+                       Foreground="Black" FontSize="26" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Readable from 1-2 m: a big word, then the reason, then serial + the server's wording. -->
+        <StackPanel Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="32,0">
+            <TextBlock AutomationProperties.AutomationId="Headline" Text="{Binding Headline}"
+                       FontSize="160" FontWeight="Bold" HorizontalAlignment="Center" />
+            <TextBlock AutomationProperties.AutomationId="Message" Text="{Binding Message}"
+                       FontSize="44" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock AutomationProperties.AutomationId="Detail" Text="{Binding Detail}"
+                       FontSize="26" Foreground="#E0FFFFFF" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,12,0,0" />
+        </StackPanel>
+
+        <!-- PropertyChanged: the scanned text is in the ViewModel before Enter. ReadOnly (not disabled) when offline,
+             so the box keeps the focus and works again as soon as the API is back. -->
+        <TextBox Grid.Row="4" x:Name="ScanBox" AutomationProperties.AutomationId="ScanBox"
+                 AutomationProperties.Name="{x:Static res:Strings.Scan_Input}"
+                 Text="{Binding ScanInput, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsOffline}"
+                 FontSize="36" Padding="12" Margin="32,0,32,32" HorizontalContentAlignment="Center">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Return" Command="{Binding ScanCommand}" />
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <!-- [v2] SOP overlay over the whole screen. A scan while it is open closes it (ViewModel). -->
+        <Grid Grid.RowSpan="5" Background="#F0202020" Visibility="{Binding IsSopOpen, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel Margin="24">
+                <Button DockPanel.Dock="Top" HorizontalAlignment="Right" AutomationProperties.AutomationId="CloseSop"
+                        Content="{x:Static res:Strings.Scan_CloseSop}" Command="{Binding CloseSopCommand}"
+                        Focusable="False" FontSize="28" Padding="48,12" Margin="0,0,0,12" />
+                <wv2:WebView2 x:Name="SopViewer" AutomationProperties.AutomationId="SopViewer" />
+            </DockPanel>
+        </Grid>
+    </Grid>
 </UserControl>

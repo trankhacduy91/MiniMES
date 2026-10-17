@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MiniMes.Client.Core;
+using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.Resources;
 
@@ -27,6 +28,7 @@ public partial class App : Application
         builder.Services.AddOptions<ClientOptions>()
             .Validate(o => !string.IsNullOrWhiteSpace(o.StationCode), "StationCode is required on a kiosk.");
         builder.Services.AddKioskViewModels();
+        builder.Services.AddSingleton<IKioskFeedback, SystemSoundFeedback>();
         builder.Services.AddSingleton<Navigation>();
         builder.Services.AddSingleton<INavigation>(sp => sp.GetRequiredService<Navigation>());
         builder.Services.AddSingleton<IKioskNavigation>(sp => sp.GetRequiredService<Navigation>());
