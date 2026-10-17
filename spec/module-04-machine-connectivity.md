@@ -1090,11 +1090,12 @@ foreach (var a in escalated) await _notifier.AndonEscalatedAsync(a.ToDto(), Role
 
 Tổng khoảng 26 giờ (**[v2]** +4 giờ: topic UNS và trường mới ở bước 1–3, tag process ở bước 4b, leo thang Andon ở bước 7b). Làm đúng thứ tự: mỗi bước cho ra thứ chạy được và kiểm tra được, bước sau dựa vào bước trước. Chỗ nào ghi "unit test" thì viết test trước hoặc ngay sau khi viết hàm (hàm thuần: `CounterMath`, `MachineTopic`, `AndonCall`).
 
-- [ ] **Bước 0 — Mosquitto và thử bằng tay** (1 giờ)
+- [x] **Bước 0 — Mosquitto và thử bằng tay** (1 giờ)
   - Mục tiêu: hiểu topic, wildcard, QoS, retained bằng tay trước khi viết một dòng C#.
   - Việc cần làm: thêm service `mosquitto` vào `docker-compose.yml` + `docker/mosquitto/mosquitto.conf` (mục 2.1); cài `mosquitto_pub/sub` (hoặc dùng `docker exec` vào container); chạy các lệnh ở 2.1; thử `+`, `#`, retained (subscribe sau khi publish), xóa retained.
   - File: `docker/mosquitto/mosquitto.conf`, sửa `docker-compose.yml`.
   - Kiểm tra: subscribe `minimes/#` thấy message publish từ terminal khác; subscriber mở sau vẫn nhận bản retained; `docker compose restart mosquitto` xong retained vẫn còn (nhờ `persistence true`).
+  - **Ghi chú khi làm (17/10/2026).** Service `mosquitto` (`eclipse-mosquitto:2`, cổng 1883, volume `mosquitto-data`, healthcheck đọc `$SYS`) và file cấu hình đã có từ M0 ở **`docker/mosquitto.conf`** (spec ghi `docker/mosquitto/mosquitto.conf`; giữ vị trí cũ, nội dung đúng 2.1: `listener 1883`, `allow_anonymous true`, `persistence true`, `persistence_location /mosquitto/data/`). Không cài `mosquitto_pub/sub` trên Windows: dùng `docker exec mes-mosquitto mosquitto_pub|mosquitto_sub`. Topic theo site/area seed của M0: `minimes/VN-BN01/SMT-ASSY/L1/{machine}/{kind}`. Kiểm tra: `+` (`.../L1/+/state`) nhận `state` của L1-SMT-01 và L1-TEST-01, không nhận `count`; `#` (`minimes/VN-BN01/#`) nhận cả ba; publish `state` retained rồi mới subscribe vẫn nhận ngay bản cuối; `alarm` không retained thì subscriber đến sau không nhận gì; `docker compose restart mosquitto` xong retained vẫn còn; publish payload rỗng `-r -n` xóa retained.
 
 - [ ] **Bước 1 — Contracts, entity, migration** (2 giờ)
   - Mục tiêu: chốt hợp đồng dữ liệu và bảng.
