@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Threading.Channels;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,14 +11,17 @@ using MQTTnet.Protocol;
 
 namespace MiniMes.Infrastructure.Machines;
 
-// Spec M4 2.2 / 2.4: the MES side of MQTT. Step 3 = receive, check, drop duplicates, log; nothing is stored yet
-// (the hot path and the batch writer come in step 4).
+// Spec M4 2.2 / 2.4: the MES side of MQTT. Receive, check, drop duplicates (step 3), then the hot path: the runtime
+// store turns the message into rows in RAM and the rows go to the channel of the batch writer (step 4).
 // MQTTnet does not reconnect by itself: ExecuteAsync keeps the connection with a 1-2-4..30 s backoff, and
 // subscribes again on every connect instead of trusting the broker to remember.
 public sealed class MqttIngestService(
     IOptions<MqttIngestOptions> options,
     MachineDirectory machines,
     RecentIdCache seen,
+    MachineRuntimeStore store,
+    Channel<IngestItem> channel,
+    IServiceScopeFactory scopes,
     TimeProvider clock,
     ILogger<MqttIngestService> log) : BackgroundService
 {
@@ -23,9 +29,12 @@ public sealed class MqttIngestService(
 
     private readonly MqttIngestOptions _opt = options.Value;
     private readonly IMqttClient _client = new MqttClientFactory().CreateMqttClient();
+    private readonly ConcurrentDictionary<int, bool> _skewed = new();   // per machine: is its clock off right now
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!await LoadRuntimeAsync(stoppingToken)) return;
+
         var mqttOptions = new MqttClientOptionsBuilder()
             .WithTcpServer(_opt.Host, _opt.Port)
             .WithClientId(_opt.ClientId)
@@ -37,7 +46,7 @@ public sealed class MqttIngestService(
         _client.ApplicationMessageReceivedAsync += e => OnMessageAsync(e, stoppingToken);
         _client.DisconnectedAsync += e =>
         {
-            if (e.ClientWasConnected) log.LogWarning("MQTT ingest lost the broker ({Reason})", e.Reason);
+            if (e.ClientWasConnected && !stoppingToken.IsCancellationRequested) log.LogWarning("MQTT ingest lost the broker ({Reason})", e.Reason);
             return Task.CompletedTask;
         };
 
@@ -63,6 +72,27 @@ public sealed class MqttIngestService(
                 try { await Task.Delay(backoff, clock, stoppingToken); }
                 catch (OperationCanceledException) { break; }
                 backoff = TimeSpan.FromSeconds(Math.Min(backoff.TotalSeconds * 2, MaxBackoff.TotalSeconds));
+            }
+        }
+    }
+
+    // Before the first message: counters and open segments come back from the DB (retried while the DB is down).
+    private async Task<bool> LoadRuntimeAsync(CancellationToken ct)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                var machines = await MachineRuntimeLoader.LoadAsync(scopes, store, ct);
+                log.LogInformation("MQTT ingest: runtime of {Count} machines loaded from the database", machines);
+                return true;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return false; }
+            catch (Exception ex)
+            {
+                var delay = TimeSpan.FromSeconds(Math.Min(attempt * 2, 30));
+                log.LogError("MQTT ingest: loading the machine runtime failed ({Error}), retry in {Delay}", ex.Message, delay);
+                try { await Task.Delay(delay, clock, ct); } catch (OperationCanceledException) { return false; }
             }
         }
     }
@@ -116,13 +146,29 @@ public sealed class MqttIngestService(
                 return;
             }
 
-            log.LogDebug("MQTT processed {Kind} {Machine} {MsgId} state={State} counter={Counter} alarm={AlarmCode} tag={Tag} value={Value}",
-                input.Topic.Kind, machine.Code, msg.MsgId, msg.State, msg.Counter, msg.AlarmCode, msg.Tag, msg.Value);
+            var result = store.Apply(machine.Id, input.Topic.Kind, msg, clock.GetUtcNow().UtcDateTime);
+            LogClockSkew(machine, result.ClockSkewed, msg);
+            log.LogDebug("MQTT processed {Kind} {Machine} {MsgId} state={State} counter={Counter} delta={Delta} stateChange={StateChange} {Note}",
+                input.Topic.Kind, machine.Code, msg.MsgId, msg.State, msg.Counter, result.Item?.Event?.Delta,
+                result.Item?.StateChange?.State, result.Note);
+            // Bounded channel: when the DB is slow this waits, and so does the MQTT client (backpressure).
+            if (result.Item is not null) await channel.Writer.WriteAsync(result.Item, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
         catch (Exception ex)
         {
             log.LogError(ex, "MQTT message on {Topic} failed", topic);
         }
+    }
+
+    // Once when a machine's clock goes off (> 60 s) and once when it is back, not on every message.
+    private void LogClockSkew(MachineRef machine, bool skewed, MachineMessage msg)
+    {
+        if (_skewed.GetValueOrDefault(machine.Id) == skewed) return;
+        _skewed[machine.Id] = skewed;
+        if (skewed)
+            log.LogWarning("Clock of {Machine} is off ({MachineTs:O}), the received time is used instead", machine.Code, msg.Ts);
+        else
+            log.LogInformation("Clock of {Machine} is back in range", machine.Code);
     }
 }

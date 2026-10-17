@@ -57,8 +57,14 @@ public static class DependencyInjection
         services.Configure<MqttIngestOptions>(config.GetSection(MqttIngestOptions.SectionName));
         services.AddSingleton<MachineDirectory>();
         services.AddSingleton(sp => new RecentIdCache(sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<MachineRuntimeStore>();
+        services.AddSingleton(_ => MachineEventBatchWriter.CreateChannel());
         if (config.GetValue(MqttIngestOptions.SectionName + ":" + nameof(MqttIngestOptions.Enabled), true))
+        {
+            // Hosted services stop in reverse order: the ingest stops first, then the writer drains what is queued.
+            services.AddHostedService<MachineEventBatchWriter>();
             services.AddHostedService<MqttIngestService>();
+        }
         services.AddScoped<DevSeeder>();
         services.AddScoped<MasterDataSeeder>();
         return services;
