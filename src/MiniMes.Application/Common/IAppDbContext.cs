@@ -63,4 +63,7 @@ public interface IAppDbContext
     // Optimistic concurrency (M2): a handler sets the RowVersion the client loaded as the original value,
     // so the UPDATE matches only if nobody changed the row since. DbContext already implements it.
     EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
+
+    // M3: a handler that retries after a concurrency conflict forgets what it loaded before reading again.
+    ChangeTracker ChangeTracker { get; }
 }

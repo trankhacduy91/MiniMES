@@ -43,6 +43,14 @@ public class Serial
         ItemId = itemId;
     }
 
+    // M3: the board arrives at the Repair station. Scanning it again while it is there changes nothing.
+    public void CheckInRepair()
+    {
+        if (Status is not (SerialStatus.Ng or SerialStatus.Repair))
+            throw new DomainException($"Serial {SerialNo} is {Status}; only NG boards are repaired.");
+        Status = SerialStatus.Repair;
+    }
+
     // M3: record a scan that route check allowed at a routing step. OK moves the board to that step (the last
     // step completes it); NG keeps the step (the failed test is done again after Repair) and marks it NG.
     public void ApplyScan(int stepSeq, bool isLastStep, ScanResult result)

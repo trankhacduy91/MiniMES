@@ -37,6 +37,7 @@ public enum RouteVerdict
 public enum BlockReason
 {
     None,
+    NoOpenSession,   // the station has no logged-in operator/WO: checked by the handler before route check
     SerialNotFound,
     WoNotActive,
     WrongWo,

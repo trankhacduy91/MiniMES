@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniMes.Application.Execution;
 using MiniMes.Application.Factory;
+using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Factory;
 using MiniMes.Domain.Users;
 
@@ -29,4 +31,11 @@ public class StationsController(ISender sender) : ControllerBase
     [HttpPut("{id:int}")]
     public Task<StationDto> Update(int id, UpdateStationRequest r, CancellationToken ct)
         => sender.Send(new UpdateStationCommand(id, r.Name, r.Type, r.IsActive, r.WorkCenterId), ct);
+
+    // M3: the scan of a board at this station, by an operator (kiosk) or a machine account (simulator).
+    // Blocked is a normal answer (200 + reasonCode); 404 = no such active station.
+    [Authorize(Roles = $"{nameof(Role.Operator)},{nameof(Role.Admin)}")]
+    [HttpPost("{id:int}/scan")]
+    public Task<ScanResponse> Scan(int id, ScanRequest r, CancellationToken ct)
+        => sender.Send(new ScanCommand(id, r.SerialNo, r.Result, r.DefectCode, r.Source), ct);
 }
