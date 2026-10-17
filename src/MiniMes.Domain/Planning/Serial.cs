@@ -1,4 +1,5 @@
 using MiniMes.Domain.Common;
+using MiniMes.Domain.Execution;
 
 namespace MiniMes.Domain.Planning;
 
@@ -40,5 +41,23 @@ public class Serial
         SerialNo = serialNo;
         WorkOrderId = workOrderId;
         ItemId = itemId;
+    }
+
+    // M3: record a scan that route check allowed at a routing step. OK moves the board to that step (the last
+    // step completes it); NG keeps the step (the failed test is done again after Repair) and marks it NG.
+    public void ApplyScan(int stepSeq, bool isLastStep, ScanResult result)
+    {
+        if (Status is not (SerialStatus.Created or SerialStatus.InProcess))
+            throw new DomainException($"Serial {SerialNo} is {Status}; it cannot be scanned at a routing step.");
+        if (stepSeq <= CurrentSeq)
+            throw new DomainException($"Serial {SerialNo} already passed step {stepSeq}.");
+
+        if (result == ScanResult.Ng)
+        {
+            Status = SerialStatus.Ng;
+            return;
+        }
+        CurrentSeq = stepSeq;
+        Status = isLastStep ? SerialStatus.Completed : SerialStatus.InProcess;
     }
 }
