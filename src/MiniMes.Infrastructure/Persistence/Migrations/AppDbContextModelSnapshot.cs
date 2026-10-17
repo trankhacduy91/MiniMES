@@ -72,6 +72,163 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditLog", (string)null);
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Execution.RepairLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ComponentReplaced")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DefectCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("RepairedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RepairedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int?>("ReturnToSeq")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SerialId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SerialNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<int>("StationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SerialId");
+
+                    b.HasIndex("SerialNo", "RepairedAt");
+
+                    b.ToTable("RepairLogs", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Execution.ScanLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("DefectCode")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("OperatorCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<DateTime>("ScannedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Seq")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SerialId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SerialNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<int>("StationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkOrderId");
+
+                    b.HasIndex("SerialNo", "ScannedAt");
+
+                    b.ToTable("ScanLogs", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Execution.StationSession", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OperatorCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("StationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkOrderId");
+
+                    b.HasIndex(new[] { "StationId" }, "UX_StationSessions_OneOpenPerStation")
+                        .IsUnique()
+                        .HasFilter("[ClosedAt] IS NULL");
+
+                    b.ToTable("StationSessions", (string)null);
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Factory.Area", b =>
                 {
                     b.Property<int>("Id")
@@ -821,6 +978,12 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("ScrapReason")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -847,6 +1010,8 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("WorkOrderId", "Status");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("WorkOrderId", "Status"), new[] { "CurrentSeq" });
 
                     b.ToTable("Serials", (string)null);
                 });
@@ -1120,6 +1285,30 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.HasKey("UserId", "Role");
 
                     b.ToTable("UserRoles", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Execution.RepairLog", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Planning.Serial", null)
+                        .WithMany()
+                        .HasForeignKey("SerialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Execution.StationSession", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Factory.Station", null)
+                        .WithMany()
+                        .HasForeignKey("StationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.WorkOrder", null)
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MiniMes.Domain.Factory.Area", b =>

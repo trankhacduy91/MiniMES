@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 using MiniMes.Domain.Audit;
+using MiniMes.Domain.Execution;
 using MiniMes.Domain.Factory;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
@@ -45,6 +46,11 @@ public interface IAppDbContext
     DbSet<WorkOrderOperation> WorkOrderOperations { get; }
     DbSet<Serial> Serials { get; }
     DbSet<LabelPrintLog> LabelPrintLogs { get; }
+
+    // M3: shop floor execution
+    DbSet<ScanLog> ScanLogs { get; }
+    DbSet<RepairLog> RepairLogs { get; }
+    DbSet<StationSession> StationSessions { get; }
 
     // A unique-index violation (two requests racing past the "already exists" check) comes out as
     // ConflictException (409), so handlers never see provider-specific SQL errors.

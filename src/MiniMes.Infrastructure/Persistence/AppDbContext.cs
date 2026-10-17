@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using MiniMes.Application.Common;
 using MiniMes.Domain.Audit;
 using MiniMes.Domain.Common;
+using MiniMes.Domain.Execution;
 using MiniMes.Domain.Factory;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
@@ -45,6 +46,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WorkOrderOperation> WorkOrderOperations => Set<WorkOrderOperation>();
     public DbSet<Serial> Serials => Set<Serial>();
     public DbSet<LabelPrintLog> LabelPrintLogs => Set<LabelPrintLog>();
+
+    // M3: shop floor execution
+    public DbSet<ScanLog> ScanLogs => Set<ScanLog>();
+    public DbSet<RepairLog> RepairLogs => Set<RepairLog>();
+    public DbSet<StationSession> StationSessions => Set<StationSession>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
         => Database.BeginTransactionAsync(ct);

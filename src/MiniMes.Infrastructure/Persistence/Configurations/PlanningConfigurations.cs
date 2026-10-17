@@ -94,7 +94,9 @@ public class SerialConfiguration : IEntityTypeConfiguration<Serial>
         b.ToTable("Serials");
         // Second line of defence after the sequence: a bug that builds the same text twice is refused here.
         b.HasIndex(x => x.SerialNo).IsUnique();
-        b.HasIndex(x => new { x.WorkOrderId, x.Status });   // progress and WIP per WO
+        // Progress and WIP per WO; CurrentSeq included so WIP-by-step (M3) reads the index only.
+        b.HasIndex(x => new { x.WorkOrderId, x.Status }).IncludeProperties(x => x.CurrentSeq);
+        b.Property(x => x.RowVersion).IsRowVersion();
         b.Property(x => x.SerialNo).HasMaxLength(Serial.SerialNoMaxLength).IsUnicode(false);
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.ScrapReason).HasMaxLength(Serial.ScrapReasonMaxLength);

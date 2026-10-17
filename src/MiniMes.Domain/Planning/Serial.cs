@@ -27,6 +27,7 @@ public class Serial
     public int CurrentSeq { get; private set; }     // last routing step passed; 0 = not started (M3 route check)
     public SerialStatus Status { get; private set; } = SerialStatus.Created;
     public string? ScrapReason { get; private set; }
+    public byte[] RowVersion { get; private set; } = [];   // M3: two scans of one board at once -> one wins, the other re-reads
 
     private Serial() { SerialNo = string.Empty; }
 
