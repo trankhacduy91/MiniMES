@@ -64,4 +64,10 @@ public class StationsController(ISender sender) : ControllerBase
         await sender.Send(new CloseStationSessionCommand(id, sessionId), ct);
         return NoContent();
     }
+
+    // M3: boards waiting at this station (next step here), FIFO by serial number. For the machine simulator (M4),
+    // which logs in and opens a session like an operator first. Empty without an open session.
+    [HttpGet("{id:int}/waiting-serials")]
+    public Task<IReadOnlyList<WaitingSerialDto>> WaitingSerials(int id, [FromQuery] int take = 1, CancellationToken ct = default)
+        => sender.Send(new GetWaitingSerialsQuery(id, take), ct);
 }

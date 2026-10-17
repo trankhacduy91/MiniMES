@@ -37,3 +37,7 @@ public sealed record OpenSessionRequest(int WorkOrderId);
 
 public sealed record StationSessionDto(long Id, int StationId, string StationCode, int WorkOrderId, string WoNo,
     string OperatorCode, DateTime OpenedAt, DateTime? ClosedAt);
+
+// GET /api/stations/{id}/waiting-serials?take=1: boards of the open session's WO whose next step is done at this
+// station, oldest serial first (FIFO). The machine simulator (M4) picks what to "test" from here.
+public sealed record WaitingSerialDto(string SerialNo, int Step, string StepName);
