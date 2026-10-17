@@ -759,6 +759,54 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Planning.LabelPrintLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("PrintNo")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PrintedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PrintedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long>("SerialId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SerialNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkOrderId");
+
+                    b.HasIndex("SerialId", "PrintNo")
+                        .IsUnique();
+
+                    b.ToTable("LabelPrintLogs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LabelPrintLogs_PrintNo", "[PrintNo] >= 1");
+                        });
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Planning.Serial", b =>
                 {
                     b.Property<long>("Id")
@@ -1200,6 +1248,21 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.HasOne("MiniMes.Domain.MasterData.Equipment.WorkCenter", null)
                         .WithMany()
                         .HasForeignKey("WorkCenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Planning.LabelPrintLog", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Planning.Serial", null)
+                        .WithMany()
+                        .HasForeignKey("SerialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.WorkOrder", null)
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

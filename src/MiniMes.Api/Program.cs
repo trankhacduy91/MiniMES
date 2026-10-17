@@ -8,8 +8,10 @@ using MiniMes.Api.Middleware;
 using MiniMes.Api.OpenApi;
 using MiniMes.Application;
 using MiniMes.Application.Common;
+using MiniMes.Application.Labels;
 using MiniMes.Infrastructure;
 using MiniMes.Infrastructure.Auth;
+using MiniMes.Infrastructure.Labels;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +33,13 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddHealthChecks();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+// Typed HttpClient for the label preview: IHttpClientFactory comes with ASP.NET Core, so it is registered here
+// instead of adding Microsoft.Extensions.Http to Infrastructure.
+builder.Services.AddHttpClient<ILabelPreview, LabelaryPreviewClient>(c =>
+{
+    c.BaseAddress = new Uri(LabelaryPreviewClient.BaseAddress);
+    c.Timeout = TimeSpan.FromSeconds(10);
+});
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();

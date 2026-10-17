@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniMes.Application.Labels;
 using MiniMes.Application.Planning;
 using MiniMes.Contracts.Common;
 using MiniMes.Contracts.Planning;
@@ -14,6 +15,8 @@ namespace MiniMes.Api.Controllers;
 public class WorkOrdersController(ISender sender) : ControllerBase
 {
     private const string Planners = $"{nameof(Role.Planner)},{nameof(Role.Admin)}";
+    // The planner prints at release; the line supervisor reprints a damaged label on the floor.
+    private const string LabelPrinters = $"{nameof(Role.Planner)},{nameof(Role.Supervisor)},{nameof(Role.Admin)}";
 
     [HttpGet]
     public Task<PagedResult<WorkOrderSummaryDto>> List([FromQuery] WorkOrderFilter f, CancellationToken ct)
@@ -53,4 +56,16 @@ public class WorkOrdersController(ISender sender) : ControllerBase
     [HttpGet("{id:int}/serials")]
     public Task<PagedResult<SerialDto>> Serials(int id, [FromQuery] SerialFilter f, CancellationToken ct)
         => sender.Send(new GetWorkOrderSerialsQuery(id, f.Status, f.Page, f.PageSize), ct);
+
+    // One label as PNG (Labelary). Printing is a separate action with a log.
+    [Authorize(Roles = LabelPrinters)]
+    [HttpPost("{id:int}/labels/preview")]
+    public async Task<IActionResult> PreviewLabel(int id, PreviewLabelRequest r, CancellationToken ct)
+        => File(await sender.Send(new PreviewLabelQuery(id, r.SerialNo), ct), "image/png");
+
+    // Logs every label (PrintNo; a reprint needs a reason) and returns the ZPL for the printer.
+    [Authorize(Roles = LabelPrinters)]
+    [HttpPost("{id:int}/labels/print")]
+    public Task<PrintLabelsResultDto> PrintLabels(int id, PrintLabelsRequest r, CancellationToken ct)
+        => sender.Send(new PrintLabelsCommand(id, r.SerialNos, r.Reason), ct);
 }

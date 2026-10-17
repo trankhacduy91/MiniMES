@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using MiniMes.Application.Labels;
 
 namespace MiniMes.IntegrationTests.Infrastructure;
 
@@ -15,5 +18,22 @@ public sealed class ApiFactory(SqlServerFixture sql) : WebApplicationFactory<Pro
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", sql.ConnectionString);
         Environment.SetEnvironmentVariable("Jwt__Key", JwtKey);
         builder.UseEnvironment("Testing"); // Program.cs: Testing -> MigrateAsync + seed
+        // Tests never call the public Labelary service: a fake records the ZPL and returns a tiny PNG.
+        builder.ConfigureTestServices(services => services.AddSingleton<ILabelPreview>(LabelPreview));
+    }
+
+    public FakeLabelPreview LabelPreview { get; } = new();
+}
+
+public sealed class FakeLabelPreview : ILabelPreview
+{
+    public static readonly byte[] Png = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
+
+    public string? LastZpl { get; private set; }
+
+    public Task<byte[]> RenderPngAsync(string zpl, CancellationToken ct)
+    {
+        LastZpl = zpl;
+        return Task.FromResult(Png);
     }
 }

@@ -26,7 +26,7 @@ public class ReleaseWorkOrderTests(ApiFixture api)
 
         Assert.Equal(("Released", 1, 1, "Pending"), (wo.Status, wo.BomVersion, wo.RoutingVersion, wo.FaiStatus));
         Assert.NotNull(wo.ReleasedAt);
-        Assert.Equal(["Start", "Cancel", "ChangePriority"], wo.AllowedActions);
+        Assert.Equal(["Start", "Cancel", "ChangePriority", "PrintLabels"], wo.AllowedActions);
         Assert.Equal(8, wo.Materials.Count);                                          // as many rows as the exploded BOM
         Assert.Equal(2472.48m, wo.Materials.Single(m => m.ComponentCode == "RES-10K-0402").RequiredQty);
         Assert.Equal(["SMT", "ASSY", "TEST", "PACK"], wo.Operations.Select(o => o.OperationCode));

@@ -24,6 +24,7 @@ public enum WorkOrderAction
     Close,
     Cancel,
     ChangePriority,
+    PrintLabels,
 }
 
 // [v2] First Article Inspection gate (spec 1.2f2). Null on a Draft: decided at Release from RequireFai.

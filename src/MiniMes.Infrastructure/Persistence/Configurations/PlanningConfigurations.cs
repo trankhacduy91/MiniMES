@@ -103,3 +103,19 @@ public class SerialConfiguration : IEntityTypeConfiguration<Serial>
         b.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+public class LabelPrintLogConfiguration : IEntityTypeConfiguration<LabelPrintLog>
+{
+    public void Configure(EntityTypeBuilder<LabelPrintLog> b)
+    {
+        b.ToTable("LabelPrintLogs", t => t.HasCheckConstraint("CK_LabelPrintLogs_PrintNo", "[PrintNo] >= 1"));
+        // One number per print of a serial: two reprints racing for "PrintNo 3" -> one of them gets 409.
+        b.HasIndex(x => new { x.SerialId, x.PrintNo }).IsUnique();
+        b.HasIndex(x => x.WorkOrderId);
+        b.Property(x => x.SerialNo).HasMaxLength(Serial.SerialNoMaxLength).IsUnicode(false);
+        b.Property(x => x.PrintedBy).HasMaxLength(100);
+        b.Property(x => x.Reason).HasMaxLength(LabelPrintLog.ReasonMaxLength);
+        b.HasOne<Serial>().WithMany().HasForeignKey(x => x.SerialId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<WorkOrder>().WithMany().HasForeignKey(x => x.WorkOrderId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

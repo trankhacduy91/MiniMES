@@ -44,6 +44,7 @@ public interface IAppDbContext
     DbSet<WorkOrderMaterial> WorkOrderMaterials { get; }
     DbSet<WorkOrderOperation> WorkOrderOperations { get; }
     DbSet<Serial> Serials { get; }
+    DbSet<LabelPrintLog> LabelPrintLogs { get; }
 
     // A unique-index violation (two requests racing past the "already exists" check) comes out as
     // ConflictException (409), so handlers never see provider-specific SQL errors.

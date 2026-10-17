@@ -5,7 +5,7 @@ using A = MiniMes.Domain.Planning.WorkOrderAction;
 
 namespace MiniMes.UnitTests.Planning;
 
-// Spec M2 step 1: every (status x action) cell, plus the special cases listed in the spec.
+// Spec M2 step 1: every (status x action) cell, plus the special cases listed in the spec (PrintLabels added in step 6).
 public class WorkOrderStateMachineTests
 {
     private static readonly DateTime Now = new(2026, 10, 1, 1, 0, 0, DateTimeKind.Utc);
@@ -15,8 +15,9 @@ public class WorkOrderStateMachineTests
     private static readonly Dictionary<S, (A Action, S To)[]> Legal = new()
     {
         [S.Draft] = [(A.Edit, S.Draft), (A.Release, S.Released), (A.Cancel, S.Cancelled), (A.ChangePriority, S.Draft)],
-        [S.Released] = [(A.Start, S.InProgress), (A.Cancel, S.Cancelled), (A.ChangePriority, S.Released)],
-        [S.InProgress] = [(A.Hold, S.OnHold), (A.Complete, S.Completed), (A.Cancel, S.Cancelled), (A.ChangePriority, S.InProgress)],
+        [S.Released] = [(A.Start, S.InProgress), (A.Cancel, S.Cancelled), (A.ChangePriority, S.Released), (A.PrintLabels, S.Released)],
+        [S.InProgress] = [(A.Hold, S.OnHold), (A.Complete, S.Completed), (A.Cancel, S.Cancelled), (A.ChangePriority, S.InProgress),
+            (A.PrintLabels, S.InProgress)],
         [S.OnHold] = [(A.Resume, S.InProgress), (A.ChangePriority, S.OnHold)],
         [S.Completed] = [(A.Close, S.Closed)],
         [S.Closed] = [],
@@ -66,6 +67,7 @@ public class WorkOrderStateMachineTests
             case A.Close: wo.Close(); break;
             case A.Cancel: wo.Cancel("Created on the wrong line"); break;
             case A.ChangePriority: wo.ChangePriority(1); break;
+            case A.PrintLabels: wo.EnsureCanPrintLabels(); break;
             default: throw new ArgumentOutOfRangeException(nameof(action));
         }
     }

@@ -64,10 +64,11 @@ public class WorkOrder : AuditableEntity, IAudited
         WorkOrderStatus.Draft =>
             [WorkOrderAction.Edit, WorkOrderAction.Release, WorkOrderAction.Cancel, WorkOrderAction.ChangePriority],
         WorkOrderStatus.Released =>
-            [WorkOrderAction.Start, WorkOrderAction.Cancel, WorkOrderAction.ChangePriority],
+            [WorkOrderAction.Start, WorkOrderAction.Cancel, WorkOrderAction.ChangePriority, WorkOrderAction.PrintLabels],
         WorkOrderStatus.InProgress => HasOutput
-            ? [WorkOrderAction.Hold, WorkOrderAction.Complete, WorkOrderAction.ChangePriority]
-            : [WorkOrderAction.Hold, WorkOrderAction.Complete, WorkOrderAction.Cancel, WorkOrderAction.ChangePriority],
+            ? [WorkOrderAction.Hold, WorkOrderAction.Complete, WorkOrderAction.ChangePriority, WorkOrderAction.PrintLabels]
+            : [WorkOrderAction.Hold, WorkOrderAction.Complete, WorkOrderAction.Cancel, WorkOrderAction.ChangePriority,
+               WorkOrderAction.PrintLabels],
         WorkOrderStatus.OnHold => [WorkOrderAction.Resume, WorkOrderAction.ChangePriority],
         WorkOrderStatus.Completed => [WorkOrderAction.Close],
         _ => [],
@@ -166,6 +167,11 @@ public class WorkOrder : AuditableEntity, IAudited
         RequirePriority(priority);
         Priority = priority;
     }
+
+    // Labels exist only for released serials, and not while the order is on hold (no new labels for a stopped
+    // order) or finished. Changes nothing on the WO; the print log is separate.
+    public void EnsureCanPrintLabels()
+        => Ensure(WorkOrderAction.PrintLabels, WorkOrderStatus.Released, WorkOrderStatus.InProgress);
 
     // [v2] M3: the first serial scanned at the first step while FAI is pending becomes the sample.
     public void AssignFaiSerial(string serialNo)
