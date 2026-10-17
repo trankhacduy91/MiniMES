@@ -336,6 +336,30 @@ public class WorkOrderStateMachineTests
         Assert.Equal((SerialStatus.Created, 0), (serial.Status, serial.CurrentSeq));
         Assert.Throws<DomainException>(() => new Serial(new string('X', Serial.SerialNoMaxLength + 1), 1, 2));
     }
+
+    // M3 step 10 (load test): the second of two first boards scanned at once finds the order already started.
+    [Fact]
+    public void Ensure_started_starts_a_released_order_and_leaves_a_running_one_alone()
+    {
+        var released = WorkOrders.InStatus(S.Released);
+        var running = WorkOrders.InStatus(S.InProgress);
+        var startedAt = running.StartedAt;
+
+        released.EnsureStarted(Now);
+        running.EnsureStarted(Now.AddHours(1));
+
+        Assert.Equal((S.InProgress, (DateTime?)Now), (released.Status, released.StartedAt));
+        Assert.Equal((S.InProgress, startedAt), (running.Status, running.StartedAt));   // first start kept
+    }
+
+    [Theory]
+    [InlineData(S.Draft)]
+    [InlineData(S.OnHold)]
+    [InlineData(S.Completed)]
+    [InlineData(S.Closed)]
+    [InlineData(S.Cancelled)]
+    public void Ensure_started_still_refuses_an_order_that_must_not_run(S status)
+        => Assert.Throws<DomainException>(() => WorkOrders.InStatus(status).EnsureStarted(Now));
 }
 
 // Builds work orders in any status through the real transitions (no reflection), PCB-A x 200 by default.

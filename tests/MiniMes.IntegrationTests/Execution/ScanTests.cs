@@ -96,17 +96,46 @@ public class ScanTests(ApiFixture api)
         Assert.Equal(1, await QtyGoodAsync(wo.Id, 10));
     }
 
-    // First scans of two boards at once on a Released order: both start it; one Start wins, the other retries.
+    // First scans of several boards at once on a Released order: all are accepted, the order starts once.
+    // Two boards were not enough to show the race the step 10 load test found (a board reading "Released" after
+    // another one started the order got 422): 8 boards, a few rounds.
     [Fact]
-    public async Task Two_first_scans_at_once_both_succeed_and_start_the_order_once()
+    public async Task First_scans_at_once_all_succeed_and_start_the_order_once()
+    {
+        var clients = new List<HttpClient>();
+        for (var i = 0; i < 8; i++) clients.Add(await api.LoginOperatorAsync());
+        for (var round = 0; round < 3; round++)
+        {
+            var (wo, serials) = await ReleasedAsync(8);
+            await OpenSessionAsync("L1-SMT-01", wo.Id);
+
+            var answers = await TogetherAsync(serials.Select((sn, i) => (Func<Task<ScanResponse>>)(() => ScanAsync(clients[i], "L1-SMT-01", sn))).ToArray());
+
+            Assert.All(answers, x => Assert.Equal(("Ok", false), (x.Result, x.Duplicate)));
+            Assert.Equal(WorkOrderStatus.InProgress, await WoStatusAsync(wo.Id));
+            Assert.Equal(8, await QtyGoodAsync(wo.Id, 10));
+            Assert.Equal(1, await api.WithDbAsync(db => db.AuditLogs.CountAsync(a => a.TableName == "WorkOrders"
+                && a.RecordKey == wo.Id.ToString() && a.ColumnName == "Status" && a.NewValue == "InProgress")));
+        }
+    }
+
+    // The race of the step 10 load test, replayed in a fixed order: board B reads the order as Released, then
+    // waits; board A starts the order and commits; B goes on and must still be accepted (EnsureStarted), not 422.
+    [Fact]
+    public async Task A_board_that_read_released_after_another_started_the_order_is_accepted()
     {
         var (wo, serials) = await ReleasedAsync(2);
         await OpenSessionAsync("L1-SMT-01", wo.Id);
         var (a, b) = (await api.LoginOperatorAsync(), await api.LoginOperatorAsync());
 
-        var answers = await TogetherAsync(() => ScanAsync(a, "L1-SMT-01", serials[0]), () => ScanAsync(b, "L1-SMT-01", serials[1]));
+        var hold = api.Factory.ScanGate.HoldScanOf(serials[1]);
+        var late = ScanAsync(b, "L1-SMT-01", serials[1]);
+        await hold.Reached.Task.WaitAsync(TimeSpan.FromSeconds(10));   // B has read "Released"
+        var first = await ScanAsync(a, "L1-SMT-01", serials[0]);       // A starts the order
+        api.Factory.ScanGate.Open();
+        var second = await late;
 
-        Assert.All(answers, x => Assert.Equal(("Ok", false), (x.Result, x.Duplicate)));
+        Assert.Equal(("Ok", "Ok"), (first.Result, second.Result));
         Assert.Equal(WorkOrderStatus.InProgress, await WoStatusAsync(wo.Id));
         Assert.Equal(2, await QtyGoodAsync(wo.Id, 10));
     }

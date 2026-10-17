@@ -12,7 +12,8 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 - **M0 (nền tảng) xong:** solution Clean Architecture, Docker, đăng nhập theo role, audit trail không sửa được, API cấu hình nhà máy, CI, 2 app WPF đăng nhập được.
 - **M1 (master data) xong:** Item, BOM đa cấp có version, routing, work center/máy, ca, lịch nhà máy, mã lỗi, lý do dừng; explode BOM bằng recursive CTE; import Excel; màn hình WPF Back-office. Xem [mục Master data](#master-data-m1).
 - **M2 (work order) xong:** tạo WO có preview NVL, Release (chụp BOM/routing + sinh serial trong một transaction, không trùng khi release đồng thời), state machine Hold/Resume/Complete/Close/Cancel, Priority + dispatch list theo line, nhãn ZPL (Code128 + DataMatrix) xem trước qua Labelary và log in lại. Xem [mục Work order](#work-order-m2).
-- Các module tiếp theo (M3 → M7) làm theo [lộ trình](spec/spec-v2.md).
+- **M3 (shop floor) xong:** scan serial tại trạm với route check (chặn nhảy bước, bo NG, bo Hold), chống scan lặp và scan đồng thời, cổng FAI, phiên trạm, Repair/Rework/Scrap; Kiosk WPF toàn màn hình cho máy quét mã vạch (NG + mã lỗi, form sửa chữa, SOP, offline); báo cáo FPY/RTY/WIP; đo hiệu năng trên 10 triệu dòng log (p95 24,8 ms). Xem [mục Shop floor](#shop-floor-m3) và [Performance](#performance).
+- Các module tiếp theo (M4 → M7) làm theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
 
@@ -134,15 +135,15 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | 2 | Planner tạo WO 200 pcs → Release → sinh serial, in nhãn ZPL | M2 | xong (in ra file `.zpl`; máy in thật ngoài phạm vi) |
 | 3 | Kho nhập reel → QC làm IQC → lot `Available` | M6 | chưa làm |
 | 4 | Operator nạp reel lên máy SMT, MES kiểm tra đúng vật tư và FIFO | M6 | chưa làm |
-| 5 | FAI: serial đầu tiên qua hết các bước → QC duyệt → chạy hàng loạt | M2, M3, M7 | chưa làm |
+| 5 | FAI: serial đầu tiên qua hết các bước → QC duyệt → chạy hàng loạt | M2, M3, M7 | cổng FAI xong (M3); QC duyệt qua endpoint tạm, checklist FAI ở M7 |
 | 6 | Simulator: SMT qua MQTT, lò reflow OPC UA, máy dán keo Modbus (qua gateway) | M4, M4b | chưa làm |
-| 7 | Operator scan trên kiosk, xem SOP; NG → Repair → Test lại → OK | M3 | chưa làm |
+| 7 | Operator scan trên kiosk, xem SOP; NG → Repair → Test lại → OK | M3 | xong |
 | 8 | Ngắt mạng gateway–broker 60 s → đệm → gửi bù, không mất bộ đếm | M4b | chưa làm |
 | 9 | Máy Down → Andon → quá 3 phút chưa Ack thì leo thang → chọn lý do dừng | M4, M5 | chưa làm |
 | 10 | Nhiệt độ reflow trôi → SPC báo vi phạm → NCR, Hold serial liên quan | M7 | chưa làm |
 | 11 | Trạm Pack: serial vào thùng 10 pcs → nhãn thùng → pallet | M3b | chưa làm |
 | 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M7 | chưa làm |
-| 13 | WO Completed → báo cáo sản lượng/FPY/OEE, xuất Excel | M2, M3, M5 | chưa làm |
+| 13 | WO Completed → báo cáo sản lượng/FPY/OEE, xuất Excel | M2, M3, M5 | FPY/WIP xong (M3); OEE, Excel ở M5 |
 
 ## Master data (M1)
 
@@ -192,6 +193,50 @@ Những điểm đáng nói khi phỏng vấn:
 - **State machine trong Domain:** server trả `allowedActions`, WPF bật/tắt nút theo đó, không lặp lại luật.
 - Màn hình đang mở mà người khác vừa đổi WO: 409 hoặc 422, màn hình tự nạp lại và báo lý do. Chuyện "test xanh nhưng không vì lý do mình tưởng" ở [`docs/incidents.md`](docs/incidents.md).
 
+## Shop floor (M3)
+
+![Kiosk chặn bo nhảy bước](docs/images/m3-kiosk-blocked.png)
+
+**Kiosk** (`src/MiniMes.Kiosk.Wpf`, trạm đặt trong `appsettings.json` hoặc `--StationCode=L1-TEST-01`): quét thẻ `EMP00123` → chọn WO từ dispatch list → màn hình scan toàn màn hình. Máy quét mã vạch "gõ" serial + Enter vào ô scan; mỗi lần quét hiện cả màn hình xanh (OK) hoặc đỏ (NG, BLOCKED kèm lý do), có âm báo, rồi tự về READY.
+- **Trạm Test:** nút **NG** → chọn mã lỗi → quét bo.
+- **Trạm `L1-REPAIR`:** quét bo NG (check-in) → form sửa chữa (hành động, linh kiện thay, quay lại bước nào) → bo về test lại.
+- **Nút SOP:** mở PDF hướng dẫn của bước ngay trong kiosk.
+- **Banner vàng:** WO đang chờ duyệt FAI.
+- **Banner OFFLINE:** khi API không trả lời; lúc đó không cho quét.
+
+**Back-office:** menu **Reports**: FPY theo bước (chỉ tính lần quét đầu của mỗi serial), RTY, final yield, WIP theo vị trí trên line.
+
+| Việc | API |
+| --- | --- |
+| Phiên trạm | `POST /api/stations/{id}/sessions` `{ workOrderId }`, `DELETE /api/stations/{id}/sessions/{sessionId}` |
+| Scan (kiosk và máy dùng chung) | `POST /api/stations/{id}/scan` `{ serialNo, result, defectCode?, source }`, bị chặn vẫn trả 200 + `reasonCode` |
+| Repair, scrap | `POST /api/stations/{id}/repair`, `POST /api/serials/{serialNo}/scrap` (Supervisor) |
+| Máy giả lập | `GET /api/stations/{id}/waiting-serials?take=1` |
+| FAI (tạm, M7 thay) | `POST /api/work-orders/{id}/fai/result` `{ passed }` (QC) |
+| SOP, báo cáo | `GET /api/sop/{**path}`, `GET /api/reports/fpy?workOrderId=`, `GET /api/reports/wip?workOrderId=` |
+
+Những điểm đáng nói khi phỏng vấn:
+- **Route check (interlock / poka-yoke) là một hàm thuần trong Domain.** Có 34 unit test: đủ 19 case của spec, cộng các test giữ đúng **thứ tự** kiểm tra (scan lặp phải thắng trạng thái Completed; bo FAI bị NG vẫn vào được Repair). Vì chặn nằm ở server, Kiosk, máy giả lập hay gọi API trực tiếp đều không qua mặt được.
+- **Một lần scan = một transaction.** Bộ đếm tăng bằng `UPDATE ... SET QtyGood = QtyGood + 1`, không đọc rồi ghi. Mẫu FAI được gán bằng UPDATE có điều kiện `WHERE FaiSerialNo IS NULL`. Hai lần quét cùng một bo thì `RowVersion` của serial chỉ cho một lần ghi; lần kia đọc lại và trả "duplicate". Mỗi cơ chế có test đồng thời và mutation (bỏ cơ chế đi thì test đỏ).
+- **FPY tính theo serial, không theo lượt quét.** `ROW_NUMBER()` lấy lần quét đầu tiên của mỗi serial tại mỗi bước. Đếm theo lượt quét (`QtyGood/(QtyGood+QtyNg)`) sẽ lẫn cả lượt test lại sau Repair: trong test là 66,67 % thay vì 70 %.
+- **Kiosk cho máy quét mã vạch:** ô scan luôn giữ focus; lệnh scan cho phép hai lần quét chạy song song (máy quét nhanh hơn API); không dùng `MessageBox`. Chuyện "test xanh cả khi xóa cấu hình cần bảo vệ" ở [`docs/incidents.md`](docs/incidents.md).
+
+![Form sửa chữa ở trạm Repair](docs/images/m3-kiosk-repair.png)
+
+## Performance
+
+Scan qua API, SQL Server 2022 trong Docker, `ScanLogs` **10 triệu dòng**, 8 luồng song song, máy i5-12400F / 16 GB / SSD. Chi tiết, plan và cách chạy lại ở [`docs/perf.md`](docs/perf.md).
+
+| | p50 | p95 | p99 |
+| --- | ---: | ---: | ---: |
+| Index `(SerialNo, ScannedAt)` theo spec | 17,9 ms | **24,8 ms** | 31,4 ms |
+| Không index | 1.396 ms | 1.708 ms | 1.786 ms |
+
+- Câu "scan gần nhất của serial" giảm từ 128.519 xuống 12 logical reads (145 ms → 0,028 ms).
+- Thêm `INCLUDE` chỉ bớt thêm 14 µs mà index to hơn 20 %, nên không dùng.
+- Tham số `nvarchar` gặp cột `varchar` làm SQL Server bỏ index (`CONVERT_IMPLICIT`): 147 ms dù có index.
+- Chạy đo còn tìm ra một race condition mà test đồng thời bỏ sót (ở `incidents.md`).
+
 ## Chạy test
 
 ```bash
@@ -239,5 +284,6 @@ src/MiniMes.BackOffice.Wpf  app văn phòng
 src/MiniMes.Kiosk.Wpf       app trạm
 tests/                      unit test, integration test (Testcontainers)
 spec/                       spec dự án và từng module
-docs/                       ERD master data, SOP mẫu, file import mẫu, incidents.md (lỗi đáng nhớ và bài học)
+scripts/                    seed 10 triệu dòng ScanLog, đo SQL các phương án index, benchmark API scan (docs/perf.md)
+docs/                       ERD master data, SOP mẫu, file import mẫu, perf.md, incidents.md (lỗi đáng nhớ và bài học)
 ```

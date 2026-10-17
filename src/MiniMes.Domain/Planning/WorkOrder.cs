@@ -114,6 +114,14 @@ public class WorkOrder : AuditableEntity, IAudited
         Status = WorkOrderStatus.InProgress;
     }
 
+    // M3: every accepted production scan makes sure the order runs. Two first boards scanned at once both read
+    // "Released"; the second one finds the order already started by the first: nothing to do, not an error
+    // (found by the step 10 load test). Any other status is still refused by Start.
+    public void EnsureStarted(DateTime utcNow)
+    {
+        if (Status != WorkOrderStatus.InProgress) Start(utcNow);
+    }
+
     // Rule R9: only a running order can be held; a Released order that should not run is cancelled instead.
     public void Hold(string reason)
     {

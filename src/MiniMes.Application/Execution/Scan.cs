@@ -112,11 +112,13 @@ public sealed class ScanHandler(IAppDbContext db, ICurrentUser user, TimeProvide
         }
 
         // The WO's first accepted production scan starts it (M2 Start); tracked so the audit log records it.
+        // EnsureStarted, not Start: another board may have started it since the context was read. Two starts at
+        // the same instant both write the WO: its RowVersion makes one fail and retry (spec 2.3).
         WorkOrder? wo = null;
         if (!isRepair && ctx.WoStatus == WorkOrderStatus.Released)
         {
             wo = await db.WorkOrders.SingleAsync(w => w.Id == serial.WorkOrderId, ct);
-            wo.Start(ctx.NowUtc);
+            wo.EnsureStarted(ctx.NowUtc);
         }
 
         db.ScanLogs.Add(new ScanLog(serial, ctx.Station.Id, step?.Seq ?? 0, result, defectCode, operatorCode, source, ctx.NowUtc));

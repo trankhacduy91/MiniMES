@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using MiniMes.Application.Labels;
+using MiniMes.Infrastructure.Persistence;
 
 namespace MiniMes.IntegrationTests.Infrastructure;
 
@@ -19,10 +21,18 @@ public sealed class ApiFactory(SqlServerFixture sql) : WebApplicationFactory<Pro
         Environment.SetEnvironmentVariable("Jwt__Key", JwtKey);
         builder.UseEnvironment("Testing"); // Program.cs: Testing -> MigrateAsync + seed
         // Tests never call the public Labelary service: a fake records the ZPL and returns a tiny PNG.
-        builder.ConfigureTestServices(services => services.AddSingleton<ILabelPreview>(LabelPreview));
+        builder.ConfigureTestServices(services =>
+        {
+            services.AddSingleton<ILabelPreview>(LabelPreview);
+            // Added to the interceptors of the real configuration (EF Core 8+), production wiring unchanged.
+            services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(ScanGate));
+        });
     }
 
     public FakeLabelPreview LabelPreview { get; } = new();
+
+    // Replays scan races in a fixed order (see ScanGate).
+    public ScanGate ScanGate { get; } = new();
 }
 
 public sealed class FakeLabelPreview : ILabelPreview
