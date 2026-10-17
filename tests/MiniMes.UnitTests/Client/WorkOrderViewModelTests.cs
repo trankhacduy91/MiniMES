@@ -232,7 +232,7 @@ public class WorkOrderViewModelTests
     }
 
     [Fact]
-    public async Task Save_sends_utc_converted_from_plant_time_and_returns_to_the_list()
+    public async Task Save_sends_utc_converted_from_plant_time_and_opens_the_new_order()
     {
         var (vm, api, pages) = await CreateFormAsync();
         vm.Item = vm.ItemOptions[0];
@@ -245,7 +245,7 @@ public class WorkOrderViewModelTests
             new DateTime(2026, 10, 18, 5, 0, 0, DateTimeKind.Utc), 2, false);
         Assert.Equal(expected, api.Created);
         Assert.Equal(DateTimeKind.Utc, api.Created!.PlannedStart.Kind);
-        Assert.Equal(typeof(WorkOrderListViewModel), pages.Shown.Single());
+        Assert.Equal(typeof(WorkOrderDetailViewModel), pages.Shown.Single());
     }
 
     [Theory]

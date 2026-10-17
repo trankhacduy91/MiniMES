@@ -11,7 +11,8 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 **Trạng thái:**
 - **M0 (nền tảng) xong:** solution Clean Architecture, Docker, đăng nhập theo role, audit trail không sửa được, API cấu hình nhà máy, CI, 2 app WPF đăng nhập được.
 - **M1 (master data) xong:** Item, BOM đa cấp có version, routing, work center/máy, ca, lịch nhà máy, mã lỗi, lý do dừng; explode BOM bằng recursive CTE; import Excel; màn hình WPF Back-office. Xem [mục Master data](#master-data-m1).
-- Các module tiếp theo (M2 → M7) làm theo [lộ trình](spec/spec-v2.md).
+- **M2 (work order) xong:** tạo WO có preview NVL, Release (chụp BOM/routing + sinh serial trong một transaction, không trùng khi release đồng thời), state machine Hold/Resume/Complete/Close/Cancel, Priority + dispatch list theo line, nhãn ZPL (Code128 + DataMatrix) xem trước qua Labelary và log in lại. Xem [mục Work order](#work-order-m2).
+- Các module tiếp theo (M3 → M7) làm theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
 
@@ -130,7 +131,7 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | # | Bước | Module | Trạng thái |
 | --- | --- | --- | --- |
 | 1 | Admin import Excel Item/BOM/Routing của model mới (file mẫu `PCB-B`) | M1 | xong |
-| 2 | Planner tạo WO 200 pcs → Release → sinh serial, in nhãn ZPL | M2 | chưa làm |
+| 2 | Planner tạo WO 200 pcs → Release → sinh serial, in nhãn ZPL | M2 | xong (in ra file `.zpl`; máy in thật ngoài phạm vi) |
 | 3 | Kho nhập reel → QC làm IQC → lot `Available` | M6 | chưa làm |
 | 4 | Operator nạp reel lên máy SMT, MES kiểm tra đúng vật tư và FIFO | M6 | chưa làm |
 | 5 | FAI: serial đầu tiên qua hết các bước → QC duyệt → chạy hàng loạt | M2, M3, M7 | chưa làm |
@@ -171,6 +172,25 @@ Kết quả đúng: `PCBA-SMT` 202, `PCB-BARE` 204, `RES-10K-0402` 2473, `CAP-10
 **Import Excel:** màn hình Import → *Download template* để lấy file mẫu, hoặc dùng [`docs/samples/import-PCB-B.xlsx`](docs/samples/import-PCB-B.xlsx) (model `PCB-B`) → *Validate* (kiểm tra, không ghi) → *Import* (chỉ bật khi 0 lỗi; ghi tất cả trong 1 transaction, BOM/routing ở trạng thái Draft). Cùng chức năng qua API: `POST /api/import/master-data?dryRun=true|false` (multipart, field `file`).
 
 **Version BOM/Routing:** bản Approved bị khóa; muốn đổi thì *New version* (Draft) → sửa → *Approve*, version cũ tự đóng hiệu lực đúng lúc version mới bắt đầu ([ADR-006](ARCHITECTURE.md#adr-006-bom-và-routing-có-version-draft--approved-hiệu-lực-nửa-mở)).
+
+## Work order (M2)
+
+![Chi tiết WO](docs/images/m2-work-order-detail.png)
+
+**Kịch bản demo bước 1–2 trên WPF Back-office** (đăng nhập `planner01`): **Work orders** → **New** → chọn `PCB-A`, 200, Line 1 → **Preview materials** (NVL theo từng bước, số chính xác và số cần xuất) → **Save** → màn hình chi tiết → **Release** → tab **Serials**: 200 serial → **Preview label** (ảnh nhãn thật từ Labelary) → **Print all labels** (lưu file `.zpl`, mỗi nhãn một dòng `LabelPrintLog`). Hold/Resume/Complete/Close cần role Supervisor (`sup01`).
+
+| Việc | API |
+| --- | --- |
+| Tạo, xem, sửa (Draft) | `POST /api/work-orders/preview`, `POST /api/work-orders`, `GET /api/work-orders[/{id}]`, `PUT /api/work-orders/{id}` |
+| Chuyển trạng thái | `POST /api/work-orders/{id}/{release\|hold\|resume\|complete\|close\|cancel}` với `{ rowVersion, reason? }` |
+| Priority, điều độ | `PUT /api/work-orders/{id}/priority`, `GET /api/lines/{id}/dispatch-list` |
+| Serial, nhãn | `GET /api/work-orders/{id}/serials`, `POST /api/work-orders/{id}/labels/preview`, `POST /api/work-orders/{id}/labels/print` |
+
+Những điểm đáng nói khi phỏng vấn:
+- **Serial không trùng** nhờ ba lớp, mỗi lớp một việc: SQL `SEQUENCE` cấp số (không khóa, có thể nhảy số nhưng không trùng), unique index `SerialNo` (lưới an toàn cuối), `rowversion` trên WO (chống release hai lần). Có test 2 request đồng thời, chạy 20 lần liên tiếp; thay sequence bằng `MAX+1` thì test đỏ.
+- **Snapshot:** Release chép giá trị BOM/routing vào WO; approve BOM v2 sau đó không làm đổi WO đang chạy (có test).
+- **State machine trong Domain:** server trả `allowedActions`, WPF bật/tắt nút theo đó, không lặp lại luật.
+- Màn hình đang mở mà người khác vừa đổi WO: 409 hoặc 422, màn hình tự nạp lại và báo lý do. Chuyện "test xanh nhưng không vì lý do mình tưởng" ở [`docs/incidents.md`](docs/incidents.md).
 
 ## Chạy test
 

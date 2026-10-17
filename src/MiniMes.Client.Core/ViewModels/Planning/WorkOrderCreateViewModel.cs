@@ -13,7 +13,7 @@ namespace MiniMes.Client.Core.ViewModels.Planning;
 
 // New work order (spec M2 step 8, "form tạo WO với preview NVL"). The planner picks item, line, quantity and
 // the planned window in plant time; Preview shows what Release would freeze (materials per step, routing),
-// computed by the server from the master data in effect now. Save creates a Draft.
+// computed by the server from the master data in effect now. Save creates a Draft and opens it.
 public partial class WorkOrderCreateViewModel(IWorkOrderApi api, IMasterDataApi masterData, IPageNavigator pages, TimeProvider time)
     : ObservableObject
 {
@@ -110,8 +110,8 @@ public partial class WorkOrderCreateViewModel(IWorkOrderApi api, IMasterDataApi 
 
         await RunAsync(async () =>
         {
-            await api.CreateAsync(new CreateWorkOrderRequest(itemId, Line!.Id!.Value, qty, start.Value, end.Value, Priority, RequireFai));
-            await pages.ShowAsync<WorkOrderListViewModel>();
+            var created = await api.CreateAsync(new CreateWorkOrderRequest(itemId, Line!.Id!.Value, qty, start.Value, end.Value, Priority, RequireFai));
+            await pages.ShowAsync<WorkOrderDetailViewModel>(vm => vm.InitAsync(created.Id));   // next step: Release
         });
     }
 

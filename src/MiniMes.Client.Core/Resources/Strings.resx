@@ -587,4 +587,115 @@
   <data name="Operation_Sop" xml:space="preserve">
     <value>SOP</value>
   </data>
+  <data name="Common_Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Common_Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="WorkOrderList_Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="WorkOrderDetail_Title" xml:space="preserve">
+    <value>{0}  {1}  ({2})</value>
+  </data>
+  <data name="WorkOrderDetail_NotReleased" xml:space="preserve">
+    <value>Not released yet (no BOM/routing frozen)</value>
+  </data>
+  <data name="WorkOrderDetail_Progress" xml:space="preserve">
+    <value>Good at last step: {0} / {1}    Serials: {2}</value>
+  </data>
+  <data name="WorkOrderDetail_PlannedWindow" xml:space="preserve">
+    <value>Planned (plant time)</value>
+  </data>
+  <data name="WorkOrderDetail_Versions" xml:space="preserve">
+    <value>Recipe</value>
+  </data>
+  <data name="WorkOrderDetail_Reason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="WorkOrderDetail_Release" xml:space="preserve">
+    <value>Release</value>
+  </data>
+  <data name="WorkOrderDetail_Hold" xml:space="preserve">
+    <value>Hold</value>
+  </data>
+  <data name="WorkOrderDetail_Resume" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="WorkOrderDetail_Complete" xml:space="preserve">
+    <value>Complete</value>
+  </data>
+  <data name="WorkOrderDetail_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="WorkOrderDetail_Cancel" xml:space="preserve">
+    <value>Cancel order</value>
+  </data>
+  <data name="WorkOrderDetail_PreviewLabel" xml:space="preserve">
+    <value>Preview label</value>
+  </data>
+  <data name="WorkOrderDetail_PrintLabels" xml:space="preserve">
+    <value>Print all labels</value>
+  </data>
+  <data name="WorkOrderDetail_Reprint" xml:space="preserve">
+    <value>Reprint selected</value>
+  </data>
+  <data name="WorkOrderDetail_TabMaterials" xml:space="preserve">
+    <value>Materials</value>
+  </data>
+  <data name="WorkOrderDetail_TabOperations" xml:space="preserve">
+    <value>Operations</value>
+  </data>
+  <data name="WorkOrderDetail_TabSerials" xml:space="preserve">
+    <value>Serials</value>
+  </data>
+  <data name="WorkOrderDetail_LabelPreview" xml:space="preserve">
+    <value>Label preview (select a serial, or the first one is used)</value>
+  </data>
+  <data name="WorkOrderDetail_ConfirmRelease" xml:space="preserve">
+    <value>Release {0}? The BOM and routing in effect now are frozen into the order and {1} serial numbers are created. This cannot be undone.</value>
+  </data>
+  <data name="WorkOrderDetail_ConfirmComplete" xml:space="preserve">
+    <value>Complete {0}? No more production can be scanned on it.</value>
+  </data>
+  <data name="WorkOrderDetail_ConfirmClose" xml:space="preserve">
+    <value>Close {0}? After closing, the order is read-only.</value>
+  </data>
+  <data name="WorkOrderDetail_HoldPrompt" xml:space="preserve">
+    <value>Why is the order put on hold? (e.g. suspect IC lot moisture)</value>
+  </data>
+  <data name="WorkOrderDetail_CancelPrompt" xml:space="preserve">
+    <value>Why is the order cancelled? Its unused serials will be scrapped.</value>
+  </data>
+  <data name="WorkOrderDetail_CompleteShortPrompt" xml:space="preserve">
+    <value>Only {0} of {1} are good at the last step. Why complete it now?</value>
+  </data>
+  <data name="WorkOrderDetail_ReprintPrompt" xml:space="preserve">
+    <value>Why reprint the label of {0}? (e.g. label burnt in reflow)</value>
+  </data>
+  <data name="WorkOrderDetail_Printed" xml:space="preserve">
+    <value>Printed {0} label(s), {1} reprint(s). ZPL saved to {2}</value>
+  </data>
+  <data name="Operation_QtyGood" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="Operation_QtyNg" xml:space="preserve">
+    <value>NG</value>
+  </data>
+  <data name="Material_Issued" xml:space="preserve">
+    <value>Issued</value>
+  </data>
+  <data name="Material_Consumed" xml:space="preserve">
+    <value>Consumed</value>
+  </data>
+  <data name="Serial_SerialNo" xml:space="preserve">
+    <value>Serial no.</value>
+  </data>
+  <data name="Serial_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Serial_CurrentSeq" xml:space="preserve">
+    <value>Last step</value>
+  </data>
 </root>

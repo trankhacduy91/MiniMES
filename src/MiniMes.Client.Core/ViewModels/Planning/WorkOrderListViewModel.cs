@@ -10,8 +10,7 @@ using MiniMes.Contracts.Planning;
 
 namespace MiniMes.Client.Core.ViewModels.Planning;
 
-// One row of the list, with the planned start shown in plant time (the PC's time zone: the screens run
-// on PCs in the plant) and progress as "good at last step / planned".
+// One row of the list: planned start in plant time, progress as "good at last step / planned".
 public sealed record WorkOrderRow(WorkOrderSummaryDto Wo, string PlannedStartText, string Progress)
 {
     public bool IsOpen => Wo.Status is not ("Completed" or "Closed" or "Cancelled");
@@ -25,7 +24,6 @@ public partial class WorkOrderListViewModel(IWorkOrderApi api, IMasterDataApi ma
     : ObservableObject, ILoadable
 {
     public const int PageSize = 50;
-    public const string DateFormat = "yyyy-MM-dd HH:mm";
 
     public ObservableCollection<WorkOrderRow> Rows { get; } = [];
     public ObservableCollection<LineOption> LineOptions { get; } = [];
@@ -45,7 +43,7 @@ public partial class WorkOrderListViewModel(IWorkOrderApi api, IMasterDataApi ma
     private string _searchText = string.Empty;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SetPriorityCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SetPriorityCommand), nameof(OpenCommand))]
     private WorkOrderRow? _selected;
 
     [ObservableProperty]
@@ -109,6 +107,11 @@ public partial class WorkOrderListViewModel(IWorkOrderApi api, IMasterDataApi ma
     [RelayCommand]
     private Task NewAsync() => pages.ShowAsync<WorkOrderCreateViewModel>(vm => vm.InitAsync());
 
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private Task OpenAsync() => pages.ShowAsync<WorkOrderDetailViewModel>(vm => vm.InitAsync(Selected!.Wo.Id));
+
+    private bool HasSelection() => Selected is not null;
+
     // [v2] Reordering the queue is a daily supervisor task (rule R15). The list has no RowVersion, so read the
     // order first; a change by someone else between the two calls still ends as a 409 message, not a crash.
     [RelayCommand(CanExecute = nameof(CanSetPriority))]
@@ -129,12 +132,9 @@ public partial class WorkOrderListViewModel(IWorkOrderApi api, IMasterDataApi ma
         var result = await api.GetWorkOrdersAsync(status, LineFilter?.Id, search, Page, PageSize);
         Rows.Clear();
         foreach (var wo in result.Items)
-            Rows.Add(new WorkOrderRow(wo, ToPlantTime(wo.PlannedStart).ToString(DateFormat), $"{wo.QtyGoodLastStep} / {wo.PlannedQty}"));
+            Rows.Add(new WorkOrderRow(wo, PlantTime.Format(wo.PlannedStart, time), $"{wo.QtyGoodLastStep} / {wo.PlannedQty}"));
         TotalCount = result.TotalCount;
     });
-
-    private DateTime ToPlantTime(DateTime utc)
-        => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), time.LocalTimeZone);
 
     private async Task RunAsync(Func<Task> action)
     {

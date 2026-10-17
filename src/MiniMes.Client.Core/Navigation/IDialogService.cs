@@ -9,4 +9,7 @@ public interface IDialogService
     // Returns the chosen path, or null when the user cancels.
     string? PickFileToOpen(string filter);
     string? PickFileToSave(string defaultFileName, string filter);
+
+    // A short free text (the reason of a hold, cancel or reprint). Null when the user cancels.
+    string? AskText(string title, string prompt);
 }

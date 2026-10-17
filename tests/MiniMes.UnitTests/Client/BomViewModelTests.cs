@@ -73,6 +73,7 @@ public class BomViewModelTests
         public bool Confirm(string message) => answer;
         public string? PickFileToOpen(string filter) => null;
         public string? PickFileToSave(string defaultFileName, string filter) => null;
+        public string? AskText(string title, string prompt) => null;
     }
 
     private static async Task<(BomViewModel Vm, BomApi Api)> OpenPcbAAsync(bool confirm = true)

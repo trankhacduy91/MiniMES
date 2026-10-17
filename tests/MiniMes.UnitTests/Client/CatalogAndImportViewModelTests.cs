@@ -16,6 +16,7 @@ public class CatalogAndImportViewModelTests
         public bool Confirm(string message) { Asked++; return confirm; }
         public string? PickFileToOpen(string filter) => openPath;
         public string? PickFileToSave(string defaultFileName, string filter) => null;
+        public string? AskText(string title, string prompt) => null;
     }
 
     private sealed class CatalogApi : FakeMasterDataApi

@@ -48,6 +48,9 @@
         <DataTemplate DataType="{x:Type pl:WorkOrderCreateViewModel}">
             <plviews:WorkOrderCreateView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type pl:WorkOrderDetailViewModel}">
+            <plviews:WorkOrderDetailView />
+        </DataTemplate>
     </Window.Resources>
 
     <!-- DataContext = Navigation (set in App.xaml.cs) -->

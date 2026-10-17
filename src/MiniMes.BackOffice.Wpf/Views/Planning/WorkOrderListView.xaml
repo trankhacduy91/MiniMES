@@ -27,6 +27,8 @@
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
             <Button AutomationProperties.AutomationId="New" Content="{x:Static res:Strings.Common_New}"
                     Command="{Binding NewCommand}" Style="{StaticResource ToolButton}" />
+            <Button AutomationProperties.AutomationId="Open" Content="{x:Static res:Strings.WorkOrderList_Open}"
+                    Command="{Binding OpenCommand}" Style="{StaticResource ToolButton}" />
             <TextBlock Text="{x:Static res:Strings.WorkOrder_Priority}" VerticalAlignment="Center" Margin="16,0,4,0" />
             <ComboBox AutomationProperties.AutomationId="NewPriority" Width="50"
                       ItemsSource="{Binding PriorityOptions}" SelectedItem="{Binding NewPriority}" />
@@ -46,6 +48,9 @@
 
         <DataGrid AutomationProperties.AutomationId="WorkOrdersGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
                   AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column">
+            <DataGrid.InputBindings>
+                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding OpenCommand}" />
+            </DataGrid.InputBindings>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_Priority}" Binding="{Binding Wo.Priority}" Width="60" />
                 <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_WoNo}" Binding="{Binding Wo.WoNo}" Width="130" />

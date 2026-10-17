@@ -73,6 +73,7 @@ public class ItemViewModelTests
         public bool Confirm(string message) { Asked++; return answer; }
         public string? PickFileToOpen(string filter) => null;
         public string? PickFileToSave(string defaultFileName, string filter) => null;
+        public string? AskText(string title, string prompt) => null;
     }
 
     // ---------- list ----------

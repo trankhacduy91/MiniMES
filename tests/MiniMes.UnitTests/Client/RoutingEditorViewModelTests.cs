@@ -49,6 +49,7 @@ public class RoutingEditorViewModelTests
         public bool Confirm(string message) => true;
         public string? PickFileToOpen(string filter) => null;
         public string? PickFileToSave(string defaultFileName, string filter) => null;
+        public string? AskText(string title, string prompt) => null;
     }
 
     private static async Task<(RoutingEditorViewModel Vm, RoutingApi Api)> OpenAsync(string status = "Draft")

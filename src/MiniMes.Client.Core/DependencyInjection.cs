@@ -67,6 +67,7 @@ public static class DependencyInjection
         services.AddTransient<IWorkOrderApi, WorkOrderApi>();
         services.AddTransient<WorkOrderListViewModel>();
         services.AddTransient<WorkOrderCreateViewModel>();
+        services.AddTransient<WorkOrderDetailViewModel>();
         return services;
     }
 }
