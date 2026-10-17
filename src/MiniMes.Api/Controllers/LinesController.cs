@@ -2,7 +2,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniMes.Application.Factory;
+using MiniMes.Application.Planning;
 using MiniMes.Contracts.Factory;
+using MiniMes.Contracts.Planning;
 using MiniMes.Domain.Users;
 
 namespace MiniMes.Api.Controllers;
@@ -16,6 +18,11 @@ public class LinesController(ISender sender) : ControllerBase
 
     [HttpGet("{id:int}")]
     public Task<LineDto> Get(int id, CancellationToken ct) => sender.Send(new GetLineByIdQuery(id), ct);
+
+    // [v2] What the line runs next: Released/InProgress/OnHold orders by priority then planned start (kiosk, M3).
+    [HttpGet("{id:int}/dispatch-list")]
+    public Task<IReadOnlyList<DispatchListItemDto>> DispatchList(int id, CancellationToken ct)
+        => sender.Send(new GetDispatchListQuery(id), ct);
 
     [Authorize(Roles = nameof(Role.Admin))]
     [HttpPost]

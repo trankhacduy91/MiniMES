@@ -109,6 +109,22 @@ public sealed record WorkOrderDetailDto(
 // loaded: if someone changed the WO since, the action is refused with 409. Reason only where the rule needs one.
 public sealed record WorkOrderTransitionRequest(string RowVersion, string? Reason = null);
 
+// [v2] PUT /api/work-orders/{id}/priority. 1 = most urgent.
+public sealed record ChangePriorityRequest(int Priority, string RowVersion);
+
+// [v2] GET /api/lines/{id}/dispatch-list: what the line should run next (kiosk, M3). Released, InProgress
+// and OnHold orders, most urgent first, then by planned start.
+public sealed record DispatchListItemDto(
+    int WorkOrderId,
+    string WoNo,
+    string ItemCode,
+    int PlannedQty,
+    int QtyGoodLastStep,
+    int Priority,
+    DateTime PlannedStart,
+    string Status,
+    string? FaiStatus);
+
 public sealed record SerialDto(long Id, string SerialNo, string Status, int CurrentSeq);
 
 // Query string of GET /api/work-orders/{id}/serials.

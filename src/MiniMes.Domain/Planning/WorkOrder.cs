@@ -141,6 +141,17 @@ public class WorkOrder : AuditableEntity, IAudited
         Status = WorkOrderStatus.Completed;
     }
 
+    // Rule R10, automatic side: M3 calls this after counting a good unit at the last step. It passes the count it
+    // just wrote (counters are updated in SQL, so the loaded Operations may be stale). Not an error when the
+    // order is not running or not finished yet: most scans simply do not complete anything.
+    public bool TryAutoComplete(int qtyGoodLastStep, DateTime utcNow)
+    {
+        if (Status != WorkOrderStatus.InProgress || qtyGoodLastStep < PlannedQty) return false;
+        CompletedAt = utcNow;
+        Status = WorkOrderStatus.Completed;
+        return true;
+    }
+
     // Rule R11: after reconciliation; nothing changes afterwards.
     public void Close()
     {

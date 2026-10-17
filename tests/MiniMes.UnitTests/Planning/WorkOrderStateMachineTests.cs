@@ -133,6 +133,31 @@ public class WorkOrderStateMachineTests
     }
 
     [Theory]
+    [InlineData(199, false)]
+    [InlineData(200, true)]
+    [InlineData(201, true)]   // a few extra good units still complete it
+    public void Auto_complete_happens_only_at_the_planned_good_quantity(int qtyGoodLastStep, bool completes)
+    {
+        var wo = WorkOrders.InStatus(S.InProgress);
+
+        Assert.Equal(completes, wo.TryAutoComplete(qtyGoodLastStep, Now));
+        Assert.Equal(completes ? S.Completed : S.InProgress, wo.Status);
+        Assert.Null(wo.CompleteReason);   // automatic = no reason needed
+    }
+
+    [Theory]
+    [InlineData(S.Released)]
+    [InlineData(S.OnHold)]
+    [InlineData(S.Completed)]
+    public void Auto_complete_never_moves_an_order_that_is_not_running(S status)
+    {
+        var wo = WorkOrders.InStatus(status);
+
+        Assert.False(wo.TryAutoComplete(500, Now));
+        Assert.Equal(status, wo.Status);
+    }
+
+    [Theory]
     [InlineData("Hold")]
     [InlineData("Cancel")]
     public void Hold_and_cancel_need_a_reason(string action)

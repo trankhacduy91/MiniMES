@@ -84,8 +84,10 @@ public class PlanningSchemaTests(ApiFixture api)
     {
         var wo = await AddWorkOrderAsync();
 
+        // The SET clause is a fixed test expression (columns cannot be parameters); the id is a parameter.
+        var sql = "UPDATE dbo.WorkOrders SET " + set + " WHERE Id = @id";
         var ex = await Assert.ThrowsAsync<SqlException>(() => api.WithDbAsync(db =>
-            db.Database.ExecuteSqlRawAsync($"UPDATE dbo.WorkOrders SET {set} WHERE Id = {wo.Id}")));
+            db.Database.ExecuteSqlRawAsync(sql, new SqlParameter("@id", wo.Id))));
 
         Assert.Equal(547, ex.Number);   // CHECK constraint violation
     }

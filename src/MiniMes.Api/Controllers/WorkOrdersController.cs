@@ -9,12 +9,15 @@ using MiniMes.Domain.Users;
 
 namespace MiniMes.Api.Controllers;
 
-// Reads: any logged-in role. Create/edit/preview: Planner (and Admin), spec M2 step 7.
+// Roles (spec M2 step 7): Planner creates, releases, cancels; Supervisor holds, resumes, completes, closes;
+// both change priority; Admin does everything; every logged-in role reads.
 [ApiController]
 [Route("api/work-orders")]
 public class WorkOrdersController(ISender sender) : ControllerBase
 {
     private const string Planners = $"{nameof(Role.Planner)},{nameof(Role.Admin)}";
+    private const string Supervisors = $"{nameof(Role.Supervisor)},{nameof(Role.Admin)}";
+    private const string Schedulers = $"{nameof(Role.Planner)},{nameof(Role.Supervisor)},{nameof(Role.Admin)}";
     // The planner prints at release; the line supervisor reprints a damaged label on the floor.
     private const string LabelPrinters = $"{nameof(Role.Planner)},{nameof(Role.Supervisor)},{nameof(Role.Admin)}";
 
@@ -68,4 +71,36 @@ public class WorkOrdersController(ISender sender) : ControllerBase
     [HttpPost("{id:int}/labels/print")]
     public Task<PrintLabelsResultDto> PrintLabels(int id, PrintLabelsRequest r, CancellationToken ct)
         => sender.Send(new PrintLabelsCommand(id, r.SerialNos, r.Reason), ct);
+
+    [Authorize(Roles = Supervisors)]
+    [HttpPost("{id:int}/hold")]
+    public Task<WorkOrderDetailDto> Hold(int id, WorkOrderTransitionRequest r, CancellationToken ct)
+        => sender.Send(new HoldWorkOrderCommand(id, r.RowVersion, r.Reason), ct);
+
+    [Authorize(Roles = Supervisors)]
+    [HttpPost("{id:int}/resume")]
+    public Task<WorkOrderDetailDto> Resume(int id, WorkOrderTransitionRequest r, CancellationToken ct)
+        => sender.Send(new ResumeWorkOrderCommand(id, r.RowVersion), ct);
+
+    // Reason required only below the planned good quantity at the last step.
+    [Authorize(Roles = Supervisors)]
+    [HttpPost("{id:int}/complete")]
+    public Task<WorkOrderDetailDto> Complete(int id, WorkOrderTransitionRequest r, CancellationToken ct)
+        => sender.Send(new CompleteWorkOrderCommand(id, r.RowVersion, r.Reason), ct);
+
+    [Authorize(Roles = Supervisors)]
+    [HttpPost("{id:int}/close")]
+    public Task<WorkOrderDetailDto> Close(int id, WorkOrderTransitionRequest r, CancellationToken ct)
+        => sender.Send(new CloseWorkOrderCommand(id, r.RowVersion), ct);
+
+    // Only before any output; unused serials become Scrapped.
+    [Authorize(Roles = Planners)]
+    [HttpPost("{id:int}/cancel")]
+    public Task<WorkOrderDetailDto> Cancel(int id, WorkOrderTransitionRequest r, CancellationToken ct)
+        => sender.Send(new CancelWorkOrderCommand(id, r.RowVersion, r.Reason), ct);
+
+    [Authorize(Roles = Schedulers)]
+    [HttpPut("{id:int}/priority")]
+    public Task<WorkOrderDetailDto> ChangePriority(int id, ChangePriorityRequest r, CancellationToken ct)
+        => sender.Send(new ChangeWorkOrderPriorityCommand(id, r.Priority, r.RowVersion), ct);
 }
