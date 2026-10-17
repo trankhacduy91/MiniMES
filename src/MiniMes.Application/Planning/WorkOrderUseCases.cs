@@ -20,6 +20,16 @@ internal static class WorkOrderRules
     public static IRuleBuilderOptions<T, int> PlannedQtyRule<T>(this IRuleBuilder<T, int> rule)
         => rule.InclusiveBetween(1, MaxPlannedQty);
 
+    public static IRuleBuilderOptions<T, string> RowVersionRule<T>(this IRuleBuilder<T, string> rule)
+        => rule.NotEmpty().Must(BeBase64).WithMessage("RowVersion must be the base64 value returned by the API.");
+
+    private static bool BeBase64(string? value) => value is not null && Convert.TryFromBase64String(value, new byte[value.Length], out _);
+
+    // The version the user saw, not the one just read: a change made after they opened the screen makes
+    // the UPDATE match 0 rows -> DbUpdateConcurrencyException -> 409 (AppDbContext).
+    public static void ApplyRowVersion(this IAppDbContext db, WorkOrder wo, string rowVersion)
+        => db.Entry(wo).Property(w => w.RowVersion).OriginalValue = Convert.FromBase64String(rowVersion);
+
     // JSON without "Z" arrives as Unspecified: treat it as UTC (the API contract), not as server local time.
     public static DateTime AsUtc(DateTime value)
         => value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(value, DateTimeKind.Utc) : value.ToUniversalTime();
@@ -121,10 +131,8 @@ public sealed class UpdateWorkOrderValidator : AbstractValidator<UpdateWorkOrder
     {
         RuleFor(x => x.PlannedQty).PlannedQtyRule();
         RuleFor(x => x.PlannedEnd).GreaterThan(x => x.PlannedStart).WithMessage("PlannedEnd must be after PlannedStart.");
-        RuleFor(x => x.RowVersion).NotEmpty().Must(BeBase64).WithMessage("RowVersion must be the base64 value returned by the API.");
+        RuleFor(x => x.RowVersion).RowVersionRule();
     }
-
-    internal static bool BeBase64(string? value) => value is not null && Convert.TryFromBase64String(value, new byte[value.Length], out _);
 }
 
 public sealed class UpdateWorkOrderHandler(IAppDbContext db) : IRequestHandler<UpdateWorkOrderCommand, WorkOrderDetailDto>
@@ -132,8 +140,7 @@ public sealed class UpdateWorkOrderHandler(IAppDbContext db) : IRequestHandler<U
     public async Task<WorkOrderDetailDto> Handle(UpdateWorkOrderCommand cmd, CancellationToken ct)
     {
         var wo = await db.LoadWorkOrderAsync(cmd.Id, ct);
-        // The version the user saw, not the one just read: an edit made after they opened the screen -> 409.
-        db.Entry(wo).Property(w => w.RowVersion).OriginalValue = Convert.FromBase64String(cmd.RowVersion);
+        db.ApplyRowVersion(wo, cmd.RowVersion);
         await db.RequireActiveLineAsync(cmd.LineId, ct);
 
         wo.UpdatePlan(cmd.LineId, cmd.PlannedQty, WorkOrderRules.AsUtc(cmd.PlannedStart), WorkOrderRules.AsUtc(cmd.PlannedEnd),

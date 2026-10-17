@@ -43,4 +43,14 @@ public class WorkOrdersController(ISender sender) : ControllerBase
     public Task<WorkOrderDetailDto> Update(int id, UpdateWorkOrderRequest r, CancellationToken ct)
         => sender.Send(new UpdateWorkOrderCommand(id, r.LineId, r.PlannedQty, r.PlannedStart, r.PlannedEnd, r.RequireFai,
             r.RowVersion), ct);
+
+    // Snapshot + serials + Released in one transaction. Not approved BOM/routing -> 422; stale RowVersion -> 409.
+    [Authorize(Roles = Planners)]
+    [HttpPost("{id:int}/release")]
+    public Task<WorkOrderDetailDto> Release(int id, WorkOrderTransitionRequest r, CancellationToken ct)
+        => sender.Send(new ReleaseWorkOrderCommand(id, r.RowVersion), ct);
+
+    [HttpGet("{id:int}/serials")]
+    public Task<PagedResult<SerialDto>> Serials(int id, [FromQuery] SerialFilter f, CancellationToken ct)
+        => sender.Send(new GetWorkOrderSerialsQuery(id, f.Status, f.Page, f.PageSize), ct);
 }

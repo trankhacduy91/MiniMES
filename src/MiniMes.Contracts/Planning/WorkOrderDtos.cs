@@ -105,6 +105,22 @@ public sealed record WorkOrderDetailDto(
     IReadOnlyList<WorkOrderMaterialDto> Materials,
     IReadOnlyList<WorkOrderOperationDto> Operations);
 
+// Body of every status change (release, hold, resume, complete, close, cancel). RowVersion = what the client
+// loaded: if someone changed the WO since, the action is refused with 409. Reason only where the rule needs one.
+public sealed record WorkOrderTransitionRequest(string RowVersion, string? Reason = null);
+
+public sealed record SerialDto(long Id, string SerialNo, string Status, int CurrentSeq);
+
+// Query string of GET /api/work-orders/{id}/serials.
+public sealed class SerialFilter
+{
+    public const int MaxPageSize = 500;
+
+    public string? Status { get; init; }
+    public int Page { get; init; } = 1;
+    public int PageSize { get; init; } = 100;
+}
+
 // Query string of GET /api/work-orders.
 public sealed class WorkOrderFilter
 {

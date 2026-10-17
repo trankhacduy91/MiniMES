@@ -5,4 +5,7 @@ namespace MiniMes.Application.Planning;
 public interface ISequenceNumbers
 {
     Task<long> NextWorkOrderNumberAsync(CancellationToken ct);
+
+    // count numbers in one round trip (a 200 pcs WO = 1 query, not 200).
+    Task<IReadOnlyList<long>> NextSerialNumbersAsync(int count, CancellationToken ct);
 }
