@@ -20,6 +20,7 @@ jobs:
         with:
           global-json-file: global.json # same SDK as the dev machine
       - run: dotnet build src/MiniMes.Api -c Release
+      - run: dotnet build src/MiniMes.MachineSimulator -c Release
       - run: dotnet test tests/MiniMes.UnitTests -c Release
 
   integration:

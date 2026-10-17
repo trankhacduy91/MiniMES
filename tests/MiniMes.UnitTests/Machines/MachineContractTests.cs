@@ -57,6 +57,7 @@ public class MachineContractTests
         var json = JsonSerializer.Serialize(msg, MachineJson.Options);
 
         Assert.Contains("\"msgId\":\"b3f1c2d4-0000-4000-8000-000000000001\"", json);
+        Assert.Contains("\"ts\":\"2026-10-01T01:23:45.123Z\"", json);   // UTC with Z, not "+00:00"
         Assert.Contains("\"state\":\"Running\"", json);
         Assert.Contains("\"quality\":\"Good\"", json);
         Assert.Contains("\"source\":\"mqtt\"", json);
@@ -73,6 +74,17 @@ public class MachineContractTests
 
         Assert.Equal(("peakTemp", 245.3, WireQuality.Good, "opcua", (WireState?)null), (msg.Tag, msg.Value, msg.Quality, msg.Source, msg.State));
         Assert.Equal(TimeSpan.Zero, msg.Ts.Offset);
+    }
+
+    // A sender with a local offset still lands on the same instant, stored as UTC.
+    [Fact]
+    public void Timestamp_with_an_offset_is_read_as_utc()
+    {
+        const string json = """{ "msgId": "5f0c0000-0000-4000-8000-000000000003", "machine": "L1-SMT-01", "ts": "2026-10-11T09:15:30.250+07:00" }""";
+
+        var ts = JsonSerializer.Deserialize<MachineMessage>(json, MachineJson.Options)!.Ts;
+
+        Assert.Equal((new DateTime(2026, 10, 11, 2, 15, 30, 250), TimeSpan.Zero), (ts.DateTime, ts.Offset));
     }
 
     // The wire enums (Contracts) and the stored ones (Domain) must stay the same list: the ingest maps by name.

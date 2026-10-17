@@ -28,6 +28,9 @@ public class DependencyTests
             ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient"]),
         new("MiniMes.Kiosk.Wpf", ["MiniMes.Client.Core"],
             ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient"]),
+        // The simulator plays the machines: it knows only the shared contract (MQTT now, the kiosk's HTTP API in step 9).
+        new("MiniMes.MachineSimulator", ["MiniMes.Contracts"],
+            ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient"]),
     ];
 
     public static TheoryData<string> ProjectNames

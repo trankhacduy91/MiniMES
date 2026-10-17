@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -94,6 +95,17 @@ public static class MachineJson
     // camelCase, enums as text ("Running"), case-insensitive reading: one serializer setting on both ends.
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
-        Converters = { new JsonStringEnumConverter() },
+        Converters = { new JsonStringEnumConverter(), new UtcTimestampConverter() },
     };
+
+    // The default writes "+00:00"; the contract says "...Z", to the millisecond (datetime2(3) on the MES side).
+    // Reading accepts any offset and normalises to UTC.
+    private sealed class UtcTimestampConverter : JsonConverter<DateTimeOffset>
+    {
+        public override DateTimeOffset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            => reader.GetDateTimeOffset().ToUniversalTime();
+
+        public override void Write(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)
+            => writer.WriteStringValue(value.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture));
+    }
 }
