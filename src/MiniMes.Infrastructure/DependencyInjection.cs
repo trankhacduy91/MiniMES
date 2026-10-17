@@ -5,11 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Auth;
 using MiniMes.Application.Common;
 using MiniMes.Application.Execution;
+using MiniMes.Application.Machines;
 using MiniMes.Application.MasterData.Boms;
 using MiniMes.Application.Planning;
 using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Auth;
 using MiniMes.Infrastructure.Execution;
+using MiniMes.Infrastructure.Machines;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Interceptors;
 using MiniMes.Infrastructure.Persistence.Queries;
@@ -51,6 +53,12 @@ public static class DependencyInjection
         services.AddScoped<IExecutionReportQueries, ExecutionReportQueries>();
         // IANA id works on Windows and Linux (.NET uses ICU); a wrong id fails at startup, not at the first WO.
         services.AddSingleton(new PlantTimeZone(TimeZoneInfo.FindSystemTimeZoneById(config["Plant:TimeZone"] ?? "Asia/Ho_Chi_Minh")));
+        // M4: MQTT ingest. Off in Testing (no broker there; the MQTT integration tests start their own, step 9).
+        services.Configure<MqttIngestOptions>(config.GetSection(MqttIngestOptions.SectionName));
+        services.AddSingleton<MachineDirectory>();
+        services.AddSingleton(sp => new RecentIdCache(sp.GetRequiredService<TimeProvider>()));
+        if (config.GetValue(MqttIngestOptions.SectionName + ":" + nameof(MqttIngestOptions.Enabled), true))
+            services.AddHostedService<MqttIngestService>();
         services.AddScoped<DevSeeder>();
         services.AddScoped<MasterDataSeeder>();
         return services;

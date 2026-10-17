@@ -19,6 +19,7 @@ public sealed class ApiFactory(SqlServerFixture sql) : WebApplicationFactory<Pro
         // (same mechanism as CI). Set before the host is built, i.e. before Program.cs reads config.
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", sql.ConnectionString);
         Environment.SetEnvironmentVariable("Jwt__Key", JwtKey);
+        Environment.SetEnvironmentVariable("Mqtt__Enabled", "false"); // no broker here: the ingest stays off
         builder.UseEnvironment("Testing"); // Program.cs: Testing -> MigrateAsync + seed
         // Tests never call the public Labelary service: a fake records the ZPL and returns a tiny PNG.
         builder.ConfigureTestServices(services =>
