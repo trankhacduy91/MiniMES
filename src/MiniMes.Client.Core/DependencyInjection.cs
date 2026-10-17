@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddTransient<BackOfficeShellViewModel>();
         services.AddTransient<ItemListViewModel>();
         services.AddTransient<ItemEditViewModel>();
+        services.AddTransient<BomViewModel>();
         return services;
     }
 }

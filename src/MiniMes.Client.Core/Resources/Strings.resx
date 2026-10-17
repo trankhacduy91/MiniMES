@@ -176,4 +176,94 @@
   <data name="Validation_CodeFormat" xml:space="preserve">
     <value>Use only A-Z, 0-9, '.', '_' and '-' (no spaces).</value>
   </data>
+  <data name="Menu_Boms" xml:space="preserve">
+    <value>BOM</value>
+  </data>
+  <data name="Bom_Title" xml:space="preserve">
+    <value>Bill of materials</value>
+  </data>
+  <data name="Bom_Item" xml:space="preserve">
+    <value>Item</value>
+  </data>
+  <data name="Bom_Versions" xml:space="preserve">
+    <value>Versions</value>
+  </data>
+  <data name="Bom_Version" xml:space="preserve">
+    <value>Ver.</value>
+  </data>
+  <data name="Bom_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Bom_EffectiveFrom" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="Bom_EffectiveTo" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="Bom_LineCount" xml:space="preserve">
+    <value>Lines</value>
+  </data>
+  <data name="Bom_NewVersion" xml:space="preserve">
+    <value>New version</value>
+  </data>
+  <data name="Bom_Approve" xml:space="preserve">
+    <value>Approve</value>
+  </data>
+  <data name="Bom_TabLines" xml:space="preserve">
+    <value>Lines</value>
+  </data>
+  <data name="Bom_TabTree" xml:space="preserve">
+    <value>Tree (in force now)</value>
+  </data>
+  <data name="Bom_TabExplode" xml:space="preserve">
+    <value>Explode</value>
+  </data>
+  <data name="Bom_Component" xml:space="preserve">
+    <value>Component</value>
+  </data>
+  <data name="Bom_QtyPer" xml:space="preserve">
+    <value>Qty per</value>
+  </data>
+  <data name="Bom_ScrapRate" xml:space="preserve">
+    <value>Scrap (0.02 = 2%)</value>
+  </data>
+  <data name="Bom_OperationSeq" xml:space="preserve">
+    <value>Op. seq</value>
+  </data>
+  <data name="Bom_AddLine" xml:space="preserve">
+    <value>Add line</value>
+  </data>
+  <data name="Bom_RemoveLine" xml:space="preserve">
+    <value>Remove line</value>
+  </data>
+  <data name="Bom_SaveLines" xml:space="preserve">
+    <value>Save lines</value>
+  </data>
+  <data name="Bom_LockedHint" xml:space="preserve">
+    <value>Approved versions are locked. Create a new version to change them.</value>
+  </data>
+  <data name="Bom_VersionStatus" xml:space="preserve">
+    <value>Version {0} - {1} - in force from {2} to {3}</value>
+  </data>
+  <data name="Bom_Saved" xml:space="preserve">
+    <value>Saved {0} lines.</value>
+  </data>
+  <data name="Bom_ConfirmApprove" xml:space="preserve">
+    <value>Approve BOM version {0} of {1}? It is locked from now on and replaces the version in force.</value>
+  </data>
+  <data name="Bom_Quantity" xml:space="preserve">
+    <value>Quantity</value>
+  </data>
+  <data name="Bom_Explode" xml:space="preserve">
+    <value>Explode</value>
+  </data>
+  <data name="Bom_QtyInvalid" xml:space="preserve">
+    <value>Enter a quantity greater than 0.</value>
+  </data>
+  <data name="Bom_ExactQty" xml:space="preserve">
+    <value>Exact need</value>
+  </data>
+  <data name="Bom_RequiredQty" xml:space="preserve">
+    <value>To issue</value>
+  </data>
 </root>

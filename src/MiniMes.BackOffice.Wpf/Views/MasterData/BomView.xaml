@@ -1,0 +1,162 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.MasterData.BomView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             xmlns:md="clr-namespace:MiniMes.Client.Core.ViewModels.MasterData;assembly=MiniMes.Client.Core">
+    <!-- DataContext = BomViewModel. Left: versions of the chosen item. Right: lines / tree / explode. -->
+    <UserControl.Resources>
+        <!-- "Code - Name" in the item pickers -->
+        <DataTemplate x:Key="ItemOption">
+            <TextBlock>
+                <Run Text="{Binding Code, Mode=OneWay}" FontWeight="SemiBold" /><Run Text=" - " /><Run Text="{Binding Name, Mode=OneWay}" />
+            </TextBlock>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Bom_Title}" Style="{StaticResource PageTitle}" />
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="{x:Static res:Strings.Bom_Item}" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ComboBox AutomationProperties.AutomationId="Parent" Width="360" ItemsSource="{Binding Parents}"
+                      SelectedItem="{Binding SelectedParent}" ItemTemplate="{StaticResource ItemOption}" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Bottom">
+            <TextBlock AutomationProperties.AutomationId="Info" Text="{Binding InfoMessage}" Foreground="Gray" TextWrapping="Wrap" />
+            <TextBlock AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}" Style="{StaticResource PageError}" />
+        </StackPanel>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Versions -->
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Bom_Versions}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button AutomationProperties.AutomationId="NewVersion" Content="{x:Static res:Strings.Bom_NewVersion}"
+                            Command="{Binding NewVersionCommand}" Style="{StaticResource ToolButton}" />
+                    <!-- Greyed out unless the selected version is a Draft with lines (Approved = locked). -->
+                    <Button AutomationProperties.AutomationId="Approve" Content="{x:Static res:Strings.Bom_Approve}"
+                            Command="{Binding ApproveCommand}" Style="{StaticResource ToolButton}" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="VersionStatus" Text="{Binding StatusText}"
+                           TextWrapping="Wrap" Margin="0,6,0,0" />
+                <DataGrid AutomationProperties.AutomationId="Versions" ItemsSource="{Binding Versions}"
+                          SelectedItem="{Binding SelectedVersion}" AutoGenerateColumns="False" IsReadOnly="True"
+                          SelectionMode="Single" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{x:Static res:Strings.Bom_Version}" Binding="{Binding Version}" Width="45" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Bom_Status}" Binding="{Binding Status}" Width="70" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Bom_EffectiveFrom}" Binding="{Binding EffectiveFrom, StringFormat=yyyy-MM-dd}" Width="80" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Bom_EffectiveTo}" Binding="{Binding EffectiveTo, StringFormat=yyyy-MM-dd}" Width="80" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Bom_LineCount}" Binding="{Binding LineCount}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+
+            <TabControl Grid.Column="2">
+                <!-- Lines of the selected version: editable only while Draft -->
+                <TabItem Header="{x:Static res:Strings.Bom_TabLines}" AutomationProperties.AutomationId="TabLines">
+                    <DockPanel Margin="6">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button AutomationProperties.AutomationId="AddLine" Content="{x:Static res:Strings.Bom_AddLine}"
+                                    Command="{Binding AddLineCommand}" Style="{StaticResource ToolButton}" />
+                            <Button AutomationProperties.AutomationId="RemoveLine" Content="{x:Static res:Strings.Bom_RemoveLine}"
+                                    Command="{Binding RemoveLineCommand}" Style="{StaticResource ToolButton}" />
+                            <Button AutomationProperties.AutomationId="SaveLines" Content="{x:Static res:Strings.Bom_SaveLines}"
+                                    Command="{Binding SaveLinesCommand}" Style="{StaticResource ToolButton}" />
+                        </StackPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Bom_LockedHint}" Foreground="Gray" Margin="0,0,0,6">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedVersion.Status}" Value="Approved">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <DataGrid AutomationProperties.AutomationId="Lines" ItemsSource="{Binding Lines}" SelectedItem="{Binding SelectedLine}"
+                                  AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
+                                  IsReadOnly="{Binding IsDraft, Converter={StaticResource Not}}">
+                            <DataGrid.Columns>
+                                <!-- A ComboBox column needs the item list from the page, not from the row:
+                                     DataGrid columns are not in the visual tree, hence the template + RelativeSource. -->
+                                <DataGridTemplateColumn Header="{x:Static res:Strings.Bom_Component}" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ComboBox ItemsSource="{Binding DataContext.Components, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                      SelectedValuePath="Id"
+                                                      SelectedValue="{Binding ComponentItemId, UpdateSourceTrigger=PropertyChanged}"
+                                                      ItemTemplate="{StaticResource ItemOption}"
+                                                      IsEnabled="{Binding DataContext.IsDraft, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="{x:Static res:Strings.Bom_QtyPer}" Binding="{Binding QtyPer, StringFormat={}{0:0.######}}" Width="80" />
+                                <DataGridTextColumn Header="{x:Static res:Strings.Bom_ScrapRate}" Binding="{Binding ScrapRate, StringFormat={}{0:0.######}}" Width="120" />
+                                <DataGridTextColumn Header="{x:Static res:Strings.Bom_OperationSeq}" Binding="{Binding OperationSeq}" Width="70" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- The BOM in force now, every level (spec M1 2.6: TreeView + HierarchicalDataTemplate) -->
+                <TabItem Header="{x:Static res:Strings.Bom_TabTree}" AutomationProperties.AutomationId="TabTree">
+                    <TreeView AutomationProperties.AutomationId="Tree" ItemsSource="{Binding TreeRoots}" Margin="6">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="True" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <TreeView.Resources>
+                            <HierarchicalDataTemplate DataType="{x:Type md:BomNodeViewModel}" ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal" Margin="0,1">
+                                    <TextBlock Text="{Binding Code}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding QtyText}" Margin="8,0,0,0" />
+                                    <TextBlock Text="{Binding ScrapText}" Margin="8,0,0,0" Foreground="Gray" />
+                                    <TextBlock Text="{Binding Name}" Margin="12,0,0,0" Foreground="Gray" />
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.Resources>
+                    </TreeView>
+                </TabItem>
+
+                <!-- Total need of every item for a quantity (the recursive CTE of step 6) -->
+                <TabItem Header="{x:Static res:Strings.Bom_TabExplode}" AutomationProperties.AutomationId="TabExplode">
+                    <DockPanel Margin="6">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="{x:Static res:Strings.Bom_Quantity}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBox AutomationProperties.AutomationId="ExplodeQty" Width="80" Padding="3"
+                                     Text="{Binding ExplodeQty, UpdateSourceTrigger=PropertyChanged}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding ExplodeCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
+                            <Button AutomationProperties.AutomationId="Explode" Content="{x:Static res:Strings.Bom_Explode}"
+                                    Command="{Binding ExplodeCommand}" Style="{StaticResource ToolButton}" Margin="6,0,0,0" />
+                        </StackPanel>
+                        <DataGrid AutomationProperties.AutomationId="Explosion" ItemsSource="{Binding Explosion}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{x:Static res:Strings.Item_Code}" Binding="{Binding Code}" Width="140" />
+                                <DataGridTextColumn Header="{x:Static res:Strings.Item_Name}" Binding="{Binding Name}" Width="*" />
+                                <DataGridTextColumn Header="{x:Static res:Strings.Item_Type}" Binding="{Binding Type}" Width="70" />
+                                <DataGridTextColumn Header="{x:Static res:Strings.Bom_ExactQty}" Binding="{Binding ExactQty, StringFormat={}{0:0.#####}}" Width="100" />
+                                <DataGridTextColumn Header="{x:Static res:Strings.Bom_RequiredQty}" Binding="{Binding RequiredQty, StringFormat={}{0:0.###}}" Width="80" />
+                                <DataGridTextColumn Header="{x:Static res:Strings.Item_Uom}" Binding="{Binding Uom}" Width="50" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </DockPanel>
+</UserControl>

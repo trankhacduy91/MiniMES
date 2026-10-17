@@ -27,6 +27,9 @@
         <DataTemplate DataType="{x:Type md:ItemEditViewModel}">
             <mdviews:ItemEditView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type md:BomViewModel}">
+            <mdviews:BomView />
+        </DataTemplate>
     </Window.Resources>
 
     <!-- DataContext = Navigation (set in App.xaml.cs) -->
