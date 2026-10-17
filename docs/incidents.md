@@ -51,3 +51,11 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Cách tìm:** gọi đúng URL đó bằng `Invoke-RestMethod` → `400 "Ask for at most one year at a time."`.
 - **Cách sửa:** client gọi 2 lần, mỗi lần một năm (năm sau vẫn cần vì Tết thường rơi vào tháng 1–2). Fake trong test giờ cũng từ chối khoảng > 366 ngày, và test kiểm tra 2 lần gọi.
 - **Bài học:** fake chỉ tốt bằng hiểu biết của người viết về hợp đồng (contract) của server. Luật nằm ở validator phía server thì fake nên mô phỏng nó, hoặc phải có một lần chạy đầu-cuối thật (app + API) trước khi coi là xong.
+
+## 2026-10-17 — File PDF có thể hỏng sau khi clone vì git đổi xuống dòng (M1 bước 9)
+
+- **Triệu chứng (bắt được ngay lúc commit, trước khi ai clone):** `git commit` cảnh báo `LF will be replaced by CRLF` cho 4 file SOP `docs/sop/PCB-A/*.pdf`. File trên máy dev vẫn mở bình thường.
+- **Nguyên nhân:** repo chưa có `.gitattributes`. Máy Windows bật `core.autocrlf=true`, nên git đoán file theo nội dung. PDF tự sinh chỉ chứa ký tự ASCII nên bị coi là **text**; khi checkout trên Windows, mọi `\n` sẽ thành `\r\n`. Bảng `xref` của PDF lưu **vị trí byte** của từng object; mỗi dòng dài thêm 1 byte thì các vị trí lệch hết, trình đọc phải dò lại hoặc báo file hỏng. File `.xlsx` không bị vì là zip (có byte nhị phân) nên git tự nhận là binary.
+- **Cách tìm:** không bỏ qua cảnh báo của git; `git ls-files --eol` cho thấy PDF mang `i/lf` (text) còn xlsx mang `-text` (binary).
+- **Cách sửa:** thêm `.gitattributes` đánh dấu `*.pdf`, `*.xlsx`, `*.png` là `binary` (không đổi xuống dòng, không diff/merge như text); `git add --renormalize`. Kiểm tra: xóa file, `git checkout` lại, render bằng `Windows.Data.Pdf` vẫn mở được.
+- **Bài học:** repo dùng trên Windows nên có `.gitattributes` từ đầu, đừng để git đoán. Một file "trông như text" vẫn có thể là định dạng nhạy cảm từng byte (PDF, chữ ký số, file có checksum). Cảnh báo `LF will be replaced by CRLF` trên file không phải code là dấu hiệu cần dừng lại xem.
