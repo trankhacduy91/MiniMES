@@ -1,6 +1,7 @@
 using MiniMes.Application.Machines;
 using MiniMes.Contracts.Machines;
 using MiniMes.Domain.Machines;
+using DataQuality = MiniMes.Domain.Machines.DataQuality;
 using DomainState = MiniMes.Domain.Machines.MachineState;
 using WireState = MiniMes.Contracts.Machines.MachineState;
 
@@ -136,7 +137,55 @@ public class MachineRuntimeStoreTests
     public void Process_kind_is_not_stored_by_the_event_path()
         => Assert.Null(_store.Apply(M, MachineKinds.Process, Msg(T0) with { Tag = "peakTemp", Value = 245 }, T0).Item);
 
+    // ---------- process tags [v2] ----------
+
+    private static readonly MachineTag PeakTemp = new(M, "peakTemp", "°C", 0, 400);
+
+    [Fact]
+    public void Process_reading_is_stored_and_becomes_the_latest_value()
+    {
+        var result = _store.ApplyProcess(PeakTemp, Process(245.3, T0), T0);
+
+        var value = result.Item!.ProcessValue!;
+        Assert.Equal((245.3, DataQuality.Good, T0), (value.Value, value.Quality, value.SourceTs));
+        Assert.Null(result.Item.Event);
+        Assert.Equal(new ProcessReading("peakTemp", "°C", 245.3, DataQuality.Good, T0), Assert.Single(_store.Get(M)!.Process));
+    }
+
+    // A cut sensor wire reads -32768: kept for diagnosis, but Bad so it never reaches SPC (spec 2.3b).
+    [Fact]
+    public void Value_outside_the_plausible_range_is_stored_as_bad_with_a_note()
+    {
+        var result = _store.ApplyProcess(PeakTemp, Process(-32768, T0), T0);
+
+        Assert.Equal(DataQuality.Bad, result.Item!.ProcessValue!.Quality);
+        Assert.Contains("plausible", result.Note);
+    }
+
+    [Fact]
+    public void Value_reported_bad_stays_bad_without_a_warning()
+    {
+        var result = _store.ApplyProcess(PeakTemp, Process(245, T0) with { Quality = MiniMes.Contracts.Machines.DataQuality.Bad }, T0);
+
+        Assert.Equal((DataQuality.Bad, (string?)null), (result.Item!.ProcessValue!.Quality, result.Note));
+    }
+
+    [Fact]
+    public void Late_reading_is_stored_but_does_not_replace_the_latest_value()
+    {
+        _store.ApplyProcess(PeakTemp, Process(246, T0.AddSeconds(10)), T0.AddSeconds(10));
+
+        var late = _store.ApplyProcess(PeakTemp, Process(240, T0), T0.AddSeconds(11));
+
+        Assert.NotNull(late.Item!.ProcessValue);
+        Assert.Equal(246, Assert.Single(_store.Get(M)!.Process).Value);
+    }
+
     // ---------- helpers ----------
+
+    private static MachineMessage Process(double value, DateTime ts)
+        => Msg(ts) with { Tag = "peakTemp", Value = value };
+
 
     private IngestResult Count(long counter, DateTime ts)
         => _store.Apply(M, MachineKinds.Count, Msg(ts) with { Counter = counter }, ts);

@@ -146,11 +146,28 @@ public sealed class MqttIngestService(
                 return;
             }
 
-            var result = store.Apply(machine.Id, input.Topic.Kind, msg, clock.GetUtcNow().UtcDateTime);
+            IngestResult result;
+            if (input.Topic.Kind == MachineKinds.Process)
+            {
+                // [v2] Only tags in master data (MachineTag): an unknown tag is a gateway configuration to fix,
+                // not data to keep.
+                var tag = await machines.ResolveTagAsync(machine.Id, input.Topic.Tag!, ct);
+                if (tag is null)
+                {
+                    log.LogWarning("MQTT dropped {Topic}: tag {Tag} is not an active MachineTag of {Machine}", topic, input.Topic.Tag, machine.Code);
+                    return;
+                }
+                result = store.ApplyProcess(tag, msg, clock.GetUtcNow().UtcDateTime);
+                if (result.Note is not null) log.LogWarning("MQTT {Machine}/{Tag}: {Note}", machine.Code, tag.TagName, result.Note);
+            }
+            else
+            {
+                result = store.Apply(machine.Id, input.Topic.Kind, msg, clock.GetUtcNow().UtcDateTime);
+            }
             LogClockSkew(machine, result.ClockSkewed, msg);
-            log.LogDebug("MQTT processed {Kind} {Machine} {MsgId} state={State} counter={Counter} delta={Delta} stateChange={StateChange} {Note}",
+            log.LogDebug("MQTT processed {Kind} {Machine} {MsgId} state={State} counter={Counter} delta={Delta} stateChange={StateChange} value={Value} quality={Quality} {Note}",
                 input.Topic.Kind, machine.Code, msg.MsgId, msg.State, msg.Counter, result.Item?.Event?.Delta,
-                result.Item?.StateChange?.State, result.Note);
+                result.Item?.StateChange?.State, msg.Value, result.Item?.ProcessValue?.Quality, result.Note);
             // Bounded channel: when the DB is slow this waits, and so does the MQTT client (backpressure).
             if (result.Item is not null) await channel.Writer.WriteAsync(result.Item, ct);
         }

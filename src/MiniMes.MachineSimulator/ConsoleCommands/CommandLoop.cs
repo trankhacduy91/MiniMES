@@ -22,6 +22,7 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
         ("unmute", "unmute <m>           resume sending"),
         ("dup", "dup <m>              send the next message twice, same msgId"),
         ("skew", "skew <m> <sec>       shift the machine clock (0 = back to normal)"),
+        ("tag", "tag <m> <tag> <value>  publish one process value, e.g. tag L1-REFLOW-01 peakTemp 245.3"),
         ("help", "help"),
     ];
 
@@ -69,6 +70,7 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
             "unmute" => new Mute(false),
             "dup" => new DuplicateNext(),
             "skew" when p.Length > 2 && int.TryParse(p[2], CultureInfo.InvariantCulture, out var s) => new SetSkew(s),
+            "tag" when p.Length > 3 && double.TryParse(p[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var v) => new PublishTag(p[2], v),
             _ => null,
         };
         if (command is null) return Usage(verb);

@@ -9,6 +9,7 @@ using MiniMes.Infrastructure.Persistence;
 namespace MiniMes.Infrastructure.Machines;
 
 // Spec M4 2.4, the cold path: one reader of the ingest channel, up to 200 rows or 1 second per batch, one transaction.
+// [v2] Process readings (ProcessValue, step 4b) go through the same channel and batch: one writer, one retry logic.
 // Database down = keep the batch and retry. Meanwhile the bounded channel fills up, the MQTT handler waits on it,
 // the client stops reading and the broker keeps our QoS 1 messages (backpressure): the rows arrive late, not lost.
 public sealed class MachineEventBatchWriter(
@@ -93,7 +94,7 @@ public sealed class MachineEventBatchWriter(
                         try { await WriteAsync([batch[done]], ct); }
                         catch (ConflictException)
                         {
-                            log.LogDebug("Machine event {MsgId} already stored, skipped", batch[done].Event?.MsgId);
+                            log.LogDebug("Message {MsgId} already stored, skipped", batch[done].Event?.MsgId ?? batch[done].ProcessValue?.MsgId);
                         }
                     }
                 }
@@ -134,6 +135,11 @@ public sealed class MachineEventBatchWriter(
             // identity value into some of them, and EF would then try to INSERT that explicit Id.
             db.Entry(evt).Property(e => e.Id).CurrentValue = 0L;
             db.MachineEvents.Add(evt);
+        }
+        foreach (var value in items.Where(i => i.ProcessValue is not null).Select(i => i.ProcessValue!))
+        {
+            db.Entry(value).Property(v => v.Id).CurrentValue = 0L;
+            db.ProcessValues.Add(value);
         }
         await db.SaveChangesAsync(ct);
         foreach (var change in items.Where(i => i.StateChange is not null).Select(i => i.StateChange!))

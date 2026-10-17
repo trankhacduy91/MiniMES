@@ -148,6 +148,10 @@ public sealed class SimulatedMachine
             case SetSkew s:
                 _skewSec = s.Seconds;
                 break;
+            case PublishTag t:
+                await SendAsync(MachineKinds.Process, NewMessage() with { Tag = t.Tag, Value = t.Value }, ct, topicOverride:
+                    MachineTopic.BuildProcess(_site, _area, _cfg.Line, Code, t.Tag));
+                break;
         }
         _log.LogInformation("{Machine} {Command}", Code, command);
     }
@@ -191,10 +195,10 @@ public sealed class SimulatedMachine
         (_pendingGood, _pendingNg, _countChanged, _lastCountAt) = (0, 0, false, now);
     }
 
-    private async Task<bool> SendAsync(string kind, MachineMessage message, CancellationToken ct, bool retain = false)
+    private async Task<bool> SendAsync(string kind, MachineMessage message, CancellationToken ct, bool retain = false, string? topicOverride = null)
     {
         if (_muted) return false;
-        var topic = Topic(kind);
+        var topic = topicOverride ?? Topic(kind);
         var sent = await Publisher.PublishAsync(topic, message, MqttQualityOfServiceLevel.AtLeastOnce, retain, ct);
         if (sent && _duplicateNext)
         {

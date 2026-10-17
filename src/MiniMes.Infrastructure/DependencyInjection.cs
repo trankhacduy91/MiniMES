@@ -64,6 +64,7 @@ public static class DependencyInjection
             // Hosted services stop in reverse order: the ingest stops first, then the writer drains what is queued.
             services.AddHostedService<MachineEventBatchWriter>();
             services.AddHostedService<MqttIngestService>();
+            services.AddHostedService<ProcessValueRetentionJob>();
         }
         services.AddScoped<DevSeeder>();
         services.AddScoped<MasterDataSeeder>();

@@ -13,6 +13,7 @@ public sealed record ResetCounter : MachineCommand;
 public sealed record Mute(bool On) : MachineCommand;
 public sealed record DuplicateNext : MachineCommand;
 public sealed record SetSkew(int Seconds) : MachineCommand;
+public sealed record PublishTag(string Tag, double Value) : MachineCommand;   // [v2] until the M4b gateway sends them
 
 public sealed record MachineSnapshot(
     string Code, MachineState State, long Counter, long Good, long Ng,

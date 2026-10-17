@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MiniMes.Domain.Machines;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.MasterData.DefectCodes;
@@ -33,6 +34,24 @@ public class MasterDataSeeder(AppDbContext db, TimeProvider time)
         await SeedShiftsAsync(ct);
         await SeedCalendarAsync(DateOnly.FromDateTime(effectiveFrom).Year, ct);
         await SeedCatalogsAsync(ct);
+        await SeedMachineTagsAsync(ct);
+    }
+
+    // M4 2.3b: process tags the ingest accepts. Plausible = the physical range (a cut sensor wire reads -32768),
+    // not the M7 specification limits.
+    private static readonly (string Machine, string Tag, string Unit, double Lower, double Upper)[] MachineTags =
+    [
+        ("L1-REFLOW-01", "peakTemp", "°C", 0, 400),
+    ];
+
+    private async Task SeedMachineTagsAsync(CancellationToken ct)
+    {
+        var machines = await db.Machines.ToDictionaryAsync(m => m.Code, m => m.Id, ct);
+        var existing = await db.MachineTags.Select(t => new { t.MachineId, t.TagName }).ToListAsync(ct);
+        foreach (var t in MachineTags.Where(t => machines.ContainsKey(t.Machine)))
+            if (!existing.Any(e => e.MachineId == machines[t.Machine] && e.TagName == t.Tag))
+                db.MachineTags.Add(new MachineTag(machines[t.Machine], t.Tag, t.Unit, t.Lower, t.Upper));
+        await db.SaveChangesAsync(ct);
     }
 
     private static readonly (string Code, string Name, ItemType Type, string Uom, bool SkipIqc)[] Items =
