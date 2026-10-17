@@ -5,4 +5,9 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Unit tests build WO states with output (WorkOrderOperation.RecordOutput); production counts via SQL in M3. -->
+    <InternalsVisibleTo Include="MiniMes.UnitTests" />
+  </ItemGroup>
+
 </Project>
