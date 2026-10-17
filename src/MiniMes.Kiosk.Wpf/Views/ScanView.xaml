@@ -38,6 +38,11 @@
                     Command="{Binding LogoutCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
             <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="ChangeWorkOrder" Content="{x:Static res:Strings.Scan_ChangeWorkOrder}"
                     Command="{Binding ChangeWorkOrderCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
+            <!-- Step 8: only at an inspection step (Test). Big and red: tapped with gloves. -->
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Ng" Content="{x:Static res:Strings.Scan_NgButton}"
+                    Command="{Binding OpenNgPanelCommand}" Focusable="False" Padding="48,8" Margin="12,0,0,0"
+                    Background="#FFC62828" Foreground="White" FontWeight="Bold"
+                    Visibility="{Binding CanReportNg, Converter={StaticResource BoolToVisibility}}" />
             <!-- Hidden when the step has no SOP. -->
             <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Sop" Content="{x:Static res:Strings.Scan_Sop}"
                     Command="{Binding OpenSopCommand}" Focusable="False" Padding="32,8"
@@ -53,10 +58,19 @@
             <TextBlock AutomationProperties.AutomationId="OfflineBanner" Text="{x:Static res:Strings.Scan_Offline}"
                        FontSize="36" FontWeight="Bold" HorizontalAlignment="Center" />
         </Border>
-        <Border Grid.Row="2" Background="#FFFFC107" Padding="12" Visibility="{Binding IsFaiPending, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock AutomationProperties.AutomationId="FaiBanner" Text="{x:Static res:Strings.Scan_FaiPending}"
-                       Foreground="Black" FontSize="26" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" />
-        </Border>
+        <StackPanel Grid.Row="2">
+            <Border Background="#FFFFC107" Padding="12" Visibility="{Binding IsFaiPending, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock AutomationProperties.AutomationId="FaiBanner" Text="{x:Static res:Strings.Scan_FaiPending}"
+                           Foreground="Black" FontSize="26" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" />
+            </Border>
+            <!-- NG chosen: the next scanned board is recorded NG with this defect. -->
+            <DockPanel Background="#FFE65100" Visibility="{Binding IsNgArmed, Converter={StaticResource BoolToVisibility}}">
+                <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="CancelNgArmed" Content="{x:Static res:Strings.Scan_CancelNg}"
+                        Command="{Binding CancelNgCommand}" Focusable="False" Padding="24,8" Margin="12" />
+                <TextBlock AutomationProperties.AutomationId="NgArmed" Text="{Binding ArmedText}"
+                           FontSize="32" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" />
+            </DockPanel>
+        </StackPanel>
 
         <!-- Readable from 1-2 m: a big word, then the reason, then serial + the server's wording. -->
         <StackPanel Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="32,0">
@@ -78,6 +92,38 @@
                 <KeyBinding Key="Return" Command="{Binding ScanCommand}" />
             </TextBox.InputBindings>
         </TextBox>
+
+        <!-- Step 8: defect panel, one big button per active defect code (touch screen). -->
+        <Grid Grid.RowSpan="5" Background="#F0202020" Visibility="{Binding IsNgPanelOpen, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel Margin="32">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+                    <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="CancelNg" Content="{x:Static res:Strings.Scan_CancelNg}"
+                            Command="{Binding CancelNgCommand}" Focusable="False" FontSize="28" Padding="48,12" />
+                    <TextBlock Text="{x:Static res:Strings.Scan_NgPanelTitle}" FontSize="36" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+                    <ItemsControl AutomationProperties.AutomationId="DefectCodes" ItemsSource="{Binding DefectCodes}" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button AutomationProperties.AutomationId="{Binding Code}" Focusable="False" Width="300" Height="120" Margin="8"
+                                        Command="{Binding DataContext.ChooseDefectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Code}" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding Name}" FontSize="20" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
 
         <!-- [v2] SOP overlay over the whole screen. A scan while it is open closes it (ViewModel). -->
         <Grid Grid.RowSpan="5" Background="#F0202020" Visibility="{Binding IsSopOpen, Converter={StaticResource BoolToVisibility}}">

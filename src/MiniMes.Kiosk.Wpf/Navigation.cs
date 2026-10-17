@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
+using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.ViewModels;
 using MiniMes.Client.Core.ViewModels.Kiosk;
@@ -17,7 +18,10 @@ public sealed partial class Navigation(IServiceProvider services) : ObservableOb
 
     public void ShowHome() => Show(services.GetRequiredService<StationSelectViewModel>());
 
-    public void ShowScan() => Show(services.GetRequiredService<ScanViewModel>());
+    // The Repair station has its own screen (check-in + repair form); every other station scans.
+    public void ShowScan() => Show(services.GetRequiredService<IKioskContext>().Station?.Type == "Repair"
+        ? services.GetRequiredService<RepairViewModel>()
+        : services.GetRequiredService<ScanViewModel>());
 
     // Shown first so its "loading" text is visible; LoadAsync never throws (errors go to the screen).
     private void Show(object viewModel)

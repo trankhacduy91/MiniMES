@@ -19,6 +19,9 @@
         <DataTemplate DataType="{x:Type kiosk:ScanViewModel}">
             <views:ScanView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type kiosk:RepairViewModel}">
+            <views:RepairView />
+        </DataTemplate>
     </Window.Resources>
 
     <!-- DataContext = Navigation (set in App.xaml.cs) -->

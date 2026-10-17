@@ -808,4 +808,62 @@
   <data name="Scan_CloseSop" xml:space="preserve">
     <value>Close</value>
   </data>
+  <data name="Scan_NgButton" xml:space="preserve">
+    <value>NG</value>
+  </data>
+  <data name="Scan_NgPanelTitle" xml:space="preserve">
+    <value>Choose the defect, then scan the board</value>
+  </data>
+  <data name="Scan_CancelNg" xml:space="preserve">
+    <value>Cancel NG</value>
+  </data>
+  <data name="Scan_NgArmed" xml:space="preserve">
+    <value>NG {0} ({1}): scan the board</value>
+    <comment>{0} = defect code, {1} = defect name</comment>
+  </data>
+  <data name="Scan_NgRecorded" xml:space="preserve">
+    <value>NG recorded ({0}): send the board to Repair.</value>
+    <comment>{0} = defect code</comment>
+  </data>
+  <data name="Repair_CheckedIn" xml:space="preserve">
+    <value>CHECKED IN</value>
+  </data>
+  <data name="Repair_FillForm" xml:space="preserve">
+    <value>Fill in the repair, then press Done.</value>
+  </data>
+  <data name="Repair_Board" xml:space="preserve">
+    <value>Board {0}</value>
+    <comment>{0} = serial number</comment>
+  </data>
+  <data name="Repair_Defect" xml:space="preserve">
+    <value>Defect found</value>
+  </data>
+  <data name="Repair_Action" xml:space="preserve">
+    <value>Action taken</value>
+  </data>
+  <data name="Repair_Component" xml:space="preserve">
+    <value>Component replaced (reference and lot)</value>
+  </data>
+  <data name="Repair_Return" xml:space="preserve">
+    <value>Then the board goes to</value>
+  </data>
+  <data name="Repair_RetestFailedStep" xml:space="preserve">
+    <value>Retest the failed step</value>
+  </data>
+  <data name="Repair_ReworkFrom" xml:space="preserve">
+    <value>Rework from step {0} {1}</value>
+    <comment>{0} = Seq, {1} = operation code</comment>
+  </data>
+  <data name="Repair_Submit" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="Repair_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Repair_Done" xml:space="preserve">
+    <value>REPAIRED</value>
+  </data>
+  <data name="Repair_ScanHint" xml:space="preserve">
+    <value>Scan the NG board to check it in.</value>
+  </data>
 </root>

@@ -9,6 +9,7 @@ using MiniMes.Client.Core.ViewModels.Kiosk;
 using MiniMes.Contracts.Auth;
 using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Factory;
+using MiniMes.Contracts.MasterData;
 using MiniMes.Contracts.Planning;
 
 namespace MiniMes.UnitTests.Client;
@@ -61,6 +62,27 @@ internal sealed class FakeExecution : IExecutionApi
     {
         SopAsked = sopUrl;
         return Task.FromResult(Sop);
+    }
+
+    public static readonly DefectCodeDto Bridge = new(1, "SLD-BRG", "Solder bridge", "Solder", true);
+    public static readonly DefectCodeDto Missing = new(5, "CMP-MIS", "Missing component", "Component", true);
+    public int DefectCodeLoads { get; private set; }
+
+    public Task<IReadOnlyList<DefectCodeDto>> GetDefectCodesAsync(CancellationToken ct = default)
+    {
+        DefectCodeLoads++;
+        return Task.FromResult<IReadOnlyList<DefectCodeDto>>([Bridge, Missing]);
+    }
+
+    // Repair: default = back to the failed TEST step.
+    public Func<RepairRequest, Task<RepairResponse>> Repair { get; set; }
+        = r => Task.FromResult(new RepairResponse(r.SerialNo, "InProcess", r.ReturnToSeq ?? 30, r.ReturnToSeq is null ? "TEST" : "SMT"));
+    public List<RepairRequest> Repairs { get; } = [];
+
+    public Task<RepairResponse> RepairAsync(int stationId, RepairRequest request, CancellationToken ct = default)
+    {
+        Repairs.Add(request);
+        return Repair(request);
     }
 }
 
@@ -123,10 +145,15 @@ internal sealed class FakeKiosk
 
     public ScanViewModel Scan() => new(Execution, Dispatch, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time);
 
+    public RepairViewModel Repair() => new(Execution, Dispatch, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time);
+
+    public static readonly StationDto Test = new(3, LineId: 1, "L1-TEST-01", "Test", "Test", true, WorkCenterId: 3);
+    public static readonly StationDto RepairStation = new(5, LineId: 1, "L1-REPAIR", "Repair", "Repair", true, WorkCenterId: null);
+
     // As after the badge login + Start: station and session known.
-    public FakeKiosk Started()
+    public FakeKiosk Started(StationDto? station = null)
     {
-        Context.SetStation(FakeExecution.Asm);
+        Context.SetStation(station ?? FakeExecution.Asm);
         Context.Start(new StationSessionDto(77, 2, "L1-ASM-01", 5, "WO-2610-00005", "EMP00123", DateTime.UtcNow, null), Wo(5, "WO-2610-00005", 1));
         return this;
     }

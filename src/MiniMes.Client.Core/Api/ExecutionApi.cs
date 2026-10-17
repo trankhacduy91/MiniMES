@@ -1,6 +1,7 @@
 using MiniMes.Client.Core.Http;
 using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Factory;
+using MiniMes.Contracts.MasterData;
 
 namespace MiniMes.Client.Core.Api;
 
@@ -17,6 +18,10 @@ public interface IExecutionApi
 
     // sopUrl as stored in the routing ("/sop/PCB-A/SMT-v1.pdf"), served under /api.
     Task<byte[]> GetSopAsync(string sopUrl, CancellationToken ct = default);
+
+    // Step 8: the NG panel of a test station and the repair form.
+    Task<IReadOnlyList<DefectCodeDto>> GetDefectCodesAsync(CancellationToken ct = default);
+    Task<RepairResponse> RepairAsync(int stationId, RepairRequest request, CancellationToken ct = default);
 }
 
 public sealed class ExecutionApi(ApiClient api) : IExecutionApi
@@ -50,4 +55,10 @@ public sealed class ExecutionApi(ApiClient api) : IExecutionApi
 
     public Task<byte[]> GetSopAsync(string sopUrl, CancellationToken ct = default)
         => api.GetBytesAsync("api/" + sopUrl.TrimStart('/'), ct);
+
+    public Task<IReadOnlyList<DefectCodeDto>> GetDefectCodesAsync(CancellationToken ct = default)
+        => api.GetAsync<IReadOnlyList<DefectCodeDto>>("api/defect-codes?isActive=true", ct);
+
+    public Task<RepairResponse> RepairAsync(int stationId, RepairRequest request, CancellationToken ct = default)
+        => api.PostAsync<RepairRequest, RepairResponse>($"{Base}/{stationId}/repair", request, ct);
 }

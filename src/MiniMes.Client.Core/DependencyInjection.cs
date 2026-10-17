@@ -83,6 +83,7 @@ public static class DependencyInjection
 
         services.AddTransient<StationSelectViewModel>();
         services.AddTransient<ScanViewModel>();
+        services.AddTransient<RepairViewModel>();
         return services;
     }
 }

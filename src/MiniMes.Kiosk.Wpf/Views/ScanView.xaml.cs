@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Web.WebView2.Core;
@@ -11,38 +10,18 @@ namespace MiniMes.Kiosk.Wpf.Views;
 // viewer. No business rule here; the ViewModel does the scanning.
 public partial class ScanView : UserControl
 {
-    private readonly DispatcherTimer _probe = new() { Interval = TimeSpan.FromSeconds(3) };
-    private Window? _window;
     private ScanViewModel? _vm;
 
     public ScanView()
     {
         InitializeComponent();
-        _probe.Tick += (_, _) => _vm?.CheckConnectionCommand.Execute(null);
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
+        _ = new HealthProbe(this, FocusScanBox);
+        Unloaded += (_, _) => Attach(null);
         DataContextChanged += (_, _) => Attach(DataContext as ScanViewModel);
-        // Whatever took the focus (a click on the SOP viewer, a closed overlay, Alt-Tab): give it back to the
+        // Whatever took the focus (a click on the SOP viewer, the NG panel, a closed overlay): give it back to the
         // scan box once the current input is handled, or the next scan types into nothing.
         ScanBox.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(FocusScanBox, DispatcherPriority.Input);
     }
-
-    private void OnLoaded(object sender, RoutedEventArgs e)
-    {
-        _window = Window.GetWindow(this);
-        if (_window is not null) _window.Activated += OnWindowActivated;
-        _probe.Start();
-        FocusScanBox();
-    }
-
-    private void OnUnloaded(object sender, RoutedEventArgs e)
-    {
-        _probe.Stop();
-        if (_window is not null) _window.Activated -= OnWindowActivated;
-        Attach(null);
-    }
-
-    private void OnWindowActivated(object? sender, EventArgs e) => FocusScanBox();
 
     private void FocusScanBox()
     {
