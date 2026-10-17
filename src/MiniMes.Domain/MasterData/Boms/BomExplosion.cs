@@ -40,6 +40,26 @@ public static class BomExplosion
         }
     }
 
+    // What has to be issued for the tree: the leaves (bought material), per item AND per consuming routing step,
+    // exact and unrounded. Semi-finished nodes are left out: they are made on the line, not issued (M2 snapshot).
+    public static IReadOnlyList<(int ItemId, int OperationSeq, decimal Qty)> LeafMaterials(BomNode root)
+    {
+        var totals = new Dictionary<(int ItemId, int OperationSeq), decimal>();
+        Add(root.Children);
+        return totals.OrderBy(t => t.Key.OperationSeq).ThenBy(t => t.Key.ItemId)
+            .Select(t => (t.Key.ItemId, t.Key.OperationSeq, t.Value)).ToList();
+
+        void Add(IEnumerable<BomNode> nodes)
+        {
+            foreach (var n in nodes)
+            {
+                if (n.Children.Count > 0) { Add(n.Children); continue; }
+                var key = (n.ItemId, n.OperationSeq);
+                totals[key] = totals.GetValueOrDefault(key) + n.RequiredQty;
+            }
+        }
+    }
+
     // Exact totals per item over the whole tree (root excluded). The same item in two branches is
     // ADDED, and nothing is rounded here: rounding happens once, on the total (spec M1 1.2.4).
     public static IReadOnlyDictionary<int, decimal> Totals(BomNode root)

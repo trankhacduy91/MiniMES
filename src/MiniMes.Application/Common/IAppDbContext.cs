@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 using MiniMes.Domain.Audit;
 using MiniMes.Domain.Factory;
@@ -51,4 +52,8 @@ public interface IAppDbContext
     // For the few use cases that must save more than once atomically (the Excel import needs item ids
     // before it can write BOM lines). The audit interceptor joins this transaction instead of opening one.
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default);
+
+    // Optimistic concurrency (M2): a handler sets the RowVersion the client loaded as the original value,
+    // so the UPDATE matches only if nobody changed the row since. DbContext already implements it.
+    EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
 }

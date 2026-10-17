@@ -54,13 +54,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         WorkOrderConfiguration.AddSequences(modelBuilder);
     }
 
-    // The one place that knows SQL Server error numbers: a unique-index violation means two requests
-    // raced past the handler's "already exists" check, which is a 409 for the caller, not a 500.
+    // The one place that turns save conflicts into 409: a stale RowVersion (lost update), or a unique-index
+    // violation (two requests raced past the handler's "already exists" check). A 409 for the caller, not a 500.
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
         try
         {
             return await base.SaveChangesAsync(ct);
+        }
+        // RowVersion no longer matches: someone saved this row after the caller loaded it (M2 spec 2.2).
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException("This record was changed by another user. Reload and try again.");
         }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
         {

@@ -163,7 +163,7 @@ public class WorkOrderStateMachineTests
 
         Assert.Equal((1, 2, (DateTime?)Now), (wo.BomVersion, wo.RoutingVersion, wo.ReleasedAt));
         var res = Assert.Single(wo.Materials, m => m.ComponentItemId == WorkOrders.Resistor);
-        Assert.Equal(2473.488m, res.RequiredQty);            // 200 x 12.36744 (12 x 1.02 x 1.01 per board)
+        Assert.Equal(2472.48m, res.RequiredQty);             // 200 x 12.3624 (12 x 1.02 x 1.01 per board), spec 1.2.4
         Assert.Equal([10, 20, 30, 40], wo.Operations.Select(o => o.Seq));   // ordered even if given unordered
         Assert.Equal("/sop/PCB-A/TEST-v1.pdf", wo.Operations.Single(o => o.Seq == 30).SopUrl);
         Assert.True(wo.Operations.Single(o => o.Seq == 30).IsInspection);
@@ -320,7 +320,7 @@ internal static class WorkOrders
     public static readonly MaterialSnapshot[] Materials =
     [
         new(ComponentItemId: 3, OperationSeq: 10, QtyPerUnit: 1.01505m),     // PCB-BARE: 1 x 1.005 x 1.01
-        new(Resistor, OperationSeq: 10, QtyPerUnit: 12.36744m),            // RES-10K-0402: 12 x 1.02 x 1.01
+        new(Resistor, OperationSeq: 10, QtyPerUnit: 12.3624m),             // RES-10K-0402: 12 x 1.02 x 1.01
         new(ComponentItemId: 9, OperationSeq: 40, QtyPerUnit: 1m),          // PACK-BAG
     ];
 

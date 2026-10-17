@@ -99,4 +99,46 @@ public class BomExplosionTests
 
         Assert.Throws<DomainException>(() => BomExplosion.BuildTree(1, 1, id => boms.GetValueOrDefault(id)));
     }
+
+    // ---------- M2: what a work order snapshots ----------
+
+    [Fact]
+    public void Leaf_materials_are_the_8_bought_parts_per_step_without_the_semi()
+    {
+        var tree = BomExplosion.BuildTree(PcbA, 1m, id => PcbABoms.GetValueOrDefault(id));
+
+        var leaves = BomExplosion.LeafMaterials(tree);
+
+        Assert.Equal(8, leaves.Count);
+        Assert.DoesNotContain(leaves, l => l.ItemId == PcbaSmt);          // made on the line, not issued
+        Assert.Equal((10, 12.3624m), leaves.Where(l => l.ItemId == Res).Select(l => (l.OperationSeq, l.Qty)).Single());
+        Assert.Equal((40, 1m), leaves.Where(l => l.ItemId == Bag).Select(l => (l.OperationSeq, l.Qty)).Single());
+        Assert.Equal([10, 10, 10, 10, 10, 20, 20, 40], leaves.Select(l => l.OperationSeq));   // ordered by step
+    }
+
+    // Per unit x 200 must give the explosion of 200 (the WO multiplies the per-unit snapshot by PlannedQty).
+    [Fact]
+    public void Leaf_materials_per_unit_times_200_equal_the_explosion_of_200()
+    {
+        var perUnit = BomExplosion.LeafMaterials(BomExplosion.BuildTree(PcbA, 1m, id => PcbABoms.GetValueOrDefault(id)));
+        var of200 = Explode(PcbABoms, PcbA, 200);
+
+        Assert.All(perUnit, l => Assert.Equal(of200[l.ItemId], l.Qty * 200));
+    }
+
+    [Fact]
+    public void Same_part_at_two_steps_stays_two_lines_and_same_step_in_two_branches_is_added()
+    {
+        const int Root = 1, SemiA = 2, SemiB = 3, Screw = 4;
+        var boms = new Dictionary<int, IReadOnlyList<BomLine>>
+        {
+            [Root] = Lines(Root, (SemiA, 1m, 0m, 10), (SemiB, 1m, 0m, 20), (Screw, 2m, 0m, 30)),
+            [SemiA] = Lines(SemiA, (Screw, 3m, 0m, 10)),
+            [SemiB] = Lines(SemiB, (Screw, 4m, 0m, 10)),
+        };
+
+        var leaves = BomExplosion.LeafMaterials(BomExplosion.BuildTree(Root, 1m, id => boms.GetValueOrDefault(id)));
+
+        Assert.Equal([(Screw, 10, 7m), (Screw, 30, 2m)], leaves);
+    }
 }

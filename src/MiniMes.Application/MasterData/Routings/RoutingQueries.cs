@@ -1,12 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using MiniMes.Application.Common;
 using MiniMes.Contracts.MasterData;
+using MiniMes.Domain.MasterData;
 using MiniMes.Domain.MasterData.Routings;
 
 namespace MiniMes.Application.MasterData.Routings;
 
 internal static class RoutingQueries
 {
+    // Same half-open [From, To) rule as BomQueries.EffectiveAt.
+    public static IQueryable<Routing> EffectiveAt(this IQueryable<Routing> routings, DateTime asOfUtc)
+        => routings.Where(r => r.Status == VersionStatus.Approved && r.EffectiveFrom <= asOfUtc
+                               && (r.EffectiveTo == null || asOfUtc < r.EffectiveTo));
+
     public static async Task<Routing> LoadRoutingAsync(this IAppDbContext db, int id, CancellationToken ct)
         => await db.Routings.Include(r => r.Steps).SingleOrDefaultAsync(r => r.Id == id, ct)
            ?? throw new KeyNotFoundException($"Routing {id} not found.");

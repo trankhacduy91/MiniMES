@@ -5,12 +5,14 @@ using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Auth;
 using MiniMes.Application.Common;
 using MiniMes.Application.MasterData.Boms;
+using MiniMes.Application.Planning;
 using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Auth;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Interceptors;
 using MiniMes.Infrastructure.Persistence.Queries;
 using MiniMes.Infrastructure.Persistence.Seed;
+using MiniMes.Infrastructure.Planning;
 
 namespace MiniMes.Infrastructure;
 
@@ -43,6 +45,9 @@ public static class DependencyInjection
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<ITokenIssuer>(sp => sp.GetRequiredService<JwtTokenService>());
         services.AddScoped<IBomExplosionQuery, BomExplosionQuery>();
+        services.AddScoped<ISequenceNumbers, SequenceNumbers>();
+        // IANA id works on Windows and Linux (.NET uses ICU); a wrong id fails at startup, not at the first WO.
+        services.AddSingleton(new PlantTimeZone(TimeZoneInfo.FindSystemTimeZoneById(config["Plant:TimeZone"] ?? "Asia/Ho_Chi_Minh")));
         services.AddScoped<DevSeeder>();
         services.AddScoped<MasterDataSeeder>();
         return services;

@@ -69,7 +69,7 @@ public class PlanningSchemaTests(ApiFixture api)
             });
 
             mine.ChangePriority(9);
-            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => first.SaveChangesAsync());
+            await Assert.ThrowsAsync<ConflictException>(() => first.SaveChangesAsync());   // 409, from DbUpdateConcurrencyException
             return 0;
         });
 
