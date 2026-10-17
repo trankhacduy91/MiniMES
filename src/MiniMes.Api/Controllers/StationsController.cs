@@ -38,4 +38,11 @@ public class StationsController(ISender sender) : ControllerBase
     [HttpPost("{id:int}/scan")]
     public Task<ScanResponse> Scan(int id, ScanRequest r, CancellationToken ct)
         => sender.Send(new ScanCommand(id, r.SerialNo, r.Result, r.DefectCode, r.Source), ct);
+
+    // M3: the technician finishes a board checked in at this Repair station (scan first). 422 = not checked in,
+    // not a Repair station or a rework step that is not earlier in the routing.
+    [Authorize(Roles = $"{nameof(Role.Operator)},{nameof(Role.Admin)}")]
+    [HttpPost("{id:int}/repair")]
+    public Task<RepairResponse> Repair(int id, RepairRequest r, CancellationToken ct)
+        => sender.Send(new CompleteRepairCommand(id, r.SerialNo, r.DefectCode, r.Action, r.ComponentReplaced, r.ReturnToSeq), ct);
 }

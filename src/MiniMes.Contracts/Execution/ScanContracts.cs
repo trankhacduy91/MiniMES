@@ -18,3 +18,15 @@ public sealed record ScanResponse(
     int? NextStep,
     string? NextStepName,
     bool Duplicate);
+
+// POST /api/stations/{id}/repair: the technician finishes a board checked in at this Repair station.
+// ReturnToSeq null = retest the failed step; an earlier routing step = rework from there.
+// ComponentReplaced required when Action starts with "Replace".
+public sealed record RepairRequest(string SerialNo, string DefectCode, string Action, string? ComponentReplaced = null,
+    int? ReturnToSeq = null);
+
+// NextStep = the step route check now expects (the failed test, or the rework step).
+public sealed record RepairResponse(string SerialNo, string Status, int? NextStep, string? NextStepName);
+
+// POST /api/serials/{serialNo}/scrap (Supervisor).
+public sealed record ScrapRequest(string Reason);

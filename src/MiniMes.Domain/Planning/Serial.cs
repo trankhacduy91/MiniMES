@@ -51,6 +51,37 @@ public class Serial
         Status = SerialStatus.Repair;
     }
 
+    // M3: the technician finished the repair. By default the board goes back to the step it failed (CurrentSeq
+    // did not move on NG, so route check expects that step again). Rework: returnToSeq = an earlier routing step
+    // to do again; CurrentSeq becomes the step before it (routings number 10, 20, 30, so not "returnToSeq - 1").
+    public void CompleteRepair(int? returnToSeq, IReadOnlyCollection<int> routingSeqs)
+    {
+        if (Status != SerialStatus.Repair)
+            throw new DomainException($"Serial {SerialNo} is {Status}; scan it at the Repair station first.");
+        if (returnToSeq is { } target)
+        {
+            var failedStep = routingSeqs.Where(q => q > CurrentSeq).DefaultIfEmpty(int.MaxValue).Min();
+            if (!routingSeqs.Contains(target))
+                throw new DomainException($"Step {target} is not in the work order's routing.");
+            if (target > failedStep)
+                throw new DomainException($"Rework goes back, not forward: the board failed at step {failedStep}.");
+            CurrentSeq = routingSeqs.Where(q => q < target).DefaultIfEmpty(0).Max();
+        }
+        Status = SerialStatus.InProcess;
+    }
+
+    // M3 (Supervisor): cannot be repaired, or not worth it. Final: route check blocks the board everywhere.
+    public void Scrap(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) throw new DomainException("Scrap needs a reason.");
+        if (reason.Length > ScrapReasonMaxLength)
+            throw new DomainException($"Scrap reason must be at most {ScrapReasonMaxLength} characters.");
+        if (Status is SerialStatus.Completed or SerialStatus.Scrapped)
+            throw new DomainException($"Serial {SerialNo} is {Status}; it cannot be scrapped.");
+        Status = SerialStatus.Scrapped;
+        ScrapReason = reason.Trim();
+    }
+
     // M3: record a scan that route check allowed at a routing step. OK moves the board to that step (the last
     // step completes it); NG keeps the step (the failed test is done again after Repair) and marks it NG.
     public void ApplyScan(int stepSeq, bool isLastStep, ScanResult result)
