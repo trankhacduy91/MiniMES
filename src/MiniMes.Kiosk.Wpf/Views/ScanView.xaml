@@ -1,0 +1,24 @@
+<UserControl x:Class="MiniMes.Kiosk.Wpf.Views.ScanView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             Background="#FF2B2B2B" Foreground="White">
+    <!-- DataContext = ScanViewModel. Idle state: READY on dark grey, readable from a step away (spec 2.8).
+         Step 7 adds the scan box and the green/red result. -->
+    <DockPanel Margin="32">
+        <DockPanel DockPanel.Dock="Top">
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Logout" Content="{x:Static res:Strings.Home_Logout}"
+                    Command="{Binding LogoutCommand}" Padding="24,8" Margin="12,0,0,0" />
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="ChangeWorkOrder" Content="{x:Static res:Strings.Scan_ChangeWorkOrder}"
+                    Command="{Binding ChangeWorkOrderCommand}" Padding="24,8" />
+            <StackPanel>
+                <TextBlock AutomationProperties.AutomationId="Station" Text="{Binding StationCode}" FontSize="32" FontWeight="SemiBold" />
+                <TextBlock AutomationProperties.AutomationId="WorkOrder" Text="{Binding WorkOrderText}" />
+                <TextBlock AutomationProperties.AutomationId="Operator" Text="{Binding OperatorText}" Foreground="LightGray" />
+            </StackPanel>
+        </DockPanel>
+
+        <TextBlock AutomationProperties.AutomationId="ScanStatus" Text="{Binding StatusText}"
+                   FontSize="160" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+    </DockPanel>
+</UserControl>

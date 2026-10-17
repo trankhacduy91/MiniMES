@@ -2,17 +2,27 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.ViewModels;
+using MiniMes.Client.Core.ViewModels.Kiosk;
 
 namespace MiniMes.Kiosk.Wpf;
 
-// Same idea as BackOffice, but the login screen is the badge scan.
-// A fresh (Transient) ViewModel on every navigation: the next operator never sees the previous one's data.
-public sealed partial class Navigation(IServiceProvider services) : ObservableObject, INavigation
+// Badge login -> choose the WO (home) -> scan. A fresh (Transient) ViewModel on every navigation: the next
+// operator never sees the previous one's data.
+public sealed partial class Navigation(IServiceProvider services) : ObservableObject, IKioskNavigation
 {
     [ObservableProperty]
     private object? _currentViewModel;
 
     public void ShowLogin() => CurrentViewModel = services.GetRequiredService<OperatorLoginViewModel>();
 
-    public void ShowHome() => CurrentViewModel = services.GetRequiredService<HomeViewModel>();
+    public void ShowHome() => Show(services.GetRequiredService<StationSelectViewModel>());
+
+    public void ShowScan() => CurrentViewModel = services.GetRequiredService<ScanViewModel>();
+
+    // Shown first so its "loading" text is visible; LoadAsync never throws (errors go to the screen).
+    private void Show(object viewModel)
+    {
+        CurrentViewModel = viewModel;
+        if (viewModel is ILoadable loadable) _ = loadable.LoadAsync();
+    }
 }

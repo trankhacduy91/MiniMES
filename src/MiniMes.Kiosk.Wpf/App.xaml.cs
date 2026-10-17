@@ -26,8 +26,10 @@ public partial class App : Application
         // A kiosk is bolted to one station: refuse to start without it rather than fail at every scan.
         builder.Services.AddOptions<ClientOptions>()
             .Validate(o => !string.IsNullOrWhiteSpace(o.StationCode), "StationCode is required on a kiosk.");
+        builder.Services.AddKioskViewModels();
         builder.Services.AddSingleton<Navigation>();
         builder.Services.AddSingleton<INavigation>(sp => sp.GetRequiredService<Navigation>());
+        builder.Services.AddSingleton<IKioskNavigation>(sp => sp.GetRequiredService<Navigation>());
         builder.Services.AddSingleton<MainWindow>();
         _host = builder.Build();
 

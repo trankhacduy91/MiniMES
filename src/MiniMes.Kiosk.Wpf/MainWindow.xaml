@@ -1,19 +1,23 @@
-<!-- Maximized, large fonts: read from a step away, used with gloves or a badge reader. -->
+<!-- Full screen (no title bar), large fonts: read from a step away, used with gloves or a badge reader. -->
 <Window x:Class="MiniMes.Kiosk.Wpf.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
         xmlns:vm="clr-namespace:MiniMes.Client.Core.ViewModels;assembly=MiniMes.Client.Core"
+        xmlns:kiosk="clr-namespace:MiniMes.Client.Core.ViewModels.Kiosk;assembly=MiniMes.Client.Core"
         xmlns:views="clr-namespace:MiniMes.Kiosk.Wpf.Views"
         Title="{x:Static res:Strings.Kiosk_WindowTitle}"
         AutomationProperties.Name="{x:Static res:Strings.Kiosk_WindowTitle}"
-        WindowState="Maximized" FontSize="22">
+        WindowStyle="None" WindowState="Maximized" ResizeMode="NoResize" FontSize="22">
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:OperatorLoginViewModel}">
             <views:OperatorLoginView />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:HomeViewModel}">
-            <views:HomeView />
+        <DataTemplate DataType="{x:Type kiosk:StationSelectViewModel}">
+            <views:StationSelectView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type kiosk:ScanViewModel}">
+            <views:ScanView />
         </DataTemplate>
     </Window.Resources>
 

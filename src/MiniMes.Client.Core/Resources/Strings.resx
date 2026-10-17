@@ -701,4 +701,34 @@
   <data name="Scan_ReasonFaiNotApproved" xml:space="preserve">
     <value>Waiting for first article approval (QC)</value>
   </data>
+  <data name="Kiosk_Operator" xml:space="preserve">
+    <value>{0} ({1})</value>
+    <comment>{0} = full name, {1} = employee code</comment>
+  </data>
+  <data name="StationSelect_Title" xml:space="preserve">
+    <value>Choose the work order</value>
+  </data>
+  <data name="StationSelect_Loading" xml:space="preserve">
+    <value>Loading the dispatch list...</value>
+  </data>
+  <data name="StationSelect_NoWorkOrders" xml:space="preserve">
+    <value>No work order is released for this line. Call your supervisor.</value>
+  </data>
+  <data name="StationSelect_Start" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="StationSelect_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Scan_WorkOrder" xml:space="preserve">
+    <value>{0} - {1}</value>
+    <comment>{0} = WO number, {1} = item code</comment>
+  </data>
+  <data name="Scan_Ready" xml:space="preserve">
+    <value>READY</value>
+    <comment>Idle state of the scan screen</comment>
+  </data>
+  <data name="Scan_ChangeWorkOrder" xml:space="preserve">
+    <value>Change WO</value>
+  </data>
 </root>

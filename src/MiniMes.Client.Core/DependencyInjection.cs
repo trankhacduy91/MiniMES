@@ -5,8 +5,10 @@ using Microsoft.Extensions.Options;
 using MiniMes.Client.Core.Api;
 using MiniMes.Client.Core.Auth;
 using MiniMes.Client.Core.Http;
+using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.ViewModels;
+using MiniMes.Client.Core.ViewModels.Kiosk;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
 
@@ -68,6 +70,18 @@ public static class DependencyInjection
         services.AddTransient<WorkOrderListViewModel>();
         services.AddTransient<WorkOrderCreateViewModel>();
         services.AddTransient<WorkOrderDetailViewModel>();
+        return services;
+    }
+
+    // Kiosk only (M3): the station screens. The app registers IKioskNavigation itself.
+    public static IServiceCollection AddKioskViewModels(this IServiceCollection services)
+    {
+        services.AddTransient<IExecutionApi, ExecutionApi>();
+        services.AddTransient<IWorkOrderApi, WorkOrderApi>();
+        services.AddSingleton<IKioskContext, KioskContext>(); // state, not a ViewModel; cleared at logout
+
+        services.AddTransient<StationSelectViewModel>();
+        services.AddTransient<ScanViewModel>();
         return services;
     }
 }
