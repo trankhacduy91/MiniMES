@@ -8,6 +8,8 @@ Mỗi quyết định ghi theo khung ADR (Architecture Decision Record): bối c
 | [ADR-002](#adr-002-wpf-gọi-api-không-nối-thẳng-database) | WPF gọi API, không nối thẳng database | 10/2026 |
 | [ADR-003](#adr-003-audit-trail-ở-ef-core-interceptor) | Audit trail ở EF Core interceptor | 10/2026 |
 | [ADR-004](#adr-004-auditlog-chặn-sửaxóa-bằng-trigger) | `AuditLog` chặn sửa/xóa bằng trigger | 10/2026 |
+| [ADR-005](#adr-005-explode-bom-bằng-recursive-cte-cây-bom-dựng-trong-bộ-nhớ) | Explode BOM bằng recursive CTE, cây BOM dựng trong bộ nhớ | 10/2026 |
+| [ADR-006](#adr-006-bom-và-routing-có-version-draft--approved-hiệu-lực-nửa-mở) | BOM và Routing có version: Draft → Approved, hiệu lực nửa mở | 10/2026 |
 
 ---
 
@@ -120,3 +122,22 @@ Integration test (Testcontainers SQL Server) so CTE với bảng của spec (202
 - *Bảng tính sẵn (materialized/closure table):* nhanh khi đọc nhưng phải đồng bộ mỗi lần Approve; thừa cho MVP.
 
 **Đánh đổi / giới hạn.** Có hai cài đặt cùng một phép tính (SQL và C#): phải giữ chúng khớp, nên có test đối chiếu. SQL thô không được compiler kiểm tra tên bảng/cột: test tích hợp chạy trên SQL Server thật là lưới an toàn. Dữ liệu lớn sẽ cần index `Boms(ItemId, Status, EffectiveFrom)` (đo ở M3).
+
+## ADR-006: BOM và Routing có version: Draft → Approved, hiệu lực nửa mở
+
+**Bối cảnh.** BOM và routing đổi theo thời gian (BOM v2 dùng 22 tụ thay vì 20, routing thêm bước dán keo). Nếu sửa đè, WO đang chạy đổi định mức giữa chừng, và câu hỏi "lô tháng trước làm theo định mức nào" không còn trả lời được. Audit log (ADR-003) cho biết *ai sửa gì*, nhưng không cho biết *định mức nào có hiệu lực* tại một thời điểm.
+
+**Quyết định.**
+
+1. Mỗi lần đổi là một **version mới** (`Bom`/`Routing` có `Version`, unique `(ItemId, Version)`). Version mới tạo ở trạng thái **Draft** (copy bản mới nhất), chỉ Draft được sửa; **Approve** khóa lại vĩnh viễn (`Domain/MasterData/Boms/Bom.cs`, `Routings/Routing.cs`).
+2. Hiệu lực là khoảng **nửa mở `[EffectiveFrom, EffectiveTo)`**, UTC. `Approve(from, previous)` đóng version đang mở đúng tại `from` của version mới: tại mọi thời điểm có đúng một version hiệu lực, không chồng, không hở.
+3. Hai **filtered unique index** giữ quy tắc ngay cả khi hai request đến cùng lúc: `UX_Boms_OneDraftPerItem` (`[Status]='Draft'`) và `UX_Boms_OneOpenApprovedPerItem` (`[Status]='Approved' AND [EffectiveTo] IS NULL`); routing có cặp tương tự. Approve v2 cập nhật v1 và v2 trong cùng `SaveChanges`; EF sắp các UPDATE theo khóa nên v1 được đóng trước khi v2 mở, index không bị vi phạm giữa chừng.
+4. Kiểm tra cần DB (component còn active, không tạo vòng, Semi có BOM) nằm ở use case Approve; quy tắc trạng thái/hiệu lực là hàm thuần trong Domain, unit test không cần DB.
+5. M2 sẽ **snapshot** version đang hiệu lực vào WO lúc release, nên Approve v3 không ảnh hưởng WO đang chạy.
+
+**Phương án đã loại.**
+- *Sửa đè + dựa vào AuditLog:* biết ai sửa, không biết định mức nào đúng lúc sản xuất; dựng lại trạng thái cũ từ log rất mong manh.
+- *Chỉ lưu bản sao trong WO:* WO có lịch sử, nhưng master không có, không so sánh được v1/v2 và không có quy trình phê duyệt.
+- *Hiệu lực theo ngày (`date`, giờ địa phương):* đơn giản hơn nhưng không đúng với ca đêm qua nửa đêm và lệch với quy ước UTC toàn dự án.
+
+**Đánh đổi / giới hạn.** Thêm thao tác cho người dùng (New version → sửa → Approve thay vì sửa trực tiếp), đúng với yêu cầu kiểm soát thay đổi ở nhà máy. MVP chưa có phê duyệt hai người (người tạo khác người duyệt) và chưa có "alternate BOM" theo khách hàng; cả hai thêm được trên khung này.

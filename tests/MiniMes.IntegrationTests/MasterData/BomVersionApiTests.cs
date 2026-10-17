@@ -3,7 +3,9 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MiniMes.Contracts.MasterData;
+using MiniMes.Domain.Common;
 using MiniMes.Domain.MasterData;
+using MiniMes.Domain.MasterData.Boms;
 using MiniMes.IntegrationTests.Infrastructure;
 
 namespace MiniMes.IntegrationTests.MasterData;
@@ -142,6 +144,20 @@ public class BomVersionApiTests(ApiFixture api)
         Assert.Single(await admin.GetFromJsonAsync<List<BomSummaryDto>>($"/api/boms?itemId={parent.Id}") ?? []);
     }
 
+    // DoD: (ItemId, Version) is unique. The use case always takes max + 1, so write past it straight to the DB.
+    [Fact]
+    public async Task Second_version_1_of_the_same_item_is_refused_by_the_unique_index()
+    {
+        var admin = await api.LoginAsync("admin");
+        var (v1, _) = await ApprovedBomAsync(admin);
+
+        await Assert.ThrowsAsync<ConflictException>(() => api.WithDbAsync(db =>
+        {
+            db.Boms.Add(Bom.CreateDraft(v1.ItemId, version: 1)); // a Draft, so only the (ItemId, Version) index can stop it
+            return db.SaveChangesAsync();
+        }));
+    }
+
     [Fact]
     public async Task Raw_item_cannot_get_a_bom_and_inactive_component_cannot_be_used()
     {
@@ -209,7 +225,7 @@ public class BomVersionApiTests(ApiFixture api)
     private static Task<HttpResponseMessage> ApproveAsync(HttpClient admin, int bomId, DateTime? from)
         => admin.PostAsJsonAsync($"/api/boms/{bomId}/approve", new ApproveVersionRequest(from));
 
-    private static async Task<(BomDto Bom, ItemDto Component)> ApprovedBomAsync(HttpClient admin, DateTime? effectiveFrom = null)
+    internal static async Task<(BomDto Bom, ItemDto Component)> ApprovedBomAsync(HttpClient admin, DateTime? effectiveFrom = null)
     {
         var parent = await CreateItemAsync(admin, "P", "Finished");
         var component = await CreateItemAsync(admin, "C", "Raw");

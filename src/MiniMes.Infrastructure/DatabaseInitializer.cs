@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Infrastructure.Persistence;
+using MiniMes.Infrastructure.Persistence.Seed;
 
 namespace MiniMes.Infrastructure;
 
@@ -14,5 +15,6 @@ public static class DatabaseInitializer
         if (applyMigrations)
             await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
         await scope.ServiceProvider.GetRequiredService<DevSeeder>().SeedAsync();
+        await scope.ServiceProvider.GetRequiredService<MasterDataSeeder>().SeedAsync(); // needs Line 1 from DevSeeder
     }
 }

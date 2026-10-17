@@ -298,7 +298,7 @@ Mỗi ca nghỉ tổng 60 phút. Ca 8 giờ có 480 phút, trừ 60 phút nghỉ
 | --- | --- |
 | `Date` (PK, `date`) | Ngày sản xuất (theo giờ nhà máy; ca đêm thuộc ngày bắt đầu ca) |
 | `IsWorkingDay` | `false` = nghỉ cả ngày (lễ); `true` = làm việc dù `Shift.Days` không có ngày này (tăng ca Chủ nhật) |
-| `ShiftCodes` | Tùy chọn: chỉ các ca này chạy hôm đó (ví dụ Chủ nhật chỉ chạy `S1`). Trống = mọi ca theo `Shift.Days` |
+| `ShiftCodes` | Tùy chọn: chỉ các ca này chạy hôm đó (ví dụ Chủ nhật chỉ chạy `S1`). Trống (ngày làm việc) = **mọi ca đang active** đều chạy, kể cả ngày ngoài `Shift.Days` như Chủ nhật; ca thêm sau tự được tính, không phải sửa lịch (user chốt 17/10/2026) |
 | `Note` | `Tet holiday`, `Overtime for order X` |
 
 Quy tắc tra cứu "ca X có chạy ngày D không": có dòng `PlantCalendar` cho D thì dòng đó quyết định; không có thì theo `Shift.Days`. Chỉ lưu **ngoại lệ**, không sinh sẵn 365 dòng/năm. Hàm `IsShiftScheduled(shift, productionDate)` đặt trong Domain để M5 dùng lại.
@@ -1197,11 +1197,12 @@ erDiagram
   - **Ghi chú khi làm, phiên 3/4 (17/10/2026): Routing.** `RoutingEditorViewModel` + `RoutingEditorView`: chọn Item, version (New version copy bản mới nhất, Approve hỏi xác nhận), lưới bước sửa khi Draft với cột Operation, Work Center (ComboBox), Ideal cycle (s), Inspection, Mandatory, **SOP URL [v2]**; Add / Remove / **Up / Down** / Save. `Seq` chỉ đọc: Up/Down đánh lại 10, 20, 30… (snippet 2.7, gọi lại `NotifyCanExecuteChanged` sau `Move` vì dòng chọn không đổi); bước mới = Seq lớn nhất + 10; OperationCode viết hoa, SopUrl trống → null khi gửi. **Lỗi bắt được:** DTO là `record`, version tải lại sau Save bằng giá trị với bản cũ nên setter không báo đổi và lưới trống; BOM editor (phiên 2) cũng bị → đặt `SelectedVersion = null` trước khi chọn lại, test hồi quy cả hai, ghi ở `docs/incidents.md`. Kiểm tra: unit 7 test Routing + 1 test hồi quy BOM; app thật (DB dev có routing PCB-A v1 theo ERD, nạp bằng script tạm): v1 Approved → Up/Approve mờ; New version → chọn PACK → Up → `30:PACK, 40:TEST` → Save "Saved 4 steps." → rời trang, mở lại → v2 Draft đúng thứ tự `10 SMT, 20 ASSY, 30 PACK, 40 TEST`, SopUrl giữ nguyên. DB dev còn PCB-A routing v2 Draft.
   - **Ghi chú khi làm, phiên 4/4 (17/10/2026): danh mục + Import.** **Một view generic** `CatalogView` cho 6 danh mục: lớp cơ sở `CatalogViewModel` (lưới + form; danh sách, chọn, hỏi xác nhận, ánh xạ lỗi 400 vào đúng ô theo tên field API, 409 vào ô Code, vòng đời form) và mỗi danh mục chỉ khai báo cột (`CatalogColumn`, có `Format` để ngày/giờ không phụ thuộc culture), field (`CatalogField` Text/Bool/Choice) và lời gọi API: `WorkCentersViewModel`, `MachinesViewModel`, `ShiftsViewModel` (ngày dạng `Mon,Tue`, break dạng `10:00-10:15, 11:30-12:15`, giờ sai định dạng chặn ở client, quy tắc break để server quyết), `PlantCalendarViewModel` (năm nay + năm sau, "Remove" = xóa dòng ngoại lệ), `DefectCodesViewModel`, `DowntimeReasonsViewModel`. Một `DataTemplate` cho `CatalogViewModel` (WPF khớp template theo cả kiểu cơ sở); cột lưới sinh trong code-behind từ `Columns`. `ImportViewModel` + `ImportView`: tải file mẫu (SaveFileDialog), chọn file (OpenFileDialog), Validate (dry-run) hiện lỗi Sheet/Row/Column/Message, **Import chỉ bật khi đúng file đó vừa validate 0 lỗi** và gửi **đúng các byte đã kiểm tra** (sửa file sau Validate cũng không lọt). Dòng gợi ý/lỗi rỗng ẩn đi (style `CollapsedWhenEmpty`). Kiểm tra: unit 11 test (catalog qua 3 danh mục + import); app thật: Machine key `L1/SMT` → lỗi dưới ô MqttTopicKey; ca đêm có break 12:00 → lỗi dưới ô Breaks, sửa lại → 420 phút; Calendar mã ca lạ → lỗi dưới ô Shifts, lưu ngày tăng ca → hiện trong lưới (sau khi sửa lỗi 2 năm, xem `docs/incidents.md`). Hộp thoại chọn file của Windows không điều khiển được bằng UI Automation, nên Import được kiểm bằng script chạy **chính `ImportViewModel` + `MasterDataApi` + multipart** với API dev (chỉ thay hộp thoại): template 8,6 KB, Validate PCB-B 0 lỗi → Import bật → Import tạo 5 Item, 2 BOM, 1 Routing Draft → Validate lại → `Code 'PCB-B' already exists.`. DB dev còn: ca `TS3`, ngày tăng ca 2026-10-18, dữ liệu PCB-B.
 
-- [ ] **Bước 9 — Seed data và nghiệm thu DoD** (1,5 giờ)
+- [x] **Bước 9 — Seed data và nghiệm thu DoD** (1,5 giờ)
   - Mục tiêu: clone → chạy → có ngay dữ liệu demo cho M2.
   - Việc cần làm: `MasterDataSeeder` (mục 2.9) tạo: 1 Finished (`PCB-A`), 1 Semi (`PCBA-SMT`), 8 Raw (`PCB-BARE`, `RES-10K-0402`, `CAP-100N-0402`, `IC-MCU-QFN`, `SOLDER-PASTE`, `CONN-USBC`, `SHIELD-CAN`, `PACK-BAG`), BOM cho hai cấp (Approved, hiệu lực từ ngày seed), routing 4 bước, Line 1 với 4 Work Center và các Machine (**[v2]** `L1-SMT-01` Mqtt, `L1-REFLOW-01` OpcUa, `L1-GLUE-01` Modbus, `L1-TEST-01` Mqtt, ...), 2 ca (+ ca đêm mẫu), 8–10 DefectCode, 8–10 DowntimeReason, **[v2]** `PlantCalendar` có các ngày lễ VN của năm hiện tại và 1 Chủ nhật tăng ca, `SopUrl` cho 4 bước routing (file PDF mẫu trong `docs/sop/`), `PACK-BAG` có `SkipIqc = true`; chạy lại 2 lần không lỗi; cập nhật README (lệnh, tài khoản, cách gọi explode).
   - File: `src/MiniMes.Infrastructure/Persistence/Seed/MasterDataSeeder.cs`, `README.md`.
   - Kiểm tra: tick toàn bộ checklist mục 5.1.
+  - **Ghi chú khi làm (17/10/2026).** `Persistence/Seed/MasterDataSeeder.cs` chạy sau `DevSeeder` (cần Line 1 và các trạm) ở cả Development và Testing, đúng dữ liệu `docs/erd-master-data.md` mục 3. **Idempotent theo từng bản ghi** thay vì "có `PCB-A` thì bỏ qua cả bộ" như snippet 2.9: mã nào đã có thì giữ nguyên (DB dev đã có PCB-A nhập tay qua API ở bước 8 vẫn được bổ sung máy, ca, danh mục còn thiếu); BOM/routing chỉ tạo v1 khi Item chưa có version nào; trạm chỉ gắn work center khi chưa gắn; ngày lịch đã có dòng thì giữ. BOM/routing đi qua `AddLine`/`AddStep`/`Approve` của Domain, hiệu lực từ 00:00 UTC ngày seed. Ngày lễ: `VietnamHolidays` theo Điều 112 BLLĐ 2019 (1/1, Tết 5 ngày = 30 Tết + mùng 1–4, Giỗ Tổ 10/3 âm, 30/4, 1/5, 1–2/9); ngày âm lịch tính bằng `ChineseLunisolarCalendar` có sẵn trong .NET (đã đối chiếu Tết 2025/2026/2027 và Giỗ Tổ 2025/2026 đúng; lịch Trung Quốc tính theo UTC+8 nên hiếm khi lệch lịch VN một ngày, chấp nhận cho dữ liệu mẫu); không tính ngày nghỉ bù. Chủ nhật tăng ca = Chủ nhật đầu tiên của tháng 12, `S1`. Danh mục: 10 mã lỗi, 9 lý do dừng (6 mã của mục 1.2.10 + bổ sung). **SOP:** `docs/sop/make-sop.cs` (file-based app, không package) viết tay 4 PDF một trang `docs/sop/PCB-A/{SMT,ASSY,TEST,PACK}-v1.pdf`; `SopUrl = /sop/PCB-A/{OP}-v1.pdf`. Phục vụ file qua API (static file) để dành cho M3, lúc kiosk thật sự mở. Kiểm tra: integration `MasterDataSeedTests` 6 test (explode `PCB-A` seed × 200 đúng bảng DoD; chạy seeder thêm 2 lần không đổi số dòng của 10 bảng kể cả `AuditLog`; BOM/routing v1 Approved, SOP tồn tại cho 4 bước; máy v2 và trạm ↔ work center; ca 420 phút, lịch, `SkipIqc`; Approve ghi audit `Status Draft → Approved` bởi `admin`) + `Second_version_1_of_the_same_item_is_refused_by_the_unique_index`; chạy API dev 2 lần: lần 1 bổ sung 4 máy, S1/S2/S3, 10 mã lỗi, 9 lý do, 12 dòng lịch 2026; lần 2 không đổi gì, không lỗi. PDF mở được (render bằng `Windows.Data.Pdf`). `ARCHITECTURE.md` thêm ADR-006 (version BOM); README thêm mục Master data.
 
 ### Nếu bị kẹt
 
@@ -1254,32 +1255,34 @@ erDiagram
 
 **DoD của spec (bắt buộc)**
 
-- [ ] API explode BOM của `PCB-A` × 200 trả đúng: `PCB-BARE` 204, `RES-10K-0402` 2473, `CAP-100N-0402` 4121, `IC-MCU-QFN` 204, `SOLDER-PASTE` 0,127 kg, `CONN-USBC` 201, `SHIELD-CAN` 201, `PACK-BAG` 200.
-- [ ] Không tạo được BOM vòng (trực tiếp và gián tiếp 3 cấp); thông báo lỗi nêu đường vòng.
+- [x] API explode BOM của `PCB-A` × 200 trả đúng: `PCB-BARE` 204, `RES-10K-0402` 2473, `CAP-100N-0402` 4121, `IC-MCU-QFN` 204, `SOLDER-PASTE` 0,127 kg, `CONN-USBC` 201, `SHIELD-CAN` 201, `PACK-BAG` 200.
+- [x] Không tạo được BOM vòng (trực tiếp và gián tiếp 3 cấp); thông báo lỗi nêu đường vòng.
 
 **Nghiệp vụ**
 
-- [ ] Unique index `Item.Code` và `(Bom.ItemId, Version)` hoạt động (thử tạo trùng).
-- [ ] BOM/Routing Approved bị khóa sửa; muốn đổi phải tạo version mới; Approve v2 đóng hiệu lực v1 đúng thời điểm, không chồng lấn.
-- [ ] Routing có ≥ 1 bước, `Seq` không trùng, `IdealCycleTimeSec > 0`.
-- [ ] Ca qua nửa đêm tính đúng độ dài và thời gian kế hoạch (420 phút cho cả ca mẫu ngày và đêm).
-- [ ] Không xóa cứng master đã được tham chiếu; `IsActive = false` ẩn khỏi danh sách chọn nhưng dữ liệu cũ vẫn hiển thị.
+- [x] Unique index `Item.Code` và `(Bom.ItemId, Version)` hoạt động (thử tạo trùng).
+- [x] BOM/Routing Approved bị khóa sửa; muốn đổi phải tạo version mới; Approve v2 đóng hiệu lực v1 đúng thời điểm, không chồng lấn.
+- [x] Routing có ≥ 1 bước, `Seq` không trùng, `IdealCycleTimeSec > 0`.
+- [x] Ca qua nửa đêm tính đúng độ dài và thời gian kế hoạch (420 phút cho cả ca mẫu ngày và đêm).
+- [x] Không xóa cứng master đã được tham chiếu; `IsActive = false` ẩn khỏi danh sách chọn nhưng dữ liệu cũ vẫn hiển thị.
 
 **Kỹ thuật**
 
-- [ ] Mọi use case theo một pattern MediatR + FluentValidation; ghi chú license MediatR trong README.
-- [ ] Unit test `BomCycleDetector` (≥ 4 ca), `Bom.Approve`, `Shift` xanh; integration test explode (Testcontainers) xanh.
-- [ ] Ghi vào `ARCHITECTURE.md` lý do chọn CTE và version BOM; ERD trong `docs/`.
-- [ ] Ghi `AuditLog` cho thay đổi master (kiểm tra 1 lần Approve).
-- [ ] WPF Back-office: Item (lọc), BOM (cây + explode), Routing (Up/Down), danh mục; chuỗi UI trong `.resx`; lỗi server hiện cạnh ô đúng.
-- [ ] Seed idempotent: chạy 2 lần không lỗi; đủ dữ liệu cho M2.
+- [x] Mọi use case theo một pattern MediatR + FluentValidation; ghi chú license MediatR trong README.
+- [x] Unit test `BomCycleDetector` (≥ 4 ca), `Bom.Approve`, `Shift` xanh; integration test explode (Testcontainers) xanh.
+- [x] Ghi vào `ARCHITECTURE.md` lý do chọn CTE và version BOM; ERD trong `docs/`.
+- [x] Ghi `AuditLog` cho thay đổi master (kiểm tra 1 lần Approve).
+- [x] WPF Back-office: Item (lọc), BOM (cây + explode), Routing (Up/Down), danh mục; chuỗi UI trong `.resx`; lỗi server hiện cạnh ô đúng.
+- [x] Seed idempotent: chạy 2 lần không lỗi; đủ dữ liệu cho M2.
 
 **[v2] Bổ sung**
 
-- [ ] Import file `PCB-B` hợp lệ tạo đủ Item/BOM/Routing ở Draft; file có 1 dòng sai (ví dụ UoM `xyz`) → **không import dòng nào**, báo đúng sheet/dòng/cột.
-- [ ] `PlantCalendar`: `IsShiftScheduled` đúng cho ngày thường, ngày lễ, Chủ nhật tăng ca (unit test).
-- [ ] `RoutingStep.SopUrl` lưu và hiển thị được; seed có SOP cho 4 bước.
-- [ ] Seed có `L1-REFLOW-01` (OpcUa) và `L1-GLUE-01` (Modbus); `SkipIqc` chỉ nhận cho Raw.
+- [x] Import file `PCB-B` hợp lệ tạo đủ Item/BOM/Routing ở Draft; file có 1 dòng sai (ví dụ UoM `xyz`) → **không import dòng nào**, báo đúng sheet/dòng/cột.
+- [x] `PlantCalendar`: `IsShiftScheduled` đúng cho ngày thường, ngày lễ, Chủ nhật tăng ca (unit test).
+- [x] `RoutingStep.SopUrl` lưu và hiển thị được; seed có SOP cho 4 bước.
+- [x] Seed có `L1-REFLOW-01` (OpcUa) và `L1-GLUE-01` (Modbus); `SkipIqc` chỉ nhận cho Raw.
+
+**Bằng chứng (17/10/2026):** unit 242/242, integration 102/102 (Testcontainers SQL Server). Explode: `BomExplosionTests` (dữ liệu tạo qua API) + `MasterDataSeedTests` (dữ liệu seed). Vòng BOM: `BomCycleDetectorTests` (trực tiếp, gián tiếp 3 cấp, kim cương không phải vòng) + `B_uses_A_after_A_uses_B_is_400_with_the_cycle_path`. Unique: `Unique_index_violation_becomes_ConflictException` (Item.Code), `Second_version_1_of_the_same_item_is_refused_by_the_unique_index`. Version: `BomTests`, `BomVersionApiTests`, `RoutingVersionApiTests`. Ca/lịch: `ShiftCalendarTests`. Soft delete: `ItemsApiTests` (Deactivate, danh sách chọn chỉ active). Kiến trúc: `ControllerConventionTests` (controller chỉ nhận `ISender`), README ghi license MediatR, ADR-005 (CTE), ADR-006 (version), `docs/erd-master-data.md`. Audit Approve: `Approving_a_bom_writes_audit_rows_by_the_user`. WPF: unit test ViewModel + chạy app thật bằng UI Automation (ghi chú bước 8). Import: `ImportTests`. Seed: `MasterDataSeedTests` + chạy API dev 2 lần.
 
 ### 5.2 Tự kiểm tra
 

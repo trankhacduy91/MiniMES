@@ -10,6 +10,7 @@ using MiniMes.Infrastructure.Auth;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Interceptors;
 using MiniMes.Infrastructure.Persistence.Queries;
+using MiniMes.Infrastructure.Persistence.Seed;
 
 namespace MiniMes.Infrastructure;
 
@@ -43,6 +44,7 @@ public static class DependencyInjection
         services.AddSingleton<ITokenIssuer>(sp => sp.GetRequiredService<JwtTokenService>());
         services.AddScoped<IBomExplosionQuery, BomExplosionQuery>();
         services.AddScoped<DevSeeder>();
+        services.AddScoped<MasterDataSeeder>();
         return services;
     }
 }

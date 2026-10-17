@@ -1,0 +1,42 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 408 >>
+stream
+BT /F1 18 Tf 50 790 Td 24 TL
+(PCB-A  /  Assembly - connector and shield) Tj T*
+/F1 11 Tf
+(Work instruction, routing v1   -   SAMPLE for Mini MES) Tj T*
+18 TL
+() Tj T*
+(1. Wear the ESD strap and check it on the tester.) Tj T*
+(2. Fit CONN-USBC; glue dot from L1-GLUE-01 must cover both tabs.) Tj T*
+(3. Press SHIELD-CAN until all 4 clips click.) Tj T*
+(4. Scan the board serial at station L1-ASM-01.) Tj T*
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+770
+%%EOF

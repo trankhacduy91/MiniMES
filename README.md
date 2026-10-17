@@ -8,7 +8,10 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 
 **License thư viện:** MediatR được ghim ở **12.x** (Apache 2.0); từ v13 MediatR chuyển sang license thương mại (có bản Community cần đăng ký key), nên không nâng cấp. Test `MediatR_stays_on_version_12` chặn việc vô tình nâng. FluentValidation, ClosedXML: Apache 2.0 / MIT.
 
-**Trạng thái:** Module 0 (nền tảng) xong: solution Clean Architecture, Docker, đăng nhập theo role, audit trail không sửa được, API cấu hình nhà máy, CI, 2 app WPF đăng nhập được. Các module nghiệp vụ (M1 → M7) làm tiếp theo [lộ trình](spec/spec-v2.md).
+**Trạng thái:**
+- **M0 (nền tảng) xong:** solution Clean Architecture, Docker, đăng nhập theo role, audit trail không sửa được, API cấu hình nhà máy, CI, 2 app WPF đăng nhập được.
+- **M1 (master data) xong:** Item, BOM đa cấp có version, routing, work center/máy, ca, lịch nhà máy, mã lỗi, lý do dừng; explode BOM bằng recursive CTE; import Excel; màn hình WPF Back-office. Xem [mục Master data](#master-data-m1).
+- Các module tiếp theo (M2 → M7) làm theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
 
@@ -96,7 +99,7 @@ Phải `dotnet build` (hoặc ít nhất `dotnet restore`) trước: trên bản
 dotnet run --project src/MiniMes.Api --launch-profile http
 ```
 
-Lần chạy đầu, seeder tạo dữ liệu demo (1 site, 1 area, 2 line, 10 station, 6 user). Mở **Swagger: http://localhost:5157/swagger** → `POST /api/auth/login` với `admin` / `Demo@12345` → copy `token` → nút **Authorize**.
+Lần chạy đầu, seeder tạo dữ liệu demo: 1 site, 1 area, 2 line, 10 station, 6 user, và master data của model `PCB-A` (xem [Master data](#master-data-m1)). Seeder chạy mỗi lần khởi động nhưng bỏ qua mã đã có, nên chạy lại không tạo trùng và không ghi đè dữ liệu bạn đã sửa. Mở **Swagger: http://localhost:5157/swagger** → `POST /api/auth/login` với `admin` / `Demo@12345` → copy `token` → nút **Authorize**.
 
 **6. Chạy app WPF** (terminal khác, API phải đang chạy)
 
@@ -126,7 +129,7 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 
 | # | Bước | Module | Trạng thái |
 | --- | --- | --- | --- |
-| 1 | Admin import Excel Item/BOM/Routing của model `PCB-A` | M1 | chưa làm |
+| 1 | Admin import Excel Item/BOM/Routing của model mới (file mẫu `PCB-B`) | M1 | xong |
 | 2 | Planner tạo WO 200 pcs → Release → sinh serial, in nhãn ZPL | M2 | chưa làm |
 | 3 | Kho nhập reel → QC làm IQC → lot `Available` | M6 | chưa làm |
 | 4 | Operator nạp reel lên máy SMT, MES kiểm tra đúng vật tư và FIFO | M6 | chưa làm |
@@ -140,6 +143,35 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M7 | chưa làm |
 | 13 | WO Completed → báo cáo sản lượng/FPY/OEE, xuất Excel | M2, M3, M5 | chưa làm |
 
+## Master data (M1)
+
+Dữ liệu seed (theo [`docs/erd-master-data.md`](docs/erd-master-data.md) mục 3):
+
+| Nhóm | Dữ liệu |
+| --- | --- |
+| Item | `PCB-A` (Finished), `PCBA-SMT` (Semi), 8 NVL (`PCB-BARE`, `RES-10K-0402`, `CAP-100N-0402`, `IC-MCU-QFN`, `SOLDER-PASTE` (kg), `CONN-USBC`, `SHIELD-CAN`, `PACK-BAG` (`SkipIqc`)) |
+| BOM | `PCB-A` → `PCBA-SMT` → NVL, 2 cấp, v1 Approved, hiệu lực từ ngày seed |
+| Routing | `PCB-A` v1: 10 SMT → 20 ASSY → 30 TEST → 40 PACK, mỗi bước có SOP ([`docs/sop/PCB-A/`](docs/sop/PCB-A/)) |
+| Line 1 | 4 work center (`WC-SMT`, `WC-ASSY`, `WC-TEST`, `WC-PACK`); máy `L1-SMT-01` (MQTT), `L1-REFLOW-01` (OPC UA), `L1-GLUE-01` (Modbus), `L1-TEST-01` (MQTT); trạm M0 gắn vào work center |
+| Ca | `S1` 06–14, `S2` 14–22 (T2–T7), `S3` 22–06 qua nửa đêm (T2–T6); đều 420 phút kế hoạch |
+| Lịch | Ngày lễ VN của năm hiện tại (Bộ luật Lao động 2019, Điều 112) + 1 Chủ nhật tăng ca (`S1`) |
+| Danh mục | 10 mã lỗi, 9 lý do dừng máy |
+
+**Explode BOM** (tổng NVL cho 200 `PCB-A`, đi xuống mọi cấp, cộng hao hụt): trong Swagger lấy `id` của `PCB-A` bằng `GET /api/items?search=PCB-A`, rồi gọi `GET /api/items/{id}/explosion?qty=200`. Hoặc bằng curl:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:5157/api/auth/login -H "Content-Type: application/json"   -d '{"employeeCode":"planner01","password":"Demo@12345"}' | jq -r .token)
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:5157/api/items/{id}/explosion?qty=200" | jq '.lines[] | {code, requiredQty}'
+```
+
+Kết quả đúng: `PCBA-SMT` 202, `PCB-BARE` 204, `RES-10K-0402` 2473, `CAP-100N-0402` 4121, `IC-MCU-QFN` 204, `SOLDER-PASTE` 0,12726 kg (hiển thị 0,127), `CONN-USBC` 201, `SHIELD-CAN` 201, `PACK-BAG` 200. Cây có số lượng từng nút: `GET /api/items/{id}/bom-tree?qty=200`. Cách tính và lý do dùng recursive CTE: [ADR-005](ARCHITECTURE.md#adr-005-explode-bom-bằng-recursive-cte-cây-bom-dựng-trong-bộ-nhớ).
+
+**Màn hình WPF Back-office** (thêm/sửa/import master data cần role Admin, đăng nhập `admin`; các role khác chỉ xem): Items (lọc, phân trang), BOM (version, cây, explode), Routing (Up/Down, SOP URL), danh mục (work center, máy, ca, lịch, mã lỗi, lý do dừng), Import.
+
+**Import Excel:** màn hình Import → *Download template* để lấy file mẫu, hoặc dùng [`docs/samples/import-PCB-B.xlsx`](docs/samples/import-PCB-B.xlsx) (model `PCB-B`) → *Validate* (kiểm tra, không ghi) → *Import* (chỉ bật khi 0 lỗi; ghi tất cả trong 1 transaction, BOM/routing ở trạng thái Draft). Cùng chức năng qua API: `POST /api/import/master-data?dryRun=true|false` (multipart, field `file`).
+
+**Version BOM/Routing:** bản Approved bị khóa; muốn đổi thì *New version* (Draft) → sửa → *Approve*, version cũ tự đóng hiệu lực đúng lúc version mới bắt đầu ([ADR-006](ARCHITECTURE.md#adr-006-bom-và-routing-có-version-draft--approved-hiệu-lực-nửa-mở)).
+
 ## Chạy test
 
 ```bash
@@ -151,7 +183,7 @@ Integration test chạy API ở môi trường `Testing`: tự `MigrateAsync()` 
 
 ## Audit trail
 
-Mọi thay đổi trên bảng master (Site/Area/Line/Station, User, Role) tự ghi vào `AuditLog` qua `AuditSaveChangesInterceptor`, cùng transaction với dữ liệu: ai, lúc nào (UTC), giá trị cũ → mới. Admin xem bằng `GET /api/audit-logs?tableName=Stations&recordKey=1`.
+Mọi thay đổi trên bảng master (Site/Area/Line/Station, User, Role, Item, BOM, Routing và các danh mục M1) tự ghi vào `AuditLog` qua `AuditSaveChangesInterceptor`, cùng transaction với dữ liệu: ai, lúc nào (UTC), giá trị cũ → mới. Admin xem bằng `GET /api/audit-logs?tableName=Stations&recordKey=1`.
 
 `AuditLog` chỉ được INSERT: trigger `TR_AuditLog_BlockModify` chặn UPDATE/DELETE, kể cả với `sa`. Ở môi trường thật, ứng dụng dùng tài khoản riêng (không phải sysadmin) và thêm:
 
@@ -178,7 +210,7 @@ Giới hạn: db_owner/sysadmin vẫn có thể `DISABLE TRIGGER` hoặc `TRUNCA
 
 ```
 src/MiniMes.Domain          entity, quy tắc nghiệp vụ (không phụ thuộc EF/ASP.NET)
-src/MiniMes.Application     interface use case, ICurrentUser
+src/MiniMes.Application     use case (MediatR + FluentValidation), IAppDbContext, ICurrentUser
 src/MiniMes.Infrastructure  EF Core, migration, audit interceptor, JWT, seeder
 src/MiniMes.Api             Controller, middleware (CorrelationId, ProblemDetails), auth
 src/MiniMes.Contracts       DTO dùng chung API ↔ WPF
@@ -187,5 +219,5 @@ src/MiniMes.BackOffice.Wpf  app văn phòng
 src/MiniMes.Kiosk.Wpf       app trạm
 tests/                      unit test, integration test (Testcontainers)
 spec/                       spec dự án và từng module
-docs/incidents.md           các lỗi đáng nhớ và bài học
+docs/                       ERD master data, SOP mẫu, file import mẫu, incidents.md (lỗi đáng nhớ và bài học)
 ```
