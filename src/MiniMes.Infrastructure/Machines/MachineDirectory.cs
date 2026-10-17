@@ -21,6 +21,7 @@ public sealed class MachineDirectory(IServiceScopeFactory scopes, TimeProvider c
 
     private readonly SemaphoreSlim _reload = new(1, 1);
     private FrozenDictionary<(string Site, string Area, string Line, string Machine), MachineRef> _byTopic = FrozenDictionary<(string, string, string, string), MachineRef>.Empty;
+    private FrozenDictionary<int, MachineRef> _byId = FrozenDictionary<int, MachineRef>.Empty;
     private FrozenDictionary<(int MachineId, string Tag), MachineTag> _tags = FrozenDictionary<(int, string), MachineTag>.Empty;
     private DateTimeOffset _loadedAt = DateTimeOffset.MinValue;
 
@@ -30,6 +31,9 @@ public sealed class MachineDirectory(IServiceScopeFactory scopes, TimeProvider c
         if (_byTopic.TryGetValue(key, out var machine)) return machine;
         return await ReloadIfDueAsync(ct) ? _byTopic.GetValueOrDefault(key) : null;
     }
+
+    // For logs: the code of a machine already seen by the ingest (the id itself when unknown).
+    public string CodeOf(int machineId) => _byId.TryGetValue(machineId, out var m) ? m.Code : $"machine #{machineId}";
 
     public async ValueTask<MachineTag?> ResolveTagAsync(int machineId, string tagName, CancellationToken ct)
     {
@@ -66,6 +70,7 @@ public sealed class MachineDirectory(IServiceScopeFactory scopes, TimeProvider c
         var tags = await db.MachineTags.AsNoTracking().Where(t => t.IsActive).ToListAsync(ct);
         _byTopic = rows.ToFrozenDictionary(r => (r.Ref.Site, r.Ref.Area, r.Ref.Line, r.MqttTopicKey), r => r.Ref);
         _tags = tags.ToFrozenDictionary(t => (t.MachineId, t.TagName), t => t);
+        _byId = rows.ToFrozenDictionary(r => r.Ref.Id, r => r.Ref);
         _loadedAt = clock.GetUtcNow();
     }
 }

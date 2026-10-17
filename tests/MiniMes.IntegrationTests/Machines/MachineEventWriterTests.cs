@@ -111,6 +111,28 @@ public class MachineEventWriterTests(ApiFixture api)
         Assert.Null(Apply(after, m, "state", T0.AddSeconds(41), state: Contracts.Machines.MachineState.Setup));   // same state: no new segment
     }
 
+    // Step 5: Offline is a server-inferred segment like any other; the next heartbeat closes it.
+    [Fact]
+    public async Task Offline_and_back_are_stored_as_segments_with_connection_events()
+    {
+        var m = await NewMachineAsync();
+        var store = new MachineRuntimeStore();
+
+        await WriteAsync(
+            Apply(store, m, "state", T0, state: Contracts.Machines.MachineState.Running),
+            store.MarkOffline(m, T0.AddMinutes(1)),
+            store.MarkOffline(m, T0.AddMinutes(1).AddSeconds(5)),   // second verdict: nothing
+            Apply(store, m, "heartbeat", T0.AddMinutes(3), state: Contracts.Machines.MachineState.Running),
+            store.MarkOnline(m, T0.AddMinutes(3)));
+
+        var segments = await api.WithDbAsync(db => db.MachineStateHistory.Where(h => h.MachineId == m).OrderBy(h => h.StartAt).ToListAsync());
+        Assert.Equal([MachineState.Running, MachineState.Offline, MachineState.Running], segments.Select(s => s.State));
+        Assert.Equal((T0.AddMinutes(1), (DateTime?)T0.AddMinutes(3)), (segments[1].StartAt, segments[1].EndAt));
+        var connections = await api.WithDbAsync(db => db.MachineEvents
+            .Where(e => e.MachineId == m && e.Kind == MachineEventKind.Connection).OrderBy(e => e.MachineTs).Select(e => e.State).ToListAsync());
+        Assert.Equal([MachineState.Offline, (MachineState?)null], connections);   // offline, then online
+    }
+
     // ---------- helpers ----------
 
     private static IngestItem? Apply(MachineRuntimeStore store, int machineId, string kind, DateTime ts,

@@ -58,6 +58,9 @@ public static class DependencyInjection
         services.AddSingleton<MachineDirectory>();
         services.AddSingleton(sp => new RecentIdCache(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<MachineRuntimeStore>();
+        services.AddSingleton<MqttConnectionState>();
+        services.AddSingleton(sp => new OfflineDetector(sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<MachineStateService>();
         services.AddSingleton(_ => MachineEventBatchWriter.CreateChannel());
         if (config.GetValue(MqttIngestOptions.SectionName + ":" + nameof(MqttIngestOptions.Enabled), true))
         {
@@ -65,6 +68,7 @@ public static class DependencyInjection
             services.AddHostedService<MachineEventBatchWriter>();
             services.AddHostedService<MqttIngestService>();
             services.AddHostedService<ProcessValueRetentionJob>();
+            services.AddHostedService<OfflineWatchdog>();
         }
         services.AddScoped<DevSeeder>();
         services.AddScoped<MasterDataSeeder>();

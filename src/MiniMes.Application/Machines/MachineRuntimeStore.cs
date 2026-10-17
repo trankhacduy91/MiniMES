@@ -15,7 +15,7 @@ public sealed record StateChange(int MachineId, DomainState State, DateTime At);
 
 // The latest known state of one machine, also read by the dashboard (step 6) and the watchdog (step 5).
 public sealed record MachineRuntimeSnapshot(int MachineId, DomainState? State, DateTime? StateSince, long? LastCounter, DateTime? LastSeenAt,
-    IReadOnlyList<ProcessReading> Process);
+    IReadOnlyList<ProcessReading> Process, DateTime? OfflineReportedAt = null);
 
 // [v2] The latest reading of one tag, for the dashboard (Bad is shown as such, not hidden).
 public sealed record ProcessReading(string Tag, string Unit, double Value, DomainQuality Quality, DateTime SourceTs);
@@ -74,6 +74,10 @@ public sealed class MachineRuntimeStore
         var state = ToDomain(msg.State!.Value);
         if (state == r.State) return new(null, skewed);                 // unchanged: nothing to store
 
+        // Leaving Offline: the segment was opened on the server's clock, so it ends on the server's clock too.
+        // With the machine's time, a PLC a few seconds behind would look "older than the segment" and stay Offline.
+        if (r.State == DomainState.Offline) at = receivedAt;
+
         var evt = MachineEvent.StateChanged(msg.MsgId, machineId, state, at, receivedAt);
         if (r.StateSince is { } since && at < since)
             return new(new IngestItem(evt, null), skewed, "state older than the current segment: event only");
@@ -94,6 +98,35 @@ public sealed class MachineRuntimeStore
         if (delta is { Delta: 0, IsBaseline: false, IsReset: false }) return new(null, skewed);   // unchanged: keep-alive count
 
         return new(new IngestItem(MachineEvent.Count(msg.MsgId, machineId, counter, delta, msg.GoodDelta, msg.NgDelta, at, receivedAt), null), skewed);
+    }
+
+    // Server-inferred (spec 2.5): no heartbeat for 30 s (watchdog) or the "offline" status (LWT / gateway).
+    // null = already Offline. The machine's next state or heartbeat brings it back (ApplyState).
+    public IngestItem? MarkOffline(int machineId, DateTime at)
+    {
+        var r = _machines.GetOrAdd(machineId, _ => new Runtime());
+        lock (r)
+        {
+            if (r.State == DomainState.Offline) return null;
+            (r.State, r.StateSince) = (DomainState.Offline, at);
+        }
+        return new IngestItem(MachineEvent.Connection(Guid.NewGuid(), machineId, online: false, at), new StateChange(machineId, DomainState.Offline, at));
+    }
+
+    // A live "offline" status (LWT) is only a report until the watchdog confirms it (OfflineDetector): a broker that
+    // shuts down publishes the LWT of every client it drops, although only the broker died.
+    public void ReportOffline(int machineId, DateTime at)
+    {
+        var r = _machines.GetOrAdd(machineId, _ => new Runtime());
+        lock (r) r.OfflineReportedAt = at;
+    }
+
+    // "online" (connect): only an event and a sign of life; the state comes with the machine's next state message.
+    public IngestItem MarkOnline(int machineId, DateTime receivedAt)
+    {
+        var r = _machines.GetOrAdd(machineId, _ => new Runtime());
+        lock (r) r.LastSeenAt = receivedAt;
+        return new IngestItem(MachineEvent.Connection(Guid.NewGuid(), machineId, online: true, receivedAt), null);
     }
 
     // [v2] Spec 2.3b: every reading of a known tag is stored (the gateway already sends only on change, deadband),
@@ -130,11 +163,12 @@ public sealed class MachineRuntimeStore
         public long? LastCounter;
         public DateTime? LastCountAt;
         public DateTime? LastSeenAt;
+        public DateTime? OfflineReportedAt;
         public readonly Dictionary<string, ProcessReading> Process = [];
 
         public MachineRuntimeSnapshot Snapshot(int machineId)
         {
-            lock (this) return new(machineId, State, StateSince, LastCounter, LastSeenAt, Process.Values.OrderBy(p => p.Tag).ToList());
+            lock (this) return new(machineId, State, StateSince, LastCounter, LastSeenAt, Process.Values.OrderBy(p => p.Tag).ToList(), OfflineReportedAt);
         }
     }
 }

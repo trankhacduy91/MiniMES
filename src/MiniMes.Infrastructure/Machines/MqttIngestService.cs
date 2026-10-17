@@ -22,6 +22,8 @@ public sealed class MqttIngestService(
     MachineRuntimeStore store,
     Channel<IngestItem> channel,
     IServiceScopeFactory scopes,
+    MqttConnectionState connection,
+    MachineStateService states,
     TimeProvider clock,
     ILogger<MqttIngestService> log) : BackgroundService
 {
@@ -46,6 +48,7 @@ public sealed class MqttIngestService(
         _client.ApplicationMessageReceivedAsync += e => OnMessageAsync(e, stoppingToken);
         _client.DisconnectedAsync += e =>
         {
+            connection.Disconnected();   // the watchdog stops judging machines until we have been back for 30 s
             if (e.ClientWasConnected && !stoppingToken.IsCancellationRequested) log.LogWarning("MQTT ingest lost the broker ({Reason})", e.Reason);
             return Task.CompletedTask;
         };
@@ -59,6 +62,7 @@ public sealed class MqttIngestService(
                 {
                     await _client.ConnectAsync(mqttOptions, stoppingToken);
                     await SubscribeAsync(stoppingToken);
+                    connection.Connected(clock.GetUtcNow().UtcDateTime);
                     backoff = TimeSpan.FromSeconds(1);
                     log.LogInformation("MQTT ingest connected to {Host}:{Port}", _opt.Host, _opt.Port);
                 }
@@ -133,9 +137,26 @@ public sealed class MqttIngestService(
                 return;
             }
 
-            if (input.Status is not null)        // online/offline: used by the watchdog in step 5
+            if (input.Status == MachineMessageReader.Online)
             {
-                log.LogDebug("MQTT status {Machine} {Status}", machine.Code, input.Status);
+                await states.MarkOnlineAsync(machine.Id, ct);
+                return;
+            }
+            if (input.Status == MachineMessageReader.Offline)
+            {
+                // Live "offline" = the broker published the machine's LWT (or the gateway lost the PLC). Only a report:
+                // the watchdog confirms it 3 s later if our connection survived (a broker shutting down sends every
+                // LWT, then drops us too). A retained one is replayed on every subscribe and may be old: a machine that
+                // is alive sends its heartbeat within 5 s, a dead one is caught by the watchdog after the grace period.
+                if (e.ApplicationMessage.Retain)
+                {
+                    log.LogDebug("MQTT retained offline of {Machine} ignored, the watchdog decides", machine.Code);
+                }
+                else
+                {
+                    store.ReportOffline(machine.Id, clock.GetUtcNow().UtcDateTime);
+                    log.LogInformation("MQTT offline reported for {Machine} (LWT), confirming", machine.Code);
+                }
                 return;
             }
 

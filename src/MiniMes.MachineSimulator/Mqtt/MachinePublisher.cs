@@ -7,12 +7,14 @@ using MQTTnet.Protocol;
 namespace MiniMes.MachineSimulator.Mqtt;
 
 // One MQTT client per machine (ClientId sim-{machine}), so each machine has its own LWT and can drop alone (spec 2.8).
-// MQTTnet does not reconnect by itself: RunAsync keeps the connection with a 1-2-4..30 s backoff.
+// MQTTnet does not reconnect by itself: RunAsync keeps the connection with a 1-2-4-8-10 s backoff. Capped at 10 s
+// (the ingest waits up to 30 s): after a broker restart the MES gives each machine 30 s to be heard again before it
+// counts as Offline, so a machine must not sleep longer than that between two attempts.
 // Publishing never throws: while the broker is away it returns false and the machine keeps counting,
 // so the next count message after the reconnect carries the new total (spec 2.3).
 public sealed class MachinePublisher : IDisposable
 {
-    private static readonly TimeSpan MaxBackoff = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan MaxBackoff = TimeSpan.FromSeconds(10);
 
     private readonly IMqttClient _client = new MqttClientFactory().CreateMqttClient();
     private readonly MqttClientOptions _options;
