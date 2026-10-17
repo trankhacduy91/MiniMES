@@ -473,4 +473,118 @@
   <data name="Import_Message" xml:space="preserve">
     <value>Message</value>
   </data>
+  <data name="Menu_WorkOrders" xml:space="preserve">
+    <value>Work orders</value>
+  </data>
+  <data name="WorkOrder_WoNo" xml:space="preserve">
+    <value>WO no.</value>
+  </data>
+  <data name="WorkOrder_Item" xml:space="preserve">
+    <value>Item</value>
+  </data>
+  <data name="WorkOrder_Line" xml:space="preserve">
+    <value>Line</value>
+  </data>
+  <data name="WorkOrder_PlannedQty" xml:space="preserve">
+    <value>Planned qty</value>
+  </data>
+  <data name="WorkOrder_Progress" xml:space="preserve">
+    <value>Good / planned</value>
+  </data>
+  <data name="WorkOrder_PlannedStart" xml:space="preserve">
+    <value>Planned start</value>
+  </data>
+  <data name="WorkOrder_PlannedEnd" xml:space="preserve">
+    <value>Planned end</value>
+  </data>
+  <data name="WorkOrder_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="WorkOrder_Priority" xml:space="preserve">
+    <value>Priority</value>
+  </data>
+  <data name="WorkOrder_Fai" xml:space="preserve">
+    <value>FAI</value>
+  </data>
+  <data name="WorkOrder_RequireFai" xml:space="preserve">
+    <value>First article inspection (FAI) required</value>
+  </data>
+  <data name="WorkOrder_Conflict" xml:space="preserve">
+    <value>This work order was changed by someone else. The screen now shows the latest data; check it and try again.</value>
+  </data>
+  <data name="WorkOrderList_Title" xml:space="preserve">
+    <value>Work orders</value>
+  </data>
+  <data name="WorkOrderList_SearchHint" xml:space="preserve">
+    <value>WO number or item code</value>
+  </data>
+  <data name="WorkOrderList_SetPriority" xml:space="preserve">
+    <value>Set priority</value>
+  </data>
+  <data name="WorkOrderCreate_Title" xml:space="preserve">
+    <value>New work order</value>
+  </data>
+  <data name="WorkOrderCreate_Preview" xml:space="preserve">
+    <value>Preview materials</value>
+  </data>
+  <data name="WorkOrderCreate_PreviewInfo" xml:space="preserve">
+    <value>{0} x {1}: BOM v{2}, routing v{3}. Release will freeze these numbers.</value>
+  </data>
+  <data name="WorkOrderCreate_TimeHint" xml:space="preserve">
+    <value>Plant time, HH:mm</value>
+  </data>
+  <data name="WorkOrderCreate_TimeFormat" xml:space="preserve">
+    <value>Use HH:mm, e.g. 08:00.</value>
+  </data>
+  <data name="WorkOrderCreate_EndAfterStart" xml:space="preserve">
+    <value>Planned end must be after planned start.</value>
+  </data>
+  <data name="WorkOrderCreate_QtyWholeNumber" xml:space="preserve">
+    <value>Enter a whole number greater than 0.</value>
+  </data>
+  <data name="WorkOrderCreate_Materials" xml:space="preserve">
+    <value>Materials (bought parts per step)</value>
+  </data>
+  <data name="WorkOrderCreate_Operations" xml:space="preserve">
+    <value>Operations</value>
+  </data>
+  <data name="Material_Seq" xml:space="preserve">
+    <value>Step</value>
+  </data>
+  <data name="Material_Component" xml:space="preserve">
+    <value>Component</value>
+  </data>
+  <data name="Material_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Material_Uom" xml:space="preserve">
+    <value>UoM</value>
+  </data>
+  <data name="Material_QtyPerUnit" xml:space="preserve">
+    <value>Per unit</value>
+  </data>
+  <data name="Material_Required" xml:space="preserve">
+    <value>Required (exact)</value>
+  </data>
+  <data name="Material_ToIssue" xml:space="preserve">
+    <value>To issue</value>
+  </data>
+  <data name="Operation_Seq" xml:space="preserve">
+    <value>Seq</value>
+  </data>
+  <data name="Operation_Code" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="Operation_WorkCenter" xml:space="preserve">
+    <value>Work center</value>
+  </data>
+  <data name="Operation_CycleTime" xml:space="preserve">
+    <value>Cycle (s)</value>
+  </data>
+  <data name="Operation_Inspection" xml:space="preserve">
+    <value>Inspection</value>
+  </data>
+  <data name="Operation_Sop" xml:space="preserve">
+    <value>SOP</value>
+  </data>
 </root>

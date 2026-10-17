@@ -8,6 +8,7 @@ using MiniMes.Client.Core.Http;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.ViewModels;
 using MiniMes.Client.Core.ViewModels.MasterData;
+using MiniMes.Client.Core.ViewModels.Planning;
 
 namespace MiniMes.Client.Core;
 
@@ -61,6 +62,11 @@ public static class DependencyInjection
         services.AddTransient<DefectCodesViewModel>();
         services.AddTransient<DowntimeReasonsViewModel>();
         services.AddTransient<ImportViewModel>();
+
+        // M2: work orders
+        services.AddTransient<IWorkOrderApi, WorkOrderApi>();
+        services.AddTransient<WorkOrderListViewModel>();
+        services.AddTransient<WorkOrderCreateViewModel>();
         return services;
     }
 }

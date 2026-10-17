@@ -33,6 +33,13 @@ public sealed class ApiClient(HttpClient http)
         return await response.Content.ReadAsByteArrayAsync(ct);
     }
 
+    // JSON in, binary out (the label preview PNG).
+    public async Task<byte[]> PostForBytesAsync<TRequest>(string url, TRequest body, CancellationToken ct = default)
+    {
+        using var response = await SendCoreAsync(new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(body) }, ct);
+        return await response.Content.ReadAsByteArrayAsync(ct);
+    }
+
     // multipart/form-data with one file field (the Excel import).
     public Task<TResponse> PostFileAsync<TResponse>(string url, string field, string fileName, byte[] content, CancellationToken ct = default)
         => SendAsync<TResponse>(new HttpRequestMessage(HttpMethod.Post, url)

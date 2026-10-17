@@ -1,0 +1,61 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.Planning.WorkOrderListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+    <!-- DataContext = WorkOrderListViewModel. Filtered and sorted on the server: priority, then planned start. -->
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.WorkOrderList_Title}" Style="{StaticResource PageTitle}" />
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBox AutomationProperties.AutomationId="Search" Width="200" Padding="3"
+                     ToolTip="{x:Static res:Strings.WorkOrderList_SearchHint}"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Enter" Command="{Binding SearchCommand}" />
+                </TextBox.InputBindings>
+            </TextBox>
+            <TextBlock Text="{x:Static res:Strings.WorkOrder_Status}" VerticalAlignment="Center" Margin="10,0,4,0" />
+            <ComboBox AutomationProperties.AutomationId="StatusFilter" Width="110"
+                      ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding StatusFilter}" />
+            <TextBlock Text="{x:Static res:Strings.WorkOrder_Line}" VerticalAlignment="Center" Margin="10,0,4,0" />
+            <ComboBox AutomationProperties.AutomationId="LineFilter" Width="80" DisplayMemberPath="Code"
+                      ItemsSource="{Binding LineOptions}" SelectedItem="{Binding LineFilter}" />
+            <Button AutomationProperties.AutomationId="SearchButton" Content="{x:Static res:Strings.Common_Search}"
+                    Command="{Binding SearchCommand}" Style="{StaticResource ToolButton}" Margin="10,0,6,0" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button AutomationProperties.AutomationId="New" Content="{x:Static res:Strings.Common_New}"
+                    Command="{Binding NewCommand}" Style="{StaticResource ToolButton}" />
+            <TextBlock Text="{x:Static res:Strings.WorkOrder_Priority}" VerticalAlignment="Center" Margin="16,0,4,0" />
+            <ComboBox AutomationProperties.AutomationId="NewPriority" Width="50"
+                      ItemsSource="{Binding PriorityOptions}" SelectedItem="{Binding NewPriority}" />
+            <Button AutomationProperties.AutomationId="SetPriority" Content="{x:Static res:Strings.WorkOrderList_SetPriority}"
+                    Command="{Binding SetPriorityCommand}" Style="{StaticResource ToolButton}" Margin="6,0,6,0" />
+        </StackPanel>
+
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="{x:Static res:Strings.Common_Previous}" Command="{Binding PreviousPageCommand}" Style="{StaticResource ToolButton}" />
+                <Button Content="{x:Static res:Strings.Common_Next}" Command="{Binding NextPageCommand}" Style="{StaticResource ToolButton}" />
+            </StackPanel>
+            <TextBlock AutomationProperties.AutomationId="PageInfo" Text="{Binding PageText}" VerticalAlignment="Center" />
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
+                   Style="{StaticResource PageError}" />
+
+        <DataGrid AutomationProperties.AutomationId="WorkOrdersGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
+                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_Priority}" Binding="{Binding Wo.Priority}" Width="60" />
+                <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_WoNo}" Binding="{Binding Wo.WoNo}" Width="130" />
+                <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_Item}" Binding="{Binding Wo.ItemCode}" Width="*" />
+                <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_Line}" Binding="{Binding Wo.LineCode}" Width="50" />
+                <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_Progress}" Binding="{Binding Progress}" Width="100" />
+                <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_PlannedStart}" Binding="{Binding PlannedStartText}" Width="130" />
+                <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_Status}" Binding="{Binding Wo.Status}" Width="90" />
+                <DataGridTextColumn Header="{x:Static res:Strings.WorkOrder_Fai}" Binding="{Binding Wo.FaiStatus}" Width="90" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

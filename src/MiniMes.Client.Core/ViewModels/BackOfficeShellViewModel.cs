@@ -4,6 +4,7 @@ using MiniMes.Client.Core.Auth;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.Resources;
 using MiniMes.Client.Core.ViewModels.MasterData;
+using MiniMes.Client.Core.ViewModels.Planning;
 
 namespace MiniMes.Client.Core.ViewModels;
 
@@ -19,6 +20,9 @@ public partial class BackOfficeShellViewModel(ITokenStore tokens, IAuthClient au
 
     // Called once the shell is on screen: the item list is the landing page.
     public Task StartAsync() => ShowItemsAsync();
+
+    [RelayCommand]
+    private Task ShowWorkOrdersAsync() => pages.ShowAsync<WorkOrderListViewModel>();
 
     [RelayCommand]
     private Task ShowItemsAsync() => pages.ShowAsync<ItemListViewModel>();
