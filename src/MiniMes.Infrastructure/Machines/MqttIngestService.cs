@@ -189,6 +189,8 @@ public sealed class MqttIngestService(
             log.LogDebug("MQTT processed {Kind} {Machine} {MsgId} state={State} counter={Counter} delta={Delta} stateChange={StateChange} value={Value} quality={Quality} {Note}",
                 input.Topic.Kind, machine.Code, msg.MsgId, msg.State, msg.Counter, result.Item?.Event?.Delta,
                 result.Item?.StateChange?.State, msg.Value, result.Item?.ProcessValue?.Quality, result.Note);
+            // State change: to the dashboards now, before the row reaches the DB (hot path first).
+            await states.PushStateChangeAsync(result.Item?.StateChange, ct);
             // Bounded channel: when the DB is slow this waits, and so does the MQTT client (backpressure).
             if (result.Item is not null) await channel.Writer.WriteAsync(result.Item, ct);
         }

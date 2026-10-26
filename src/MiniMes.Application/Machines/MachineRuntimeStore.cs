@@ -48,6 +48,23 @@ public sealed class MachineRuntimeStore
 
     public IReadOnlyList<MachineRuntimeSnapshot> All() => _machines.Select(kv => kv.Value.Snapshot(kv.Key)).ToList();
 
+    // Throttle (spec 2.7): the publisher calls this once a second and pushes only the latest value of what changed,
+    // however many messages arrived meanwhile. Taking clears the flags.
+    public DirtyRuntime TakeDirty()
+    {
+        var counters = new List<(int, long, DateTime?)>();
+        var process = new List<(int, ProcessReading)>();
+        foreach (var (id, r) in _machines)
+            lock (r)
+            {
+                if (r.CounterDirty && r.LastCounter is { } counter) counters.Add((id, counter, r.LastSeenAt));
+                foreach (var tag in r.DirtyTags) process.Add((id, r.Process[tag]));
+                r.CounterDirty = false;
+                r.DirtyTags.Clear();
+            }
+        return new(counters, process);
+    }
+
     public IngestResult Apply(int machineId, string kind, MachineMessage msg, DateTime receivedAt)
     {
         var r = _machines.GetOrAdd(machineId, _ => new Runtime());
@@ -96,6 +113,7 @@ public sealed class MachineRuntimeStore
         var delta = CounterMath.Compute(r.LastCounter, counter);
         (r.LastCounter, r.LastCountAt) = (counter, at);
         if (delta is { Delta: 0, IsBaseline: false, IsReset: false }) return new(null, skewed);   // unchanged: keep-alive count
+        r.CounterDirty = true;
 
         return new(new IngestItem(MachineEvent.Count(msg.MsgId, machineId, counter, delta, msg.GoodDelta, msg.NgDelta, at, receivedAt), null), skewed);
     }
@@ -145,7 +163,10 @@ public sealed class MachineRuntimeStore
         {
             r.LastSeenAt = receivedAt;
             if (!r.Process.TryGetValue(tag.TagName, out var latest) || at >= latest.SourceTs)
+            {
                 r.Process[tag.TagName] = new ProcessReading(tag.TagName, tag.Unit, msg.Value.Value, quality, at);
+                r.DirtyTags.Add(tag.TagName);
+            }
         }
         var note = quality == DomainQuality.Bad && reported != DomainQuality.Bad
             ? $"value {msg.Value} outside the plausible range {tag.LowerPlausible}..{tag.UpperPlausible}: stored as Bad"
@@ -164,6 +185,8 @@ public sealed class MachineRuntimeStore
         public DateTime? LastCountAt;
         public DateTime? LastSeenAt;
         public DateTime? OfflineReportedAt;
+        public bool CounterDirty;
+        public readonly HashSet<string> DirtyTags = [];
         public readonly Dictionary<string, ProcessReading> Process = [];
 
         public MachineRuntimeSnapshot Snapshot(int machineId)
@@ -172,6 +195,10 @@ public sealed class MachineRuntimeStore
         }
     }
 }
+
+// Spec 2.7: what changed since the last throttled push. Absolute values (latest counter, latest reading).
+public sealed record DirtyRuntime(IReadOnlyList<(int MachineId, long Counter, DateTime? LastSeenAt)> Counters,
+    IReadOnlyList<(int MachineId, ProcessReading Reading)> Process);
 
 // Item = what to store (null = nothing); Note = why something was not stored (logged at Debug by the ingest).
 public sealed record IngestResult(IngestItem? Item, bool ClockSkewed, string? Note = null);

@@ -11,12 +11,14 @@ using MiniMes.Application.Planning;
 using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Auth;
 using MiniMes.Infrastructure.Execution;
+using MiniMes.Application.Realtime;
 using MiniMes.Infrastructure.Machines;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Interceptors;
 using MiniMes.Infrastructure.Persistence.Queries;
 using MiniMes.Infrastructure.Persistence.Seed;
 using MiniMes.Infrastructure.Planning;
+using MiniMes.Infrastructure.Realtime;
 
 namespace MiniMes.Infrastructure;
 
@@ -61,6 +63,9 @@ public static class DependencyInjection
         services.AddSingleton<MqttConnectionState>();
         services.AddSingleton(sp => new OfflineDetector(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<MachineStateService>();
+        services.AddSignalR();
+        services.AddSingleton<IRealtimeNotifier, SignalRRealtimeNotifier>();
+        services.AddSingleton<RealtimePublisher>();
         services.AddSingleton(_ => MachineEventBatchWriter.CreateChannel());
         if (config.GetValue(MqttIngestOptions.SectionName + ":" + nameof(MqttIngestOptions.Enabled), true))
         {
@@ -69,6 +74,7 @@ public static class DependencyInjection
             services.AddHostedService<MqttIngestService>();
             services.AddHostedService<ProcessValueRetentionJob>();
             services.AddHostedService<OfflineWatchdog>();
+            services.AddHostedService(sp => sp.GetRequiredService<RealtimePublisher>());
         }
         services.AddScoped<DevSeeder>();
         services.AddScoped<MasterDataSeeder>();

@@ -32,8 +32,10 @@ public sealed class MachineDirectory(IServiceScopeFactory scopes, TimeProvider c
         return await ReloadIfDueAsync(ct) ? _byTopic.GetValueOrDefault(key) : null;
     }
 
-    // For logs: the code of a machine already seen by the ingest (the id itself when unknown).
-    public string CodeOf(int machineId) => _byId.TryGetValue(machineId, out var m) ? m.Code : $"machine #{machineId}";
+    // A machine already seen by the ingest (the cache is loaded on the first message), for logs and pushes.
+    public MachineRef? Get(int machineId) => _byId.GetValueOrDefault(machineId);
+
+    public string CodeOf(int machineId) => Get(machineId)?.Code ?? $"machine #{machineId}";
 
     public async ValueTask<MachineTag?> ResolveTagAsync(int machineId, string tagName, CancellationToken ct)
     {

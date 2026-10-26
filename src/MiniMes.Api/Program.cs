@@ -15,6 +15,8 @@ using MiniMes.Infrastructure.Auth;
 using MiniMes.Infrastructure.Execution;
 using MiniMes.Infrastructure.Labels;
 using Serilog;
+using MiniMes.Contracts.Realtime;
+using MiniMes.Infrastructure.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +59,19 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
     {
         var jwt = jwtOptions.Value;
         o.MapInboundClaims = false; // keep "sub"/"role" as-is instead of long ClaimTypes URIs
+        // A browser WebSocket cannot carry an Authorization header, so JS SignalR clients send ?access_token= instead
+        // (the .NET client used by the WPF apps sends the header). Accepted only on the hub paths, so tokens never end
+        // up in ordinary request URLs and their logs.
+        o.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                var token = ctx.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) && ctx.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    ctx.Token = token;
+                return Task.CompletedTask;
+            },
+        };
         o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidIssuer = jwt.Issuer,
@@ -95,6 +110,7 @@ app.UseAuthentication(); // must come before UseAuthorization
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<MachineHub>(RealtimeHub.Path);   // M4 realtime; [Authorize] on the hub
 app.MapHealthChecks("/health").AllowAnonymous(); // used by monitors, no token
 
 app.Run();

@@ -2,9 +2,11 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniMes.Application.Factory;
+using MiniMes.Application.Machines;
 using MiniMes.Application.Planning;
 using MiniMes.Contracts.Factory;
 using MiniMes.Contracts.Planning;
+using MiniMes.Contracts.Realtime;
 using MiniMes.Domain.Users;
 
 namespace MiniMes.Api.Controllers;
@@ -23,6 +25,10 @@ public class LinesController(ISender sender) : ControllerBase
     [HttpGet("{id:int}/dispatch-list")]
     public Task<IReadOnlyList<DispatchListItemDto>> DispatchList(int id, CancellationToken ct)
         => sender.Send(new GetDispatchListQuery(id), ct);
+
+    // M4: machines of the line with their live state, counter and latest process values (dashboard snapshot).
+    [HttpGet("{code}/status")]
+    public Task<LineStatusDto> Status(string code, CancellationToken ct) => sender.Send(new GetLineStatusQuery(code), ct);
 
     [Authorize(Roles = nameof(Role.Admin))]
     [HttpPost]

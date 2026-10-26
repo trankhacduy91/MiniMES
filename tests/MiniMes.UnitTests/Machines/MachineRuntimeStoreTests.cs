@@ -181,6 +181,47 @@ public class MachineRuntimeStoreTests
         Assert.Equal(246, Assert.Single(_store.Get(M)!.Process).Value);
     }
 
+    // ---------- throttle (step 6) ----------
+
+    // 10 counts between two pushes = one push with the latest total: nothing lost, the value is absolute.
+    [Fact]
+    public void Take_dirty_gives_the_latest_counter_once_per_change()
+    {
+        foreach (var i in Enumerable.Range(0, 10)) Count(15000 + i, T0.AddMilliseconds(200 * i));
+
+        var first = _store.TakeDirty();
+        var second = _store.TakeDirty();
+
+        Assert.Equal((M, 15009L), (first.Counters.Single().MachineId, first.Counters.Single().Counter));
+        Assert.Empty(second.Counters);                                  // flags cleared
+        Count(15009, T0.AddSeconds(10));                                // unchanged keep-alive count
+        Assert.Empty(_store.TakeDirty().Counters);
+    }
+
+    [Fact]
+    public void Take_dirty_gives_each_changed_tag_with_its_latest_reading()
+    {
+        _store.ApplyProcess(PeakTemp, Process(245.0, T0), T0);
+        _store.ApplyProcess(PeakTemp, Process(246.5, T0.AddSeconds(1)), T0.AddSeconds(1));
+
+        var reading = Assert.Single(_store.TakeDirty().Process).Reading;
+
+        Assert.Equal(246.5, reading.Value);
+        Assert.Empty(_store.TakeDirty().Process);
+    }
+
+    // State changes are not part of the throttled set: they are pushed at once by the caller.
+    [Fact]
+    public void State_change_does_not_mark_anything_dirty()
+    {
+        State(WireState.Down, T0);
+
+        var dirty = _store.TakeDirty();
+
+        Assert.Empty(dirty.Counters);
+        Assert.Empty(dirty.Process);
+    }
+
     // ---------- helpers ----------
 
     private static MachineMessage Process(double value, DateTime ts)
