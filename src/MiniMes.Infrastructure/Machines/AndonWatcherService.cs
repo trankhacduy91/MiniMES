@@ -25,6 +25,8 @@ public sealed class AndonOptions
 // One automatic call per Down period: a call of this machine raised since the Down began (open or already closed)
 // means nothing to do. Without it, a supervisor resolving while the machine is still Down would get a new call
 // 5 s later, and an API restart would not know what it had raised before.
+// [v2] Step 7b: the same tick escalates the calls nobody acknowledged (EscalateAndonsCommand). Computed from RaisedAt
+// and the EscalationLevel stored in the database, so a restart neither loses nor repeats an escalation.
 public sealed class AndonWatcherService(
     MachineRuntimeStore store,
     MachineDirectory machines,
@@ -51,13 +53,16 @@ public sealed class AndonWatcherService(
 
     public async Task TickAsync(CancellationToken ct)
     {
+        using var scope = scopes.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        await AutoRaiseAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), sender, ct);
+        await sender.Send(new EscalateAndonsCommand(), ct);
+    }
+
+    private async Task AutoRaiseAsync(AppDbContext db, ISender sender, CancellationToken ct)
+    {
         var due = AndonAutoRaise.Due(store.All(), clock.GetUtcNow().UtcDateTime,
             TimeSpan.FromSeconds(options.Value.AutoRaiseAfterSeconds));
-        if (due.Count == 0) return;
-
-        using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         foreach (var down in due)
         {
             var covered = await db.AndonCalls.AsNoTracking().AnyAsync(a =>

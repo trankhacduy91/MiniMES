@@ -11,6 +11,7 @@ public interface IMachineClient
     Task MachineCounterUpdated(MachineCounterDto dto);       // throttled: at most once a second per machine
     Task MachineProcessUpdated(MachineProcessDto dto);       // [v2] throttled like the counter
     Task AndonChanged(AndonDto dto);                         // pushed at once: raise, acknowledge, resolve, cancel
+    Task AndonEscalated(AndonDto dto);                       // [v2] to role groups: nobody acknowledged in time
 }
 
 public static class RealtimeHub
@@ -20,6 +21,9 @@ public static class RealtimeHub
     public const string LeaveLine = nameof(LeaveLine);
 
     public static string LineGroup(string lineCode) => $"line:{lineCode}";
+
+    // [v2] The server puts every connection in the groups of its JWT roles; a client cannot join another role.
+    public static string RoleGroup(string role) => $"role:{role}";
 }
 
 // Absolute values only (state, cumulative counter, latest reading), never "+3": a throttled or missed push is

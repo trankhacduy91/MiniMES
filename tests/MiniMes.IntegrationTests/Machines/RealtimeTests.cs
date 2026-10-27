@@ -1,13 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
+using MediatR;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MiniMes.Application.Andon;
 using MiniMes.Application.Machines;
 using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Machines;
 using MiniMes.Contracts.Realtime;
+using MiniMes.Domain.Andon;
 using MiniMes.Domain.Machines;
 using MiniMes.Infrastructure.Machines;
 using MiniMes.IntegrationTests.Infrastructure;
@@ -89,6 +92,39 @@ public class RealtimeTests(ApiFixture api)
         Assert.False(got2.IsCompleted);
     }
 
+    // [v2] Step 7b: a call nobody acknowledged goes to the role groups of its level, which the server joined from the
+    // JWT on connect (no JoinLine needed). Level 1 of a Machine call = Admin: the Supervisor does not get it, QC neither.
+    [Fact]
+    public async Task Escalation_reaches_the_role_groups_of_the_level_only()
+    {
+        var machine = await KnownMachineAsync("L1-REFLOW-01");
+        await using var admin = await ConnectAsAsync("admin");
+        await using var supervisor = await ConnectAsAsync("sup01");
+        await using var qc = await ConnectAsAsync("qc01");
+        // The command escalates every Raised call of the shared database: only pushes about this test's call count.
+        var (toAdmin, toSupervisor, toQc) = (new List<AndonDto>(), new List<AndonDto>(), new List<AndonDto>());
+        foreach (var (hub, into) in new[] { (admin, toAdmin), (supervisor, toSupervisor), (qc, toQc) })
+            hub.On<AndonDto>(nameof(IMachineClient.AndonEscalated), d => { lock (into) into.Add(d); });
+        var id = await api.WithDbAsync(async db =>
+        {
+            foreach (var open in db.AndonCalls.Where(a => a.MachineId == machine.Id && a.Status <= AndonStatus.Acknowledged))
+                open.Cancel("test", DateTime.UtcNow);
+            var call = new AndonCall(machine.Id, AndonType.Machine, AndonCall.SystemUser, DateTime.UtcNow.AddMinutes(-4));
+            db.AndonCalls.Add(call);
+            await db.SaveChangesAsync();
+            return call.Id;
+        });
+
+        using (var scope = api.Factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<ISender>().Send(new EscalateAndonsCommand());
+
+        await WaitUntilAsync(() => { lock (toAdmin) return toAdmin.Any(d => d.Id == id); });
+        lock (toAdmin) Assert.Equal((1, "Raised"), toAdmin.Where(d => d.Id == id).Select(d => (d.EscalationLevel, d.Status)).Single());
+        await Task.Delay(500);
+        lock (toSupervisor) Assert.DoesNotContain(toSupervisor, d => d.Id == id);
+        lock (toQc) Assert.DoesNotContain(toQc, d => d.Id == id);
+    }
+
     // Throttle: 10 counts between two publisher ticks are one push carrying the latest total.
     [Fact]
     public async Task Counter_pushes_are_throttled_to_the_latest_value()
@@ -163,10 +199,16 @@ public class RealtimeTests(ApiFixture api)
 
     private async Task<HubConnection> JoinAsync(string line)
     {
-        var client = await api.LoginAsync("sup01");
+        var hub = await ConnectAsAsync("sup01");
+        await hub.InvokeAsync(RealtimeHub.JoinLine, line);
+        return hub;
+    }
+
+    private async Task<HubConnection> ConnectAsAsync(string user)
+    {
+        var client = await api.LoginAsync(user);
         var hub = Connect(client.DefaultRequestHeaders.Authorization!.Parameter);
         await hub.StartAsync();
-        await hub.InvokeAsync(RealtimeHub.JoinLine, line);
         return hub;
     }
 

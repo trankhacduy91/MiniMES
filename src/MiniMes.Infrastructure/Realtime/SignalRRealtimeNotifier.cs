@@ -23,6 +23,12 @@ public sealed class SignalRRealtimeNotifier(IHubContext<MachineHub, IMachineClie
     public Task AndonChangedAsync(AndonDto dto, CancellationToken ct = default)
         => SafeAsync(dto.Line, c => c.AndonChanged(dto), dto.Machine);
 
+    public async Task AndonEscalatedAsync(AndonDto dto, IReadOnlyList<string> roles, CancellationToken ct = default)
+    {
+        try { await hub.Clients.Groups(roles.Select(RealtimeHub.RoleGroup).ToList()).AndonEscalated(dto); }
+        catch (Exception ex) { log.LogWarning(ex, "SignalR escalation push for Andon {AndonId} failed", dto.Id); }
+    }
+
     private async Task SafeAsync(string line, Func<IMachineClient, Task> push, string machine)
     {
         try { await push(hub.Clients.Group(RealtimeHub.LineGroup(line))); }

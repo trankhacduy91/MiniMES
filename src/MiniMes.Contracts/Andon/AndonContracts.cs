@@ -27,3 +27,11 @@ public sealed record RaiseAndonRequest(int MachineId, string Type);
 public sealed record AndonTransitionRequest(string RowVersion);
 
 public sealed record ResolveAndonRequest(int? DowntimeReasonId, string? Note, string RowVersion);
+
+// [v2] GET /api/andon/stats?from=&to= (step 7b): calls raised in [From, To), Cancelled left out (raised by mistake).
+// ByLevel = how far calls climbed before someone acknowledged them (the final EscalationLevel).
+// AvgReactionSeconds = mean of AckAt - RaisedAt over the calls that were acknowledged; null when none.
+public sealed record AndonStatsDto(DateTime From, DateTime To, int Total, IReadOnlyList<AndonLevelCountDto> ByLevel,
+    int Acknowledged, double? AvgReactionSeconds);
+
+public sealed record AndonLevelCountDto(int Level, int Count);

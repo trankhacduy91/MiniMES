@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MiniMes.Application.Andon;
 using MiniMes.Application.Machines;
 using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Factory;
@@ -211,7 +213,114 @@ public class AndonTests(ApiFixture api, ITestOutputHelper output)
         Assert.Equal(2, (await CallsOfAsync(machine.Id)).Count);
     }
 
+    // ---------- [v2] step 7b: escalation and statistics ----------
+
+    // EscalateAndonsCommand against the real database: each call goes to the level its waiting time deserves; an
+    // acknowledged call never moves; a second run changes nothing (EscalationLevel is stored, not recomputed).
+    [Fact]
+    public async Task Escalation_follows_the_seed_rules_and_is_idempotent()
+    {
+        var now = DateTime.UtcNow;
+        var fresh = await InsertCallAsync(AndonType.Machine, now.AddMinutes(-2));
+        var level1 = await InsertCallAsync(AndonType.Machine, now.AddMinutes(-4));
+        var level2 = await InsertCallAsync(AndonType.Machine, now.AddMinutes(-11));
+        var quality = await InsertCallAsync(AndonType.Quality, now.AddMinutes(-6));
+        var material = await InsertCallAsync(AndonType.Material, now.AddMinutes(-60));
+        var acked = await InsertCallAsync(AndonType.Machine, now.AddMinutes(-30), ackAfter: TimeSpan.FromMinutes(1));
+
+        await EscalateAsync();
+        var first = await LevelsAsync(fresh, level1, level2, quality, material, acked);
+        await EscalateAsync();
+
+        Assert.Equal([0, 1, 2, 1, 0, 0], first);
+        Assert.Equal(first, await LevelsAsync(fresh, level1, level2, quality, material, acked));
+        var escalatedAt = await api.WithDbAsync(db => db.AndonCalls.Where(a => a.Id == level2).Select(a => a.LastEscalatedAt).SingleAsync());
+        Assert.NotNull(escalatedAt);
+    }
+
+    [Fact]
+    public async Task Seed_has_the_escalation_rules_of_the_spec()
+    {
+        var rules = await api.WithDbAsync(db => db.AndonEscalationRules.AsNoTracking()
+            .OrderBy(r => r.AndonType).ThenBy(r => r.Level).ToListAsync());
+
+        Assert.Equal(
+            [(AndonType.Machine, 0, 0, "Supervisor,Maintenance"), (AndonType.Machine, 1, 3, "Admin"),
+             (AndonType.Machine, 2, 10, "Admin"), (AndonType.Quality, 1, 5, "QC")],
+            rules.Select(r => (r.AndonType, r.Level, r.AfterMinutes, r.NotifyRoles)));
+    }
+
+    // Calls in January 2020 only (no other test writes there): Cancelled is left out, reaction = AckAt - RaisedAt.
+    [Fact]
+    public async Task Stats_count_final_levels_and_average_reaction_time()
+    {
+        var t0 = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        await api.WithDbAsync(async db =>
+        {
+            var m1 = (await NewMachineAsync()).Id;
+            var m2 = (await NewMachineAsync()).Id;
+            var a = new AndonCall(m1, AndonType.Machine, "system", t0);              // level 1, ack after 240 s
+            a.Escalate(1, t0.AddMinutes(3)); a.Acknowledge("sup01", t0.AddMinutes(4));
+            var b = new AndonCall(m1, AndonType.Material, "EMP00123", t0);           // level 0, ack after 60 s
+            b.Acknowledge("sup01", t0.AddMinutes(1));
+            var c = new AndonCall(m1, AndonType.Quality, "EMP00123", t0);            // cancelled: left out
+            c.Escalate(1, t0.AddMinutes(5)); c.Cancel("sup01", t0.AddMinutes(6));
+            var d = new AndonCall(m1, AndonType.Other, "EMP00123", t0.AddHours(1));  // never acknowledged
+            var e = new AndonCall(m2, AndonType.Machine, "system", t0.AddHours(2));  // level 2, resolved after 720 s
+            e.Escalate(2, t0.AddHours(2).AddMinutes(10)); e.Resolve("mt01", await ReasonIdAsync("MCH-FAULT"), null, t0.AddHours(2).AddMinutes(12));
+            var outside = new AndonCall(m2, AndonType.Material, "EMP00123", t0.AddDays(1));   // To is exclusive
+            db.AndonCalls.AddRange(a, b, c, d, e, outside);
+            return await db.SaveChangesAsync();
+        });
+        var sup = await api.LoginAsync("sup01");
+
+        var stats = await sup.GetFromJsonAsync<AndonStatsDto>("/api/andon/stats?from=2020-01-01T00:00:00Z&to=2020-01-02T00:00:00Z");
+
+        Assert.Equal((4, 3, 340.0), (stats!.Total, stats.Acknowledged, stats.AvgReactionSeconds));
+        Assert.Equal([new AndonLevelCountDto(0, 2), new AndonLevelCountDto(1, 1), new AndonLevelCountDto(2, 1)], stats.ByLevel);
+        Assert.Equal(new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), stats.From);
+    }
+
+    [Fact]
+    public async Task Stats_need_a_responder_role_and_a_valid_range()
+    {
+        var empty = await (await api.LoginAsync("admin")).GetFromJsonAsync<AndonStatsDto>("/api/andon/stats?from=2019-01-01T00:00:00Z&to=2019-01-02T00:00:00Z");
+        Assert.Equal((0, null), (empty!.Total, empty.AvgReactionSeconds));
+
+        var sup = await api.LoginAsync("sup01");
+        Assert.Equal(HttpStatusCode.Forbidden, (await (await api.LoginOperatorAsync()).GetAsync("/api/andon/stats?from=2020-01-01&to=2020-01-02")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await sup.GetAsync("/api/andon/stats?from=2020-01-02&to=2020-01-01")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await sup.GetAsync("/api/andon/stats?from=2020-01-01&to=2021-06-01")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await sup.GetAsync("/api/andon/stats")).StatusCode);
+    }
+
     // ---------- helpers ----------
+
+    private async Task<long> InsertCallAsync(AndonType type, DateTime raisedAt, TimeSpan? ackAfter = null)
+    {
+        var machineId = (await NewMachineAsync()).Id;
+        return await api.WithDbAsync(async db =>
+        {
+            var call = new AndonCall(machineId, type, AndonCall.SystemUser, raisedAt);
+            if (ackAfter is { } after) call.Acknowledge("sup01", raisedAt + after);
+            db.AndonCalls.Add(call);
+            await db.SaveChangesAsync();
+            return call.Id;
+        });
+    }
+
+    private async Task EscalateAsync()
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<ISender>().Send(new EscalateAndonsCommand());
+    }
+
+    private Task<int[]> LevelsAsync(params long[] ids)
+        => api.WithDbAsync(async db =>
+        {
+            var levels = await db.AndonCalls.Where(a => ids.Contains(a.Id)).ToDictionaryAsync(a => a.Id, a => a.EscalationLevel);
+            return ids.Select(id => levels[id]).ToArray();
+        });
 
     private async Task<MachineDto> NewMachineAsync()
     {

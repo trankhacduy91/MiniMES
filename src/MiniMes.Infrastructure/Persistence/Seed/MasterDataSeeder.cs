@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MiniMes.Domain.Andon;
 using MiniMes.Domain.Machines;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
@@ -35,6 +36,25 @@ public class MasterDataSeeder(AppDbContext db, TimeProvider time)
         await SeedCalendarAsync(DateOnly.FromDateTime(effectiveFrom).Year, ct);
         await SeedCatalogsAsync(ct);
         await SeedMachineTagsAsync(ct);
+        await SeedAndonEscalationRulesAsync(ct);
+    }
+
+    // [v2] M4 2.9b: who is told when a call stays Raised. Level 0 = at raise (the line dashboard). Admin stands in for
+    // the production manager in the MVP. Material and Other have no rule: they never escalate.
+    private static readonly (AndonType Type, int Level, int AfterMinutes, string Roles, string Note)[] AndonEscalationRules =
+    [
+        (AndonType.Machine, 0, 0, "Supervisor,Maintenance", "At raise"),
+        (AndonType.Machine, 1, 3, "Admin", "3 minutes without acknowledge: shop floor manager"),
+        (AndonType.Machine, 2, 10, "Admin", "10 minutes: production manager (Error in the log)"),
+        (AndonType.Quality, 1, 5, "QC", "5 minutes without acknowledge"),
+    ];
+
+    private async Task SeedAndonEscalationRulesAsync(CancellationToken ct)
+    {
+        var existing = await db.AndonEscalationRules.Select(r => new { r.AndonType, r.Level }).ToListAsync(ct);
+        foreach (var r in AndonEscalationRules.Where(r => !existing.Any(e => e.AndonType == r.Type && e.Level == r.Level)))
+            db.AndonEscalationRules.Add(new AndonEscalationRule(r.Type, r.Level, r.AfterMinutes, r.Roles, r.Note));
+        await db.SaveChangesAsync(ct);
     }
 
     // M4 2.3b: process tags the ingest accepts. Plausible = the physical range (a cut sensor wire reads -32768),

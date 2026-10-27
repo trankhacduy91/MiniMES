@@ -14,7 +14,8 @@ public enum AndonStatus : byte { Raised = 0, Acknowledged = 1, Resolved = 2, Can
 //   Raised -> Acknowledged -> Resolved      (normal path, Resolve needs a downtime reason)
 //   Raised -> Resolved                      (fixed at once: AckBy/AckAt filled so reaction time is never null)
 //   Raised | Acknowledged -> Cancelled      (raised by mistake; no reason, kept out of the Pareto)
-// The machine running again does NOT close the call: nobody has said yet why it stopped. Escalate comes in step 7b.
+// The machine running again does NOT close the call: nobody has said yet why it stopped.
+// [v2] Escalate (step 7b): a call nobody acknowledges climbs the AndonEscalationRule levels, each level once.
 public class AndonCall : IAudited
 {
     public const string SystemUser = "system";
@@ -73,6 +74,17 @@ public class AndonCall : IAudited
         ResolutionNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
     }
 
+    // [v2] Only up, only while nobody has acknowledged; the same level again is a no-op (false), so the watcher may
+    // run every 5 s or restart without telling anyone twice. EscalationLevel stays after Ack/Resolve: the KPI
+    // "how many calls reached level 2 this month" reads it.
+    public bool Escalate(int toLevel, DateTime nowUtc)
+    {
+        if (Status != AndonStatus.Raised || toLevel <= EscalationLevel) return false;
+        EscalationLevel = toLevel;
+        LastEscalatedAt = nowUtc;
+        return true;
+    }
+
     public void Cancel(string by, DateTime nowUtc)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(by);
@@ -86,34 +98,4 @@ public class AndonCall : IAudited
     {
         if (!IsOpen) throw new DomainException($"Andon {Id} is already {Status}; it cannot be {action}.");
     }
-}
-
-// [v2] Spec M4 2.9b: who is told when a call stays Raised too long. Level 0 = at raise; each level once.
-public class AndonEscalationRule : AuditableEntity, IAudited
-{
-    public const int NotifyRolesMaxLength = 100;
-    public const int NoteMaxLength = 200;
-
-    public AndonType AndonType { get; private set; }
-    public int Level { get; private set; }
-    public int AfterMinutes { get; private set; }         // counted from RaisedAt
-    public string NotifyRoles { get; private set; }       // role names, comma separated: "Supervisor,Maintenance"
-    public string? Note { get; private set; }
-
-    private AndonEscalationRule() { NotifyRoles = string.Empty; }
-
-    public AndonEscalationRule(AndonType andonType, int level, int afterMinutes, string notifyRoles, string? note = null)
-    {
-        if (level < 0) throw new DomainException("Escalation level cannot be negative.");
-        if (afterMinutes < 0) throw new DomainException("AfterMinutes cannot be negative.");
-        if (string.IsNullOrWhiteSpace(notifyRoles) || notifyRoles.Length > NotifyRolesMaxLength)
-            throw new DomainException($"NotifyRoles is required and at most {NotifyRolesMaxLength} characters.");
-        AndonType = andonType;
-        Level = level;
-        AfterMinutes = afterMinutes;
-        NotifyRoles = notifyRoles;
-        Note = note;
-    }
-
-    public IReadOnlyList<string> Roles => NotifyRoles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

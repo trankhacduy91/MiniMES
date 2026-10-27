@@ -21,6 +21,12 @@ public class AndonController(ISender sender) : ControllerBase
     public Task<IReadOnlyList<AndonDto>> List([FromQuery] string? status, [FromQuery] string? line, CancellationToken ct)
         => sender.Send(new GetAndonCallsQuery(status, line), ct);
 
+    // [v2] Calls raised in [from, to) (UTC), Cancelled left out: count per final escalation level, mean reaction time.
+    [Authorize(Roles = Responders)]
+    [HttpGet("stats")]
+    public Task<AndonStatsDto> Stats([FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
+        => sender.Send(new GetAndonStatsQuery(from, to), ct);
+
     [HttpGet("{id:long}")]
     public Task<AndonDto> Get(long id, CancellationToken ct) => sender.Send(new GetAndonByIdQuery(id), ct);
 
