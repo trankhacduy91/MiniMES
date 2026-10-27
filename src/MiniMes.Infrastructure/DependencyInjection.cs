@@ -67,6 +67,7 @@ public static class DependencyInjection
         services.AddSingleton<IRealtimeNotifier, SignalRRealtimeNotifier>();
         services.AddSingleton<RealtimePublisher>();
         services.AddSingleton(_ => MachineEventBatchWriter.CreateChannel());
+        services.Configure<AndonOptions>(config.GetSection(AndonOptions.SectionName));
         if (config.GetValue(MqttIngestOptions.SectionName + ":" + nameof(MqttIngestOptions.Enabled), true))
         {
             // Hosted services stop in reverse order: the ingest stops first, then the writer drains what is queued.
@@ -75,6 +76,7 @@ public static class DependencyInjection
             services.AddHostedService<ProcessValueRetentionJob>();
             services.AddHostedService<OfflineWatchdog>();
             services.AddHostedService(sp => sp.GetRequiredService<RealtimePublisher>());
+            services.AddHostedService<AndonWatcherService>();   // reads the runtime store the ingest fills
         }
         services.AddScoped<DevSeeder>();
         services.AddScoped<MasterDataSeeder>();

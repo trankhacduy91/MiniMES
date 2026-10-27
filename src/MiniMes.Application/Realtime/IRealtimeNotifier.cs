@@ -1,3 +1,4 @@
+using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Realtime;
 
 namespace MiniMes.Application.Realtime;
@@ -9,4 +10,5 @@ public interface IRealtimeNotifier
     Task MachineStateChangedAsync(MachineStateChangedDto dto, CancellationToken ct = default);
     Task MachineCounterUpdatedAsync(MachineCounterDto dto, CancellationToken ct = default);
     Task MachineProcessUpdatedAsync(MachineProcessDto dto, CancellationToken ct = default);
+    Task AndonChangedAsync(AndonDto dto, CancellationToken ct = default);
 }

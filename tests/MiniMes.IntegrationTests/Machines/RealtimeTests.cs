@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Machines;
+using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Machines;
 using MiniMes.Contracts.Realtime;
 using MiniMes.Domain.Machines;
@@ -63,6 +64,29 @@ public class RealtimeTests(ApiFixture api)
         Assert.Equal(("L1-TEST-01", "L1", WireState.Offline), (dto.Machine, dto.Line, dto.State));
         await Task.Delay(500);
         Assert.False(got2.IsCompleted);                               // L2 hears nothing about L1
+    }
+
+    // Step 7: an Andon change is pushed at once (not throttled) to the machine's line, with the status after the change.
+    [Fact]
+    public async Task Andon_changes_are_pushed_to_the_line_group()
+    {
+        var machine = await KnownMachineAsync("L1-SMT-01");
+        await using var line1 = await JoinAsync("L1");
+        await using var line2 = await JoinAsync("L2");
+        var pushes = new List<AndonDto>();
+        line1.On<AndonDto>(nameof(IMachineClient.AndonChanged), d => { lock (pushes) pushes.Add(d); });
+        var got2 = Next<AndonDto>(line2, nameof(IMachineClient.AndonChanged));
+        var raise = await (await api.LoginOperatorAsync()).PostAsJsonAsync("/api/andon", new RaiseAndonRequest(machine.Id, AndonTypes.Other));
+        var call = (await raise.Content.ReadFromJsonAsync<RaiseAndonResult>())!.Andon;
+
+        (await (await api.LoginAsync("sup01")).PostAsJsonAsync($"/api/andon/{call.Id}/cancel", new AndonTransitionRequest(call.RowVersion)))
+            .EnsureSuccessStatusCode();
+
+        await WaitUntilAsync(() => { lock (pushes) return pushes.Count(p => p.Id == call.Id) >= 2; });
+        lock (pushes)
+            Assert.Equal(["Raised", "Cancelled"], pushes.Where(p => p.Id == call.Id).Select(p => p.Status));
+        await Task.Delay(500);
+        Assert.False(got2.IsCompleted);
     }
 
     // Throttle: 10 counts between two publisher ticks are one push carrying the latest total.

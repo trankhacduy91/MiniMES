@@ -1,15 +1,16 @@
+using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Machines;
 
 namespace MiniMes.Contracts.Realtime;
 
 // Spec M4 2.6: what the server pushes over SignalR. Typed hub: a method name typed wrong breaks the compile instead
 // of silently never firing on the client. Each method name is the event name the client subscribes to.
-// AndonChanged comes with the Andon backend (step 7).
 public interface IMachineClient
 {
     Task MachineStateChanged(MachineStateChangedDto dto);    // pushed at once
     Task MachineCounterUpdated(MachineCounterDto dto);       // throttled: at most once a second per machine
     Task MachineProcessUpdated(MachineProcessDto dto);       // [v2] throttled like the counter
+    Task AndonChanged(AndonDto dto);                         // pushed at once: raise, acknowledge, resolve, cancel
 }
 
 public static class RealtimeHub

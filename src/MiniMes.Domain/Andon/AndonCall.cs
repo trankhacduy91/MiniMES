@@ -10,8 +10,11 @@ public enum AndonStatus : byte { Raised = 0, Acknowledged = 1, Resolved = 2, Can
 // Spec M4 2.9: a call for help at a machine (TPS jidoka: whoever sees a problem may call, someone must answer in
 // time). Raised by an operator or by the system (machine Down too long), acknowledged and resolved by Supervisor /
 // Maintenance with a downtime reason (the Pareto of M5). At most one open call per (machine, type): filtered unique
-// index. Two people acknowledging at once: RowVersion. The state machine (Acknowledge, Resolve, Cancel, Escalate)
-// comes in steps 7 and 7b.
+// index. Two people acknowledging at once: RowVersion.
+//   Raised -> Acknowledged -> Resolved      (normal path, Resolve needs a downtime reason)
+//   Raised -> Resolved                      (fixed at once: AckBy/AckAt filled so reaction time is never null)
+//   Raised | Acknowledged -> Cancelled      (raised by mistake; no reason, kept out of the Pareto)
+// The machine running again does NOT close the call: nobody has said yet why it stopped. Escalate comes in step 7b.
 public class AndonCall : IAudited
 {
     public const string SystemUser = "system";
@@ -45,6 +48,44 @@ public class AndonCall : IAudited
     }
 
     public bool IsOpen => Status is AndonStatus.Raised or AndonStatus.Acknowledged;
+
+    public void Acknowledge(string by, DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(by);
+        if (Status != AndonStatus.Raised)
+            throw new DomainException($"Andon {Id} is {Status}; only a Raised call can be acknowledged.");
+        Status = AndonStatus.Acknowledged;
+        AckBy = by;
+        AckAt = nowUtc;
+    }
+
+    public void Resolve(string by, int downtimeReasonId, string? note, DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(by);
+        RequireOpen("resolved");
+        if (downtimeReasonId <= 0) throw new DomainException("A downtime reason is required to resolve an Andon.");
+        if (note?.Length > NoteMaxLength) throw new DomainException($"Resolution note is at most {NoteMaxLength} characters.");
+        if (Status == AndonStatus.Raised) { AckBy = by; AckAt = nowUtc; }   // fixed straight away, no separate ack
+        Status = AndonStatus.Resolved;
+        ResolvedBy = by;
+        ResolvedAt = nowUtc;
+        DowntimeReasonId = downtimeReasonId;
+        ResolutionNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+    }
+
+    public void Cancel(string by, DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(by);
+        RequireOpen("cancelled");
+        Status = AndonStatus.Cancelled;
+        ResolvedBy = by;
+        ResolvedAt = nowUtc;
+    }
+
+    private void RequireOpen(string action)
+    {
+        if (!IsOpen) throw new DomainException($"Andon {Id} is already {Status}; it cannot be {action}.");
+    }
 }
 
 // [v2] Spec M4 2.9b: who is told when a call stays Raised too long. Level 0 = at raise; each level once.

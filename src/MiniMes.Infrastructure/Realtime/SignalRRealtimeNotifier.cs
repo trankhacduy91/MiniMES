@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using MiniMes.Application.Realtime;
+using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Realtime;
 
 namespace MiniMes.Infrastructure.Realtime;
@@ -18,6 +19,9 @@ public sealed class SignalRRealtimeNotifier(IHubContext<MachineHub, IMachineClie
 
     public Task MachineProcessUpdatedAsync(MachineProcessDto dto, CancellationToken ct = default)
         => SafeAsync(dto.Line, c => c.MachineProcessUpdated(dto), dto.Machine);
+
+    public Task AndonChangedAsync(AndonDto dto, CancellationToken ct = default)
+        => SafeAsync(dto.Line, c => c.AndonChanged(dto), dto.Machine);
 
     private async Task SafeAsync(string line, Func<IMachineClient, Task> push, string machine)
     {
