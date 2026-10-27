@@ -1,0 +1,71 @@
+<UserControl x:Class="MiniMes.Kiosk.Wpf.Views.AndonPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             Focusable="False">
+    <!-- DataContext = AndonPanelViewModel (spec M4 step 8): the state of the station's machines, the open Andon calls
+         on them, and the big ANDON button. Nothing here takes the keyboard focus (the scan box must keep it). -->
+    <UserControl.Resources>
+        <Style x:Key="MachineChip" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,12,0" />
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Background" Value="#FF616161" />
+            <Setter Property="TextElement.Foreground" Value="White" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Running">
+                    <Setter Property="Background" Value="#FF2E7D32" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Idle">
+                    <Setter Property="Background" Value="#FFFFF59D" />
+                    <Setter Property="TextElement.Foreground" Value="Black" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Down">
+                    <Setter Property="Background" Value="#FFC62828" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Setup">
+                    <Setter Property="Background" Value="#FF1565C0" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="PlannedStop">
+                    <Setter Property="Background" Value="#FF424242" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Offline">
+                    <Setter Property="Background" Value="#FFBDBDBD" />
+                    <Setter Property="TextElement.Foreground" Value="Black" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel Margin="32,0,32,8">
+        <!-- Big and orange-red: tapped with gloves, seen from across the line. -->
+        <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="AndonButton" Content="{x:Static res:Strings.Andon_Button}"
+                Command="{Binding OpenPanelCommand}" Focusable="False" FontSize="28" FontWeight="Bold" Padding="48,10"
+                Background="#FFFF6F00" Foreground="White"
+                Visibility="{Binding HasMachines, Converter={StaticResource BoolToVisibility}}" />
+        <StackPanel VerticalAlignment="Center">
+            <ItemsControl AutomationProperties.AutomationId="StationMachines" ItemsSource="{Binding Machines}" Focusable="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource MachineChip}" AutomationProperties.AutomationId="{Binding Code}">
+                            <StackPanel>
+                                <TextBlock FontSize="18">
+                                    <Run Text="{Binding Code, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="{Binding StateText, Mode=OneWay}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding AndonText}" FontSize="16" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock AutomationProperties.AutomationId="AndonMessage" Text="{Binding Message}" FontSize="20" TextWrapping="Wrap" Margin="0,4,0,0" />
+            <TextBlock Text="{x:Static res:Strings.Andon_Reconnecting}" Foreground="#FFFFB300" FontSize="16"
+                       Visibility="{Binding IsReconnecting, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+    </DockPanel>
+</UserControl>

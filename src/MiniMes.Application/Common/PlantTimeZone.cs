@@ -7,4 +7,13 @@ public sealed class PlantTimeZone(TimeZoneInfo zone)
     public TimeZoneInfo Zone { get; } = zone;
 
     public DateOnly DateOf(DateTime utc) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(utc, Zone));
+
+    // M4 step 8: start (UTC) of the plant's clock hour containing utc. "Output this hour" follows the clock on the
+    // shop floor wall, which matters for zones with a half-hour offset (India +5:30).
+    public DateTime HourStartUtc(DateTime utc)
+    {
+        var local = TimeZoneInfo.ConvertTimeFromUtc(utc, Zone);
+        var hour = new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified);
+        return TimeZoneInfo.ConvertTimeToUtc(hour, Zone);
+    }
 }

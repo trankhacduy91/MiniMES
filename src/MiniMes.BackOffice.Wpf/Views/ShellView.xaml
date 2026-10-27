@@ -12,6 +12,8 @@
                             Command="{Binding LogoutCommand}" Padding="6,3" />
                 </StackPanel>
                 <StackPanel>
+                    <Button AutomationProperties.AutomationId="MenuLineDashboard" Content="{x:Static res:Strings.Menu_LineDashboard}"
+                            Command="{Binding ShowLineDashboardCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Button AutomationProperties.AutomationId="MenuWorkOrders" Content="{x:Static res:Strings.Menu_WorkOrders}"
                             Command="{Binding ShowWorkOrdersCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Button AutomationProperties.AutomationId="MenuReports" Content="{x:Static res:Strings.Menu_Reports}"

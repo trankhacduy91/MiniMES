@@ -189,13 +189,13 @@ public class MachineRuntimeStoreTests
     {
         foreach (var i in Enumerable.Range(0, 10)) Count(15000 + i, T0.AddMilliseconds(200 * i));
 
-        var first = _store.TakeDirty();
-        var second = _store.TakeDirty();
+        var first = _store.TakeDirty(T0.AddSeconds(10));
+        var second = _store.TakeDirty(T0.AddSeconds(10));
 
         Assert.Equal((M, 15009L), (first.Counters.Single().MachineId, first.Counters.Single().Counter));
         Assert.Empty(second.Counters);                                  // flags cleared
         Count(15009, T0.AddSeconds(10));                                // unchanged keep-alive count
-        Assert.Empty(_store.TakeDirty().Counters);
+        Assert.Empty(_store.TakeDirty(T0.AddSeconds(10)).Counters);
     }
 
     [Fact]
@@ -204,10 +204,10 @@ public class MachineRuntimeStoreTests
         _store.ApplyProcess(PeakTemp, Process(245.0, T0), T0);
         _store.ApplyProcess(PeakTemp, Process(246.5, T0.AddSeconds(1)), T0.AddSeconds(1));
 
-        var reading = Assert.Single(_store.TakeDirty().Process).Reading;
+        var reading = Assert.Single(_store.TakeDirty(T0.AddSeconds(10)).Process).Reading;
 
         Assert.Equal(246.5, reading.Value);
-        Assert.Empty(_store.TakeDirty().Process);
+        Assert.Empty(_store.TakeDirty(T0.AddSeconds(10)).Process);
     }
 
     // State changes are not part of the throttled set: they are pushed at once by the caller.
@@ -216,10 +216,59 @@ public class MachineRuntimeStoreTests
     {
         State(WireState.Down, T0);
 
-        var dirty = _store.TakeDirty();
+        var dirty = _store.TakeDirty(T0.AddSeconds(10));
 
         Assert.Empty(dirty.Counters);
         Assert.Empty(dirty.Process);
+    }
+
+    // ---------- count of the current hour (step 8) ----------
+
+    // Sum of the deltas, not "counter now - counter at :00": a reset in the middle of the hour does not break it.
+    [Fact]
+    public void Count_this_hour_sums_the_deltas_across_a_reset()
+    {
+        Count(15000, T0.AddMinutes(1));                 // baseline: 0
+        Count(15010, T0.AddMinutes(10));                // +10
+        Count(4, T0.AddMinutes(20));                    // reset: +4
+
+        Assert.Equal(14, _store.CountThisHour(_store.Get(M)!, T0.AddMinutes(30)));
+    }
+
+    [Fact]
+    public void A_new_hour_starts_from_the_first_delta_in_it()
+    {
+        Count(100, T0.AddMinutes(10));
+        Count(105, T0.AddMinutes(59.9));                // 01:59:54 -> hour 01:00
+        Count(108, T0.AddMinutes(60.2));                // 02:00:12 -> hour 02:00
+
+        Assert.Equal(3, _store.CountThisHour(_store.Get(M)!, T0.AddMinutes(61)));
+        Assert.Equal(3, _store.TakeDirty(T0.AddMinutes(61)).Counters.Single().CountThisHour);
+    }
+
+    // A stopped machine made 0 this hour: the snapshot says so, and the publisher pushes the 0 once at the new hour.
+    [Fact]
+    public void At_a_new_hour_a_silent_machine_drops_to_zero_once()
+    {
+        Count(100, T0.AddMinutes(10));
+        Count(105, T0.AddMinutes(20));
+        _store.TakeDirty(T0.AddMinutes(30));
+
+        Assert.Equal(0, _store.CountThisHour(_store.Get(M)!, T0.AddMinutes(61)));
+        var atNewHour = _store.TakeDirty(T0.AddMinutes(60).AddSeconds(1));
+        Assert.Equal((105L, 0L), (atNewHour.Counters.Single().Counter, atNewHour.Counters.Single().CountThisHour));
+        Assert.Empty(_store.TakeDirty(T0.AddMinutes(60).AddSeconds(2)).Counters);
+    }
+
+    // After an API restart the loader seeds what the DB has for the hour; new counts add to it.
+    [Fact]
+    public void Seeded_hour_count_continues_after_a_restart()
+    {
+        _store.Seed(M, DomainState.Running, T0, lastCounter: 500, lastCountAt: T0.AddMinutes(5), hourStart: T0, hourCount: 40);
+
+        Count(507, T0.AddMinutes(15));
+
+        Assert.Equal(47, _store.CountThisHour(_store.Get(M)!, T0.AddMinutes(16)));
     }
 
     // ---------- helpers ----------

@@ -36,10 +36,10 @@ public sealed class RealtimePublisher(
 
     public async Task PublishDirtyAsync(CancellationToken ct)
     {
-        var dirty = store.TakeDirty();
-        foreach (var (machineId, counter, lastSeen) in dirty.Counters)
+        var dirty = store.TakeDirty(clock.GetUtcNow().UtcDateTime);
+        foreach (var (machineId, counter, thisHour, lastSeen) in dirty.Counters)
             if (machines.Get(machineId) is { } m)
-                await notifier.MachineCounterUpdatedAsync(new MachineCounterDto(m.Code, m.Line, counter, lastSeen), ct);
+                await notifier.MachineCounterUpdatedAsync(new MachineCounterDto(m.Code, m.Line, counter, thisHour, lastSeen), ct);
         foreach (var (machineId, p) in dirty.Process)
             if (machines.Get(machineId) is { } m)
                 await notifier.MachineProcessUpdatedAsync(new MachineProcessDto(m.Code, m.Line, p.Tag, p.Unit, p.Value,

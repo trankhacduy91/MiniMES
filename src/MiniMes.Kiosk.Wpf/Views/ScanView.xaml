@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:views="clr-namespace:MiniMes.Kiosk.Wpf.Views"
              Foreground="White" KeyboardNavigation.TabNavigation="None">
     <!-- DataContext = ScanViewModel (spec M3 2.7-2.9, 2.8b). The barcode scanner is a keyboard: everything it types
          must land in ScanBox, so no control here can take the focus (buttons Focusable=False, no IsDefault, Tab off)
@@ -59,6 +60,8 @@
                        FontSize="36" FontWeight="Bold" HorizontalAlignment="Center" />
         </Border>
         <StackPanel Grid.Row="2">
+            <!-- M4 step 8: state of the station's machines, open Andon calls, the ANDON button. -->
+            <views:AndonPanel DataContext="{Binding Andon}" />
             <Border Background="#FFFFC107" Padding="12" Visibility="{Binding IsFaiPending, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock AutomationProperties.AutomationId="FaiBanner" Text="{x:Static res:Strings.Scan_FaiPending}"
                            Foreground="Black" FontSize="26" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" />
@@ -122,6 +125,67 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+            </DockPanel>
+        </Grid>
+
+        <!-- M4 step 8: Andon chooser over the whole screen: which machine (only when the station has several), then
+             what kind of problem. One tap each, big buttons. -->
+        <Grid Grid.RowSpan="5" Background="#F0202020" DataContext="{Binding Andon}"
+              Visibility="{Binding IsPanelOpen, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel Margin="32">
+                <Button DockPanel.Dock="Top" HorizontalAlignment="Right" AutomationProperties.AutomationId="AndonCancel"
+                        Content="{x:Static res:Strings.Andon_Cancel}" Command="{Binding ClosePanelCommand}"
+                        Focusable="False" FontSize="28" Padding="48,12" Margin="0,0,0,12" />
+                <StackPanel DockPanel.Dock="Top" Visibility="{Binding MustChooseMachine, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{x:Static res:Strings.Andon_ChooseMachine}" FontSize="36" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <ItemsControl AutomationProperties.AutomationId="AndonMachines" ItemsSource="{Binding Machines}" Focusable="False" Margin="0,0,0,24">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button AutomationProperties.AutomationId="{Binding Code}" Focusable="False" Width="320" Height="110" Margin="8"
+                                        Command="{Binding DataContext.ChooseMachineCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="#FFFF6F00" />
+                                                    <Setter Property="BorderThickness" Value="6" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Code}" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding Name}" FontSize="18" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Andon_ChooseType}" FontSize="36" FontWeight="SemiBold" Margin="0,0,0,12" />
+                <ItemsControl AutomationProperties.AutomationId="AndonTypes" ItemsSource="{Binding Types}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- Disabled until a machine is chosen (RaiseCommand.CanExecute). -->
+                            <Button AutomationProperties.AutomationId="{Binding Code}" Content="{Binding Label}" Focusable="False"
+                                    Width="300" Height="140" Margin="8" FontSize="32" FontWeight="Bold"
+                                    Background="#FFFF6F00" Foreground="White"
+                                    Command="{Binding DataContext.RaiseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </DockPanel>
         </Grid>
 

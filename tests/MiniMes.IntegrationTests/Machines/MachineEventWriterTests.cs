@@ -111,6 +111,28 @@ public class MachineEventWriterTests(ApiFixture api)
         Assert.Null(Apply(after, m, "state", T0.AddSeconds(41), state: Contracts.Machines.MachineState.Setup));   // same state: no new segment
     }
 
+    // Step 8: the production of the current hour survives a restart (sum of the deltas stored since the hour began).
+    // Times are taken just after the start of the current hour so the test does not depend on the minute it runs.
+    [Fact]
+    public async Task Loader_seeds_the_count_of_the_current_hour()
+    {
+        var m = await NewMachineAsync();
+        var before = new MachineRuntimeStore();
+        var hour = before.HourStartUtc(DateTime.UtcNow);
+        await WriteAsync(
+            Apply(before, m, "count", hour.AddMinutes(-20), counter: 900),   // baseline, previous hour
+            Apply(before, m, "count", hour.AddMinutes(-10), counter: 950),   // +50, previous hour: not counted
+            Apply(before, m, "count", hour.AddMilliseconds(100), counter: 958),
+            Apply(before, m, "count", hour.AddMilliseconds(200), counter: 3)); // reset: +3
+
+        var after = new MachineRuntimeStore();
+        await MachineRuntimeLoader.LoadAsync(Scopes, after, default);
+
+        Assert.Equal(11, after.CountThisHour(after.Get(m)!, hour.AddMinutes(1)));
+        Apply(after, m, "count", hour.AddMilliseconds(300), counter: 5);
+        Assert.Equal(13, after.CountThisHour(after.Get(m)!, hour.AddMinutes(1)));
+    }
+
     // Step 5: Offline is a server-inferred segment like any other; the next heartbeat closes it.
     [Fact]
     public async Task Offline_and_back_are_stored_as_segments_with_connection_events()

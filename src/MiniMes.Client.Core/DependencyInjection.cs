@@ -7,9 +7,11 @@ using MiniMes.Client.Core.Auth;
 using MiniMes.Client.Core.Http;
 using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Navigation;
+using MiniMes.Client.Core.Realtime;
 using MiniMes.Client.Core.ViewModels;
 using MiniMes.Client.Core.ViewModels.Execution;
 using MiniMes.Client.Core.ViewModels.Kiosk;
+using MiniMes.Client.Core.ViewModels.Machines;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
 
@@ -37,6 +39,10 @@ public static class DependencyInjection
             .AddHttpMessageHandler<AuthHandler>();
 
         services.AddTransient<IAuthClient, AuthClient>();
+
+        // M4: live machine data. Each app registers its IUiDispatcher (WPF Dispatcher).
+        services.AddSingleton<IRealtimeClientFactory, RealtimeClientFactory>();
+        services.AddTransient<IMachineApi, MachineApi>();
 
         // Transient: a fresh ViewModel each time a screen opens, no stale state from the last user.
         services.AddTransient<UserLoginViewModel>();
@@ -75,6 +81,9 @@ public static class DependencyInjection
         // M3: production reports
         services.AddTransient<IReportApi, ReportApi>();
         services.AddTransient<ExecutionReportViewModel>();
+
+        // M4: line dashboard
+        services.AddTransient<LineDashboardViewModel>();
         return services;
     }
 
@@ -89,6 +98,7 @@ public static class DependencyInjection
         services.AddTransient<StationSelectViewModel>();
         services.AddTransient<ScanViewModel>();
         services.AddTransient<RepairViewModel>();
+        services.AddTransient<AndonPanelViewModel>();   // M4: part of the scan screen
         return services;
     }
 }

@@ -916,4 +916,118 @@
   <data name="Report_Qty" xml:space="preserve">
     <value>Qty</value>
   </data>
+  <data name="Menu_LineDashboard" xml:space="preserve">
+    <value>Line dashboard</value>
+  </data>
+  <data name="Dashboard_Title" xml:space="preserve">
+    <value>Line dashboard</value>
+  </data>
+  <data name="Dashboard_Line" xml:space="preserve">
+    <value>Line</value>
+  </data>
+  <data name="Dashboard_Reconnecting" xml:space="preserve">
+    <value>Connection to the server lost. Reconnecting... the screen may be out of date.</value>
+  </data>
+  <data name="Dashboard_NoData" xml:space="preserve">
+    <value>No data</value>
+  </data>
+  <data name="Dashboard_ThisHour" xml:space="preserve">
+    <value>This hour: {0}</value>
+  </data>
+  <data name="Dashboard_Counter" xml:space="preserve">
+    <value>Counter {0}</value>
+  </data>
+  <data name="Dashboard_OpenAndons" xml:space="preserve">
+    <value>Open Andon calls</value>
+  </data>
+  <data name="Dashboard_NoAndons" xml:space="preserve">
+    <value>No open Andon on this line.</value>
+  </data>
+  <data name="Dashboard_Machine" xml:space="preserve">
+    <value>Machine</value>
+  </data>
+  <data name="Dashboard_Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Dashboard_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Dashboard_RaisedAt" xml:space="preserve">
+    <value>Raised</value>
+  </data>
+  <data name="Dashboard_RaisedBy" xml:space="preserve">
+    <value>By</value>
+  </data>
+  <data name="Dashboard_Level" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="Dashboard_Reason" xml:space="preserve">
+    <value>Downtime reason</value>
+  </data>
+  <data name="Dashboard_Acknowledge" xml:space="preserve">
+    <value>Acknowledge</value>
+  </data>
+  <data name="Dashboard_Resolve" xml:space="preserve">
+    <value>Resolve</value>
+  </data>
+  <data name="Dashboard_AckBy" xml:space="preserve">
+    <value>Acknowledged by {0}</value>
+  </data>
+  <data name="Dashboard_ChooseReason" xml:space="preserve">
+    <value>Choose a downtime reason before resolving.</value>
+  </data>
+  <data name="Dashboard_Escalated" xml:space="preserve">
+    <value>Andon escalated to level {2}: {0} ({1}) raised at {3}, nobody has acknowledged it.</value>
+  </data>
+  <data name="Dashboard_Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="Source_Mqtt" xml:space="preserve">
+    <value>MQTT</value>
+  </data>
+  <data name="Source_OpcUa" xml:space="preserve">
+    <value>OPC UA</value>
+  </data>
+  <data name="Source_Modbus" xml:space="preserve">
+    <value>Modbus</value>
+  </data>
+  <data name="Andon_Button" xml:space="preserve">
+    <value>ANDON</value>
+  </data>
+  <data name="Andon_ChooseMachine" xml:space="preserve">
+    <value>Which machine?</value>
+  </data>
+  <data name="Andon_ChooseType" xml:space="preserve">
+    <value>What is the problem?</value>
+  </data>
+  <data name="Andon_Type_Machine" xml:space="preserve">
+    <value>Machine</value>
+  </data>
+  <data name="Andon_Type_Material" xml:space="preserve">
+    <value>Material</value>
+  </data>
+  <data name="Andon_Type_Quality" xml:space="preserve">
+    <value>Quality</value>
+  </data>
+  <data name="Andon_Type_Other" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="Andon_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Andon_Sent" xml:space="preserve">
+    <value>Andon sent: {0} on {1}. Help is on the way.</value>
+  </data>
+  <data name="Andon_AlreadyOpen" xml:space="preserve">
+    <value>A {0} Andon is already open on {1} ({2}). No new call needed.</value>
+  </data>
+  <data name="Andon_NoMachine" xml:space="preserve">
+    <value>No machine at this station: Andon is not available here.</value>
+  </data>
+  <data name="Andon_Status" xml:space="preserve">
+    <value>{0} Andon: {1}</value>
+  </data>
+  <data name="Andon_Reconnecting" xml:space="preserve">
+    <value>Live machine status unavailable. Reconnecting...</value>
+  </data>
 </root>

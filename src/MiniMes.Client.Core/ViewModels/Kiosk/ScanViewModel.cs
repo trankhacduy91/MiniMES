@@ -16,10 +16,16 @@ namespace MiniMes.Client.Core.ViewModels.Kiosk;
 // the scan box; the answer is shown as a full-screen colour with a big word and a sound.
 // At an inspection step (Test) the operator can report NG: tap NG, tap the defect, then scan the board, so the
 // scanner stays the only way a serial enters (no typing, the focus never leaves the scan box).
+// M4 step 8: the Andon panel (button + state of the station's machines) sits on this screen.
 public partial class ScanViewModel(IExecutionApi execution, IWorkOrderApi workOrders, IKioskContext kiosk,
-    IKioskNavigation navigation, IAuthClient auth, ITokenStore tokens, IKioskFeedback feedback, TimeProvider time)
-    : StationScreenViewModel(execution, kiosk, navigation, auth, tokens, feedback, time), ILoadable
+    IKioskNavigation navigation, IAuthClient auth, ITokenStore tokens, IKioskFeedback feedback, TimeProvider time,
+    AndonPanelViewModel andon)
+    : StationScreenViewModel(execution, kiosk, navigation, auth, tokens, feedback, time), ILoadable, IClosable
 {
+    public AndonPanelViewModel Andon { get; } = andon;
+
+    public Task CloseAsync() => Andon.CloseAsync();
+
     private string? _sopUrl;
 
     // [v2] Yellow banner while the WO's first article waits for QC: only the sample may run.
@@ -59,6 +65,7 @@ public partial class ScanViewModel(IExecutionApi execution, IWorkOrderApi workOr
     // Never throws: SOP, FAI banner and NG panel of the WO; the screen scans without them.
     public async Task LoadAsync()
     {
+        _ = Andon.StartAsync();   // never throws; independent of the work order
         if (Kiosk.WorkOrder is null) return;
         try
         {

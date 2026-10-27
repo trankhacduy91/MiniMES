@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MiniMes.Client.Core;
 using MiniMes.Client.Core.Navigation;
+using MiniMes.Client.Core.Realtime;
 using MiniMes.Client.Core.Resources;
 
 namespace MiniMes.BackOffice.Wpf;
@@ -29,6 +30,7 @@ public partial class App : Application
         builder.Services.AddSingleton<Navigation>();
         builder.Services.AddSingleton<INavigation>(sp => sp.GetRequiredService<Navigation>());
         builder.Services.AddSingleton<IDialogService, DialogService>();
+        builder.Services.AddSingleton<IUiDispatcher, WpfUiDispatcher>();   // M4: SignalR pushes -> UI thread
         builder.Services.AddSingleton<MainWindow>();
         _host = builder.Build();
 

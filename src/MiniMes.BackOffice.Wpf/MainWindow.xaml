@@ -10,6 +10,8 @@
         xmlns:plviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Planning"
         xmlns:ex="clr-namespace:MiniMes.Client.Core.ViewModels.Execution;assembly=MiniMes.Client.Core"
         xmlns:exviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Execution"
+        xmlns:mc="clr-namespace:MiniMes.Client.Core.ViewModels.Machines;assembly=MiniMes.Client.Core"
+        xmlns:mcviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Machines"
         Title="{x:Static res:Strings.BackOffice_Title}"
         AutomationProperties.Name="{x:Static res:Strings.BackOffice_Title}"
         Width="1200" Height="760" WindowStartupLocation="CenterScreen">
@@ -20,6 +22,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:HomeViewModel}">
             <views:HomeView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type mc:LineDashboardViewModel}">
+            <mcviews:LineDashboardView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:BackOfficeShellViewModel}">
             <views:ShellView />

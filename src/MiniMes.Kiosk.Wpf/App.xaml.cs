@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MiniMes.Client.Core;
 using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Navigation;
+using MiniMes.Client.Core.Realtime;
 using MiniMes.Client.Core.Resources;
 
 namespace MiniMes.Kiosk.Wpf;
@@ -29,6 +30,7 @@ public partial class App : Application
             .Validate(o => !string.IsNullOrWhiteSpace(o.StationCode), "StationCode is required on a kiosk.");
         builder.Services.AddKioskViewModels();
         builder.Services.AddSingleton<IKioskFeedback, SystemSoundFeedback>();
+        builder.Services.AddSingleton<IUiDispatcher, WpfUiDispatcher>();   // M4: SignalR pushes -> UI thread
         builder.Services.AddSingleton<Navigation>();
         builder.Services.AddSingleton<INavigation>(sp => sp.GetRequiredService<Navigation>());
         builder.Services.AddSingleton<IKioskNavigation>(sp => sp.GetRequiredService<Navigation>());

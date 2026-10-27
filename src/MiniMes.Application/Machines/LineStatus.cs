@@ -12,7 +12,7 @@ namespace MiniMes.Application.Machines;
 // Line codes are unique per area; the MVP has one area, so the code is enough (same key as the SignalR group).
 public sealed record GetLineStatusQuery(string LineCode) : IRequest<LineStatusDto>;
 
-public sealed class GetLineStatusHandler(IAppDbContext db, MachineRuntimeStore store) : IRequestHandler<GetLineStatusQuery, LineStatusDto>
+public sealed class GetLineStatusHandler(IAppDbContext db, MachineRuntimeStore store, TimeProvider time) : IRequestHandler<GetLineStatusQuery, LineStatusDto>
 {
     public async Task<LineStatusDto> Handle(GetLineStatusQuery q, CancellationToken ct)
     {
@@ -27,11 +27,13 @@ public sealed class GetLineStatusHandler(IAppDbContext db, MachineRuntimeStore s
             select new { m.Id, m.Code, m.Name, m.Type, m.DataSource })
             .ToListAsync(ct);
 
+        var now = time.GetUtcNow().UtcDateTime;
         return new LineStatusDto(q.LineCode, machines.Select(m =>
         {
             var rt = store.Get(m.Id);
             return new MachineStatusDto(m.Id, m.Code, m.Name, m.Type, m.DataSource.ToString(),
-                rt?.State is { } s ? Enum.Parse<WireState>(s.ToString()) : null, rt?.StateSince, rt?.LastCounter, rt?.LastSeenAt,
+                rt?.State is { } s ? Enum.Parse<WireState>(s.ToString()) : null, rt?.StateSince, rt?.LastCounter,
+                rt is null ? 0 : store.CountThisHour(rt, now), rt?.LastSeenAt,
                 rt?.Process.Select(p => new ProcessReadingDto(p.Tag, p.Unit, p.Value, Enum.Parse<WireQuality>(p.Quality.ToString()), p.SourceTs)).ToList() ?? []);
         }).ToList());
     }

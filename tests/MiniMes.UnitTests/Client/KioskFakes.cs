@@ -143,7 +143,12 @@ internal sealed class FakeKiosk
         => new(Execution, Dispatch, Context, Navigation, new FakeKioskAuth(Tokens), Tokens,
             Options.Create(new ClientOptions { ApiBaseUrl = "http://x/", StationCode = station }));
 
-    public ScanViewModel Scan() => new(Execution, Dispatch, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time);
+    public ScanViewModel Scan() => new(Execution, Dispatch, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time,
+        new AndonPanelViewModel(Machines, Realtime, new ImmediateDispatcher(), Context));
+
+    // M4 step 8: the Andon panel of the scan screen.
+    public FakeMachineApi Machines { get; } = new();
+    public FakeRealtimeFactory Realtime { get; } = new();
 
     public RepairViewModel Repair() => new(Execution, Dispatch, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time);
 

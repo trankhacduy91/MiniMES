@@ -14,7 +14,7 @@ public sealed partial class Navigation(IServiceProvider services) : ObservableOb
     [ObservableProperty]
     private object? _currentViewModel;
 
-    public void ShowLogin() => CurrentViewModel = services.GetRequiredService<OperatorLoginViewModel>();
+    public void ShowLogin() => Show(services.GetRequiredService<OperatorLoginViewModel>());
 
     public void ShowHome() => Show(services.GetRequiredService<StationSelectViewModel>());
 
@@ -24,8 +24,10 @@ public sealed partial class Navigation(IServiceProvider services) : ObservableOb
         : services.GetRequiredService<ScanViewModel>());
 
     // Shown first so its "loading" text is visible; LoadAsync never throws (errors go to the screen).
+    // The screen left behind lets go of what it holds open (the Andon panel's SignalR connection).
     private void Show(object viewModel)
     {
+        if (CurrentViewModel is IClosable closable) _ = closable.CloseAsync();
         CurrentViewModel = viewModel;
         if (viewModel is ILoadable loadable) _ = loadable.LoadAsync();
     }

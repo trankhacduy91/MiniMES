@@ -17,4 +17,19 @@ public class PlantTimeZoneTests
 
         Assert.Equal(DateOnly.Parse(expected), Vietnam.DateOf(instant));
     }
+
+    // M4 step 8: "output this hour" follows the wall clock of the plant. India (+5:30) shows why hours are not UTC hours.
+    [Theory]
+    [InlineData("Asia/Ho_Chi_Minh", "2026-10-17T01:10:00Z", "2026-10-17T01:00:00Z")]   // 08:10 -> 08:00
+    [InlineData("Asia/Ho_Chi_Minh", "2026-10-17T16:59:59Z", "2026-10-17T16:00:00Z")]   // 23:59:59 -> 23:00
+    [InlineData("Asia/Kolkata", "2026-10-17T01:10:00Z", "2026-10-17T00:30:00Z")]       // 06:40 -> 06:00
+    [InlineData("Asia/Kolkata", "2026-10-17T01:29:59Z", "2026-10-17T00:30:00Z")]       // 06:59:59 -> 06:00
+    [InlineData("Asia/Kolkata", "2026-10-17T01:30:00Z", "2026-10-17T01:30:00Z")]       // 07:00 -> 07:00
+    public void Hour_start_follows_the_plant_clock(string zone, string utc, string expected)
+    {
+        var plant = new PlantTimeZone(TimeZoneInfo.FindSystemTimeZoneById(zone));
+        static DateTime Utc(string s) => DateTime.Parse(s, null, System.Globalization.DateTimeStyles.AdjustToUniversal);
+
+        Assert.Equal(Utc(expected), plant.HourStartUtc(Utc(utc)));
+    }
 }

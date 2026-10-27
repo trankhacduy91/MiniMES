@@ -30,7 +30,9 @@ public static class RealtimeHub
 // repaired by the next one, and a client can always replace what it shows (spec 2.7). Times are UTC.
 public sealed record MachineStateChangedDto(string Machine, string Line, MachineState State, DateTime Since);
 
-public sealed record MachineCounterDto(string Machine, string Line, long Counter, DateTime? LastSeenAt);
+// CountThisHour (step 8): made in the current plant clock hour, summed from the deltas on the server (a counter reset
+// does not break it, and a dashboard opened at 9:40 still shows 9:00-9:40).
+public sealed record MachineCounterDto(string Machine, string Line, long Counter, long CountThisHour, DateTime? LastSeenAt);
 
 public sealed record MachineProcessDto(string Machine, string Line, string Tag, string Unit, double Value, DataQuality Quality, DateTime SourceTs);
 
@@ -40,7 +42,7 @@ public sealed record LineStatusDto(string Line, IReadOnlyList<MachineStatusDto> 
 
 public sealed record MachineStatusDto(
     int Id, string Code, string Name, string Type, string DataSource,
-    MachineState? State, DateTime? StateSince, long? Counter, DateTime? LastSeenAt,
+    MachineState? State, DateTime? StateSince, long? Counter, long CountThisHour, DateTime? LastSeenAt,
     IReadOnlyList<ProcessReadingDto> Process);
 
 public sealed record ProcessReadingDto(string Tag, string Unit, double Value, DataQuality Quality, DateTime SourceTs);

@@ -158,6 +158,13 @@ public class RealtimeTests(ApiFixture api)
         var tag = (await Service<MachineDirectory>().ResolveTagAsync(reflow.Id, "peakTemp", default))!;
         Service<MachineRuntimeStore>().ApplyProcess(tag,
             new MachineMessage(Guid.NewGuid(), reflow.Code, DateTimeOffset.UtcNow, Tag: "peakTemp", Value: 245.3), DateTime.UtcNow);
+        var store = Service<MachineRuntimeStore>();
+        var now = DateTime.UtcNow;
+        if (store.Get(reflow.Id)?.LastCounter is null)
+            store.Apply(reflow.Id, MachineKinds.Count, new MachineMessage(Guid.NewGuid(), reflow.Code, now, Counter: 1000), now);
+        var hourBefore = store.CountThisHour(store.Get(reflow.Id)!, now);
+        store.Apply(reflow.Id, MachineKinds.Count,
+            new MachineMessage(Guid.NewGuid(), reflow.Code, now, Counter: store.Get(reflow.Id)!.LastCounter + 7), now);
         var client = await api.LoginOperatorAsync();
 
         var status = await client.GetFromJsonAsync<LineStatusDto>("/api/lines/L1/status");
@@ -165,6 +172,7 @@ public class RealtimeTests(ApiFixture api)
         Assert.Contains(status!.Machines, m => m.Code == "L1-SMT-01" && m.DataSource == "Mqtt");
         var oven = Assert.Single(status.Machines, m => m.Code == "L1-REFLOW-01");
         Assert.Equal(("OpcUa", 245.3, DataQuality.Good), (oven.DataSource, oven.Process.Single().Value, oven.Process.Single().Quality));
+        Assert.Equal(hourBefore + 7, oven.CountThisHour);                                            // step 8
         Assert.Contains(status.Machines, m => m.Code == "L1-GLUE-01" && m.DataSource == "Modbus");   // every work center of the line
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/lines/NOPE/status")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await api.Anonymous().GetAsync("/api/lines/L1/status")).StatusCode);
