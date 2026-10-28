@@ -195,6 +195,8 @@ Nhân vật: **Dũng** (IT MES trực), **chị Lan** (supervisor), **Minh** (QC
 Thứ tự đọc: 2.1 (cấu trúc project) → 2.2–2.3 (OPC UA server/client) → 2.4–2.5 (Modbus) → 2.6 (chuẩn hóa, `msgId`) → 2.7 (store-and-forward) → 2.8 (health, reconnect) → 2.9 (chạy như dịch vụ).
 
 > **Phiên bản.** OPC UA dùng gói chính thức `OPCFoundation.NetStandard.Opc.Ua` (server: `...Opc.Ua.Server`, client: `...Opc.Ua.Client`, cấu hình: `...Opc.Ua.Configuration`). Snippet viết theo dòng 1.5.x; nhánh 2.0 mới có thay đổi API (nhiều method chuyển sang async). Modbus dùng `NModbus` 3.x. **Khi compile lỗi, đối chiếu README và thư mục `Applications/` (mẫu ConsoleReferenceServer, ConsoleReferenceClient) của repo `OPCFoundation/UA-.NETStandard` đúng phiên bản bạn cài**, đừng sửa mò.
+>
+> **Ghi chú khi làm (Bước 0, 28/10/2026).** Bản 1.5.378.182 đã đánh dấu `[Obsolete]` các API đồng bộ trong snippet (`Session.Create`, `CoreClientUtils.SelectEndpoint`, `Subscription.Create`, `Browser.Browse`, `ReadValue`, `new ApplicationInstance(config)`). Dùng bản async: `new DefaultSessionFactory(telemetry).CreateAsync(...)`, `SelectEndpointAsync(config, url, false, telemetry)`, `sub.CreateAsync()`, `BrowseAsync`, `ReadValueAsync`, `new ApplicationInstance(config, telemetry)`; `telemetry = DefaultTelemetry.Create(...)` (`ITelemetryContext`). Dòng 2.0.x (07/10/2026) bỏ hẳn API cũ. Mẫu chạy được: `docs/learning/labs/opcua-lab.cs`. Namespace index trên OPC PLC là `ns=3`, không phải `ns=2`.
 
 ### 2.1 Cấu trúc project và trừu tượng `IDeviceDriver`
 
@@ -603,10 +605,11 @@ Payload status gateway: `{"state":"online","queueLength":0,"droppedCount":0,"old
 
 Tổng khoảng 24 giờ. Commit sau mỗi bước.
 
-- [ ] **Bước 0 — Học OPC UA và Modbus bằng công cụ có sẵn (2 giờ)**
+- [x] **Bước 0 — Học OPC UA và Modbus bằng công cụ có sẵn (2 giờ)**
   - Mục tiêu: hiểu khái niệm trước khi viết code.
   - Việc cần làm: chạy `docker run -p 50000:50000 mcr.microsoft.com/iotedge/opc-plc --autoaccept --unsecuretransport` (kiểm tra tham số trong README của image); cài **UaExpert** (Unified Automation, miễn phí, cần đăng ký) → kết nối, Browse, Read, kéo node vào Data Access View (subscription), thử Deadband; cài công cụ Modbus (ví dụ `mbpoll` dòng lệnh, hoặc Modbus Poll/Modbus Slave bản dùng thử) → đọc/ghi holding register, thử đọc 2 register thành int32 với các thứ tự byte.
   - Kiểm tra: tự viết vào `docs/opcua-modbus-notes.md` 10 dòng: NodeId là gì, SamplingInterval khác PublishingInterval thế nào, 40001 là địa chỉ mấy trên dây, CDAB nghĩa là gì.
+  - Đã làm (28/10/2026): UaExpert/mbpoll được thay bằng hai lab C# chạy thẳng file (`docs/learning/labs/opcua-lab.cs` với container OPC PLC, `docs/learning/labs/modbus-lab.cs`); kết quả và ghi chú ở `docs/opcua-modbus-notes.md`, `docs/learning/M4b-step00-opcua-modbus-basics.md`.
 
 - [ ] **Bước 1 — OPC UA server trong simulator (4 giờ)**
   - Mục tiêu: lò reflow `L1-REFLOW-01` là OPC UA server có 3 node cập nhật theo chu kỳ.
