@@ -23,6 +23,9 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
         ("dup", "dup <m>              send the next message twice, same msgId"),
         ("skew", "skew <m> <sec>       shift the machine clock (0 = back to normal)"),
         ("tag", "tag <m> <tag> <value>  publish one process value, e.g. tag L1-REFLOW-01 peakTemp 245.3"),
+        ("drift", "drift <m> <c/min|off> oven peak temperature drifts by c °C per minute (off = back to set point)"),
+        ("sensor", "sensor <m> bad|good  thermocouple broken: PeakTemp quality BadSensorFailure on OPC UA"),
+        ("opcua", "opcua stop|start     stop/start the OPC UA servers (the PLC is switched off / on)"),
         ("help", "help"),
     ];
 
@@ -41,17 +44,18 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
             }
             catch (OperationCanceledException) { return; }
             if (line is null) return;                          // no console (stdin closed): machines keep running
-            if (!string.IsNullOrWhiteSpace(line)) Console.WriteLine(Execute(line));
+            if (!string.IsNullOrWhiteSpace(line)) Console.WriteLine(await ExecuteAsync(line, stoppingToken));
         }
     }
 
-    public string Execute(string line)
+    public async Task<string> ExecuteAsync(string line, CancellationToken ct)
     {
         var p = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var verb = p[0].ToLowerInvariant();
         if (verb == "help") return Help;
         if (verb == "list") return List();
         if (!Commands.Any(c => c.Verb == verb)) return "Unknown command. Type 'help'.";
+        if (verb == "opcua") return await OpcUaAsync(p, ct);
 
         if (p.Length < 2) return Usage(verb);
         var machine = fleet.Find(p[1]);
@@ -71,6 +75,9 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
             "dup" => new DuplicateNext(),
             "skew" when p.Length > 2 && int.TryParse(p[2], CultureInfo.InvariantCulture, out var s) => new SetSkew(s),
             "tag" when p.Length > 3 && double.TryParse(p[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var v) => new PublishTag(p[2], v),
+            "drift" when p.Length > 2 && p[2].Equals("off", StringComparison.OrdinalIgnoreCase) => new SetDrift(null),
+            "drift" when p.Length > 2 && double.TryParse(p[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var d) => new SetDrift(d),
+            "sensor" when p.Length > 2 && p[2].ToLowerInvariant() is "bad" or "good" => new SetSensor(p[2].Equals("good", StringComparison.OrdinalIgnoreCase)),
             _ => null,
         };
         if (command is null) return Usage(verb);
@@ -78,12 +85,29 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
         return "ok";
     }
 
+    // The servers start and stop on the console's thread: the machine loops keep running (and keep their values).
+    private async Task<string> OpcUaAsync(string[] p, CancellationToken ct)
+    {
+        if (fleet.OpcUaServers.Count == 0) return "No machine has an OPC UA server (opcua in machines.json).";
+        switch (p.ElementAtOrDefault(1)?.ToLowerInvariant())
+        {
+            case "stop": await Task.WhenAll(fleet.OpcUaServers.Select(s => s.StopAsync(ct))); break;
+            case "start": await Task.WhenAll(fleet.OpcUaServers.Select(s => s.StartAsync(ct))); break;
+            default: return Usage("opcua");
+        }
+        return string.Join(Environment.NewLine, fleet.OpcUaServers.Select(s => $"{s.Machine} {s.EndpointUrl} {(s.IsRunning ? "running" : "stopped")}"));
+    }
+
     private string List()
     {
         var rows = fleet.Machines.Select(m => m.Snapshot).Select(s =>
             $"{s.Code,-14} {s.State,-11} counter {s.Counter,8}  good {s.Good,6}  ng {s.Ng,4}  " +
             $"{(s.Connected ? "connected" : "NO BROKER")}{(s.Muted ? " muted" : "")}{(s.SkewSec != 0 ? $" skew {s.SkewSec}s" : "")}" +
-            (s.DownUntil is { } until ? $" down until {until.ToLocalTime():HH:mm:ss}" : ""));
+            (s.DownUntil is { } until ? $" down until {until.ToLocalTime():HH:mm:ss}" : "") +
+            (s.OpcUa is { } ua
+                ? $"{Environment.NewLine}{"",15}OPC UA {ua.Endpoint} {(ua.Running ? "running" : "STOPPED")}  peak {ua.PeakTemp:F2} °C" +
+                  $"{(ua.SensorOk ? "" : " SENSOR BAD")}{(ua.DriftPerMin != 0 ? $" drift {ua.DriftPerMin:+0.0#;-0.0#} °C/min" : "")}"
+                : ""));
         return string.Join(Environment.NewLine, rows);
     }
 

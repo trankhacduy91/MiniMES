@@ -8,7 +8,7 @@ using MiniMes.MachineSimulator.Machines;
 using MiniMes.MachineSimulator.Stations;
 
 // Machine simulator (spec M4 2.8): plays the MQTT machines of machines.json and, for machines with a station, the
-// automatic stations that scan through the API (step 9).
+// automatic stations that scan through the API (step 9). M4b: machines with "opcua" also run an OPC UA server.
 //   dotnet run --project src/MiniMes.MachineSimulator [-- --config other.json] [--auto-operator]
 // --auto-operator: also scan the manual stations listed under autoOperators (a flag without value, so it is taken
 // out before the configuration reads the command line, which expects "--key value" pairs).
@@ -21,6 +21,9 @@ builder.Configuration.AddJsonFile(Path.GetFullPath(configFile), optional: false,
 
 builder.Logging.ClearProviders();
 builder.Logging.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "HH:mm:ss "; });
+// The OPC UA stack logs every step and session at Information; its categories are Opc.Ua.* and our server subclass.
+builder.Logging.AddFilter("Opc.Ua", LogLevel.Warning);
+builder.Logging.AddFilter("MiniMes.MachineSimulator.OpcUa.ReflowServer+OvenServer", LogLevel.Warning);
 
 var options = builder.Configuration.Get<SimulatorOptions>() ?? new SimulatorOptions();
 var errors = options.Validate().ToList();

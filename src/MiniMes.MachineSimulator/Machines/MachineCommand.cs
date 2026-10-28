@@ -14,7 +14,12 @@ public sealed record Mute(bool On) : MachineCommand;
 public sealed record DuplicateNext : MachineCommand;
 public sealed record SetSkew(int Seconds) : MachineCommand;
 public sealed record PublishTag(string Tag, double Value) : MachineCommand;   // [v2] until the M4b gateway sends them
+public sealed record SetDrift(double? PerMin) : MachineCommand;               // M4b: oven temperature drift, null = off
+public sealed record SetSensor(bool Ok) : MachineCommand;                     // M4b: thermocouple broken / fixed
 
 public sealed record MachineSnapshot(
     string Code, MachineState State, long Counter, long Good, long Ng,
-    bool Connected, bool Muted, int SkewSec, DateTimeOffset? DownUntil);
+    bool Connected, bool Muted, int SkewSec, DateTimeOffset? DownUntil,
+    OpcUaSnapshot? OpcUa = null);
+
+public sealed record OpcUaSnapshot(string Endpoint, bool Running, double PeakTemp, bool SensorOk, double DriftPerMin);

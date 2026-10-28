@@ -28,6 +28,7 @@ public sealed class SimulatorOptions
                 yield return $"{m.Code}: downDurationSec must be [min, max] seconds.";
             if (m.AlarmCodes.Length == 0) yield return $"{m.Code}: alarmCodes needs at least one code.";
             if (m.NgProb is < 0 or > 1 || m.DownProbPerCycle is < 0 or > 1) yield return $"{m.Code}: probabilities must be in 0..1.";
+            if (m.OpcUa is { Port: < 1 or > 65535 }) yield return $"{m.Code}: opcua.port must be 1..65535.";
             if (m.Station is { } st)
             {
                 if (string.IsNullOrWhiteSpace(st.Code)) yield return $"{m.Code}: station.code is required.";
@@ -35,6 +36,8 @@ public sealed class SimulatorOptions
                     yield return $"{m.Code}: station mode AutoTest needs defectCodes for its NG boards.";
             }
         }
+        foreach (var dup in Machines.Where(m => m.OpcUa is not null).GroupBy(m => m.OpcUa!.Port).Where(g => g.Count() > 1))
+            yield return $"opcua port {dup.Key} is used by {string.Join(", ", dup.Select(m => m.Code))}.";
         foreach (var o in AutoOperators)
             if (string.IsNullOrWhiteSpace(o.Station) || o.CycleTimeSec <= 0) yield return "every autoOperator needs station and cycleTimeSec > 0.";
         if ((Machines.Any(m => m.Station is not null) || AutoOperators.Count > 0)
@@ -88,4 +91,15 @@ public sealed class MachineOptions
     public int ClockSkewSec { get; set; }              // a PLC whose clock is off; also settable by the "skew" command
     public string[] AlarmCodes { get; set; } = [];        // one is picked when the machine goes Down by itself
     public StationOptions? Station { get; set; }          // step 9: this machine also scans each board at that station
+    public OpcUaOptions? OpcUa { get; set; }              // M4b: the machine also shows its values on an OPC UA server
+}
+
+// M4b step 1: the reflow oven as an OPC UA server (PeakTemp, Counter, State). Host = the name clients use to reach it
+// (localhost on the dev PC, the service name in Docker).
+public sealed class OpcUaOptions
+{
+    public string Host { get; set; } = "localhost";
+    public int Port { get; set; } = 4840;
+    public double PeakTempC { get; set; } = 245;          // set point; the reading is this + noise + drift
+    public double NoiseC { get; set; } = 0.8;             // uniform +- noise of each reading
 }

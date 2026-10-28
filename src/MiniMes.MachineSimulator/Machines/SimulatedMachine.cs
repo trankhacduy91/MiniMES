@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MiniMes.Contracts.Machines;
 using MiniMes.MachineSimulator.Config;
 using MiniMes.MachineSimulator.Mqtt;
+using MiniMes.MachineSimulator.OpcUa;
 using MiniMes.MachineSimulator.Stations;
 using MQTTnet.Protocol;
 
@@ -13,6 +14,8 @@ namespace MiniMes.MachineSimulator.Machines;
 // new total, so the MES loses no production when the broker or the network is away (spec 2.3).
 // Step 9: a machine with a station also scans each board it makes at that station (AutoStationClient). No board
 // waiting = nothing to make: the machine goes Idle (starved) and looks again every few seconds.
+// M4b step 1: a machine with an OPC UA side (the reflow oven) also shows PeakTemp, Counter and State on its own
+// OPC UA server, updated from this loop. Until the gateway reads it (M4b step 4) it keeps talking MQTT as well.
 public sealed class SimulatedMachine
 {
     private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(100);
@@ -46,11 +49,14 @@ public sealed class SimulatedMachine
     private readonly AutoStationClient? _station;
     private bool _starved;                           // Idle because no board waits (not an Idle from the console)
     private DateTimeOffset _retryAt;
+    private readonly ReflowServer? _opcUa;
+    private readonly OvenTemperature? _oven;
 
     public SimulatedMachine(SimulatorOptions sim, MachineOptions cfg, Random rng, MachinePublisher publisher, TimeProvider clock, ILogger log,
-        AutoStationClient? station = null)
+        AutoStationClient? station = null, (ReflowServer Server, OvenTemperature Oven)? opcUa = null)
     {
         _station = station;
+        (_opcUa, _oven) = (opcUa?.Server, opcUa?.Oven);
         _cfg = cfg;
         (_site, _area) = (sim.Site, sim.Area);
         _cycle = TimeSpan.FromSeconds(cfg.CycleTimeSec);
@@ -67,6 +73,7 @@ public sealed class SimulatedMachine
 
     public string Code => _cfg.Code;
     public MachinePublisher Publisher { get; }
+    public ReflowServer? OpcUaServer => _opcUa;
     public MachineSnapshot Snapshot => _snapshot;
 
     public bool Post(MachineCommand command) => _commands.Writer.TryWrite(command);
@@ -86,6 +93,7 @@ public sealed class SimulatedMachine
                 else if (_state == MachineState.Idle && _starved && now >= _retryAt) await RetryStarvedAsync(now, ct);
 
                 await FlushCountAsync(force: false, ct);
+                PublishOpcUa(now);
                 _snapshot = TakeSnapshot();
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -196,6 +204,15 @@ public sealed class SimulatedMachine
             case SetSkew s:
                 _skewSec = s.Seconds;
                 break;
+            case SetDrift d when _oven is not null:
+                _oven.SetDrift(d.PerMin);
+                break;
+            case SetSensor s when _oven is not null:
+                _oven.SensorOk = s.Ok;
+                break;
+            case SetDrift or SetSensor:
+                _log.LogWarning("{Machine} has no OPC UA side (opcua in machines.json): {Command} ignored", Code, command);
+                return;
             case PublishTag t:
                 await SendAsync(MachineKinds.Process, NewMessage() with { Tag = t.Tag, Value = t.Value }, ct, topicOverride:
                     MachineTopic.BuildProcess(_site, _area, _cfg.Line, Code, t.Tag));
@@ -258,6 +275,20 @@ public sealed class SimulatedMachine
         return sent;
     }
 
+    // The PLC side: the server only notifies the clients of the nodes whose value changed.
+    private void PublishOpcUa(DateTimeOffset now)
+    {
+        if (_opcUa is null || _oven is null) return;
+        _oven.Update(now);
+        var plcState = _state switch
+        {
+            MachineState.Running => 1, MachineState.Idle => 2, MachineState.Down => 3, MachineState.Setup => 4, MachineState.PlannedStop => 5,
+            _ => 0,
+        };
+        // uint: the PLC's 32-bit counter. Ts on the PLC's clock, skew included, like the MQTT messages.
+        _opcUa.Publish(new ReflowValues(_oven.Value, _oven.SensorOk, unchecked((uint)_counter), plcState), now.AddSeconds(_skewSec).UtcDateTime);
+    }
+
     // After every (re)connect: "online" and the current state (spec 2.3: state is sent right after connecting).
     private async Task OnConnectedAsync(CancellationToken ct)
     {
@@ -274,5 +305,6 @@ public sealed class SimulatedMachine
     private string Topic(string kind) => MachineTopic.Build(_site, _area, _cfg.Line, Code, kind);
 
     private MachineSnapshot TakeSnapshot()
-        => new(Code, _state, _counter, _good, _ng, Publisher.IsConnected, _muted, _skewSec, _state == MachineState.Down ? _downUntil : null);
+        => new(Code, _state, _counter, _good, _ng, Publisher.IsConnected, _muted, _skewSec, _state == MachineState.Down ? _downUntil : null,
+            _opcUa is null || _oven is null ? null : new(_opcUa.EndpointUrl, _opcUa.IsRunning, _oven.Value, _oven.SensorOk, _oven.DriftPerMin));
 }

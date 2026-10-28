@@ -611,11 +611,12 @@ Tổng khoảng 24 giờ. Commit sau mỗi bước.
   - Kiểm tra: tự viết vào `docs/opcua-modbus-notes.md` 10 dòng: NodeId là gì, SamplingInterval khác PublishingInterval thế nào, 40001 là địa chỉ mấy trên dây, CDAB nghĩa là gì.
   - Đã làm (28/10/2026): UaExpert/mbpoll được thay bằng hai lab C# chạy thẳng file (`docs/learning/labs/opcua-lab.cs` với container OPC PLC, `docs/learning/labs/modbus-lab.cs`); kết quả và ghi chú ở `docs/opcua-modbus-notes.md`, `docs/learning/M4b-step00-opcua-modbus-basics.md`.
 
-- [ ] **Bước 1 — OPC UA server trong simulator (4 giờ)**
+- [x] **Bước 1 — OPC UA server trong simulator (4 giờ)**
   - Mục tiêu: lò reflow `L1-REFLOW-01` là OPC UA server có 3 node cập nhật theo chu kỳ.
   - Việc cần làm: thêm gói `OPCFoundation.NetStandard.Opc.Ua.Server`; `ApplicationConfiguration` bằng code (security `None` cho dev), chứng chỉ tự ký; `ReflowNodeManager` (2.2); nối vòng chu kỳ của `SimulatedMachine` (M4) để gọi `Publish`; nhiệt độ = 245 + nhiễu ±0,8 °C (seed cố định); lệnh `drift`, `sensor bad`, `opcua stop|start`.
   - File: `src/MiniMes.MachineSimulator/OpcUa/{ReflowServer.cs, ReflowNodeManager.cs}`, cấu hình trong `machines.json` (`"opcua": { "port": 4840 }` cho máy reflow).
   - Kiểm tra: UaExpert kết nối `opc.tcp://localhost:4840`, thấy `Reflow/PeakTemp` thay đổi; `drift L1-REFLOW-01 1` → giá trị tăng dần; `sensor bad` → UaExpert hiện status `Bad...`. **Nếu kẹt quá 2 giờ** ở phần server: tạm dùng container `opc-plc` với file node tùy chỉnh để làm tiếp Bước 2–7, quay lại sau.
+  - Đã làm (28/10/2026): `OpcUa/ReflowNodeManager.cs`, `OpcUa/ReflowServer.cs`, `Machines/OvenTemperature.cs`; kiểm tra bằng `docs/learning/labs/opcua-lab.cs` (thay UaExpert): đúng `ns=2;s=Reflow.PeakTemp|Counter|State`, deadband 0,5 °C, drift 30 °C/phút 246,7 → 254,0 °C trong 15 giây, `sensor bad` → `BadSensorFailure`, `opcua stop` → client bị từ chối, `opcua start` → giá trị cuối có ngay. Khác snippet: (1) cấu hình `"opcua": { "host", "port", "peakTempC", "noiseC" }`; (2) `drift <m> off` để tắt drift và về set point; `sensor <m> bad|good`; `opcua stop|start` áp cho mọi server OPC UA; (3) `opcua stop` hủy server, `start` tạo server mới (StandardServer đã dừng không chạy lại được); (4) phải đặt `MaxRegistrationInterval = 0`, nếu không server tự đăng ký LDS ở chính cổng 4840 (xem `docs/incidents.md`); (5) lò **vẫn phát MQTT** cho tới Bước 4 (khi gateway thay vào), để dashboard không mất lò; (6) node chỉ được cập nhật khi giá trị đổi, timestamp = giờ PLC (tính cả `skew`); nhiễu nhiệt độ dùng Random riêng (seed + 100) để chuỗi Down/NG của lò giữ như M4.
 
 - [ ] **Bước 2 — Khung gateway + OPC UA client (3 giờ)**
   - Mục tiêu: gateway subscribe 3 node và log giá trị.
