@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MiniMes.EdgeGateway": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

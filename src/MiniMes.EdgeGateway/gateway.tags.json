@@ -1,0 +1,16 @@
+{
+  // Spec M4b 2.6. Gateway GW01 reads the machines of line L1 that do not speak MQTT themselves.
+  // site/area/line and every "machine" must match the seeded master data (Machine.MqttTopicKey), like machines.json.
+  "gateway": { "id": "GW01", "site": "VN-BN01", "area": "SMT-ASSY", "line": "L1" },
+  // autoAcceptUntrustedCertificates: left out = only in Development (dotnet run). Never true in production.
+  "opcUa": { "pkiPath": "pki", "keepAliveMs": 2000 },
+  "devices": [
+    // The reflow oven played by the simulator (M4b step 1). nsu=<namespace URI>: the server gives the index (ns=2 today).
+    { "machine": "L1-REFLOW-01", "protocol": "opcua", "endpoint": "opc.tcp://localhost:4840", "publishingMs": 1000,
+      "tags": [
+        { "name": "peakTemp", "kind": "process", "nodeId": "nsu=urn:minimes:simulator:reflow;s=Reflow.PeakTemp", "samplingMs": 500, "deadband": 0.5 },
+        { "name": "counter",  "kind": "count",   "nodeId": "nsu=urn:minimes:simulator:reflow;s=Reflow.Counter",  "samplingMs": 1000 },
+        { "name": "state",    "kind": "state",   "nodeId": "nsu=urn:minimes:simulator:reflow;s=Reflow.State",    "samplingMs": 1000,
+          "map": { "1": "Running", "2": "Idle", "3": "Down", "4": "Setup", "5": "PlannedStop" } } ] }
+  ]
+}

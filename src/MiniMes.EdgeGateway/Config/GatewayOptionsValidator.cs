@@ -1,0 +1,83 @@
+using Microsoft.Extensions.Options;
+using MiniMes.Contracts.Machines;
+using Opc.Ua;
+
+namespace MiniMes.EdgeGateway.Config;
+
+// Spec M4b step 2: a wrong configuration stops the gateway at start (ValidateOnStart) instead of running half blind.
+// A gateway that starts with an empty endpoint or two tags of the same name loses data without anyone noticing.
+public sealed class GatewayOptionsValidator : IValidateOptions<GatewayOptions>
+{
+    public ValidateOptionsResult Validate(string? name, GatewayOptions options)
+    {
+        var errors = Errors(options).ToList();
+        return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);
+    }
+
+    public static IEnumerable<string> Errors(GatewayOptions o)
+    {
+        var g = o.Gateway;
+        if (new[] { g.Id, g.Site, g.Area, g.Line }.Any(string.IsNullOrWhiteSpace))
+            yield return "gateway.id, site, area and line are required.";
+        if (o.Devices.Count == 0) yield return "at least one device is required.";
+        foreach (var dup in o.Devices.GroupBy(d => d.Machine, StringComparer.OrdinalIgnoreCase).Where(x => x.Count() > 1))
+            yield return $"machine {dup.Key} is listed twice: two drivers reading one machine send everything twice.";
+
+        foreach (var d in o.Devices)
+        {
+            var m = string.IsNullOrWhiteSpace(d.Machine) ? "(no machine)" : d.Machine;
+            if (string.IsNullOrWhiteSpace(d.Machine)) yield return "every device needs machine (= Machine.MqttTopicKey).";
+            if (!Protocols.Supported.Contains(d.Protocol))
+            {
+                yield return $"{m}: protocol '{d.Protocol}' is not supported (supported: {string.Join(", ", Protocols.Supported)}).";
+                continue;
+            }
+            if (d.Tags.Count == 0) yield return $"{m}: no tags.";
+            foreach (var dup in d.Tags.GroupBy(t => t.Name, StringComparer.OrdinalIgnoreCase).Where(x => x.Count() > 1))
+                yield return $"{m}: tag {dup.Key} is listed twice.";
+            foreach (var dup in d.Tags.Where(t => t.Kind != TagKinds.Process).GroupBy(t => t.Kind).Where(x => x.Count() > 1))
+                yield return $"{m}: only one {dup.Key} tag per machine.";
+
+            if (d.Protocol == Protocols.OpcUa)
+                foreach (var e in OpcUaErrors(m, d)) yield return e;
+            foreach (var t in d.Tags)
+                foreach (var e in TagErrors(m, t)) yield return e;
+        }
+    }
+
+    private static IEnumerable<string> OpcUaErrors(string m, DeviceOptions d)
+    {
+        if (!Uri.TryCreate(d.Endpoint, UriKind.Absolute, out var uri) || uri.Scheme != "opc.tcp")
+            yield return $"{m}: endpoint must be an opc.tcp:// URL (was '{d.Endpoint}').";
+        if (d.PublishingMs <= 0) yield return $"{m}: publishingMs must be > 0.";
+        foreach (var t in d.Tags)
+        {
+            if (string.IsNullOrWhiteSpace(t.NodeId)) yield return $"{m}.{t.Name}: nodeId is required.";
+            else if (!IsNodeId(t.NodeId)) yield return $"{m}.{t.Name}: nodeId '{t.NodeId}' is not valid (e.g. nsu=urn:...;s=Reflow.PeakTemp).";
+            if (t.SamplingMs <= 0) yield return $"{m}.{t.Name}: samplingMs must be > 0.";
+            if (t.SamplingMs > d.PublishingMs) yield return $"{m}.{t.Name}: samplingMs must be <= publishingMs ({d.PublishingMs}).";
+        }
+    }
+
+    private static IEnumerable<string> TagErrors(string m, TagOptions t)
+    {
+        if (string.IsNullOrWhiteSpace(t.Name)) yield return $"{m}: every tag needs a name.";
+        if (!TagKinds.All.Contains(t.Kind)) yield return $"{m}.{t.Name}: kind '{t.Kind}' is not one of {string.Join(", ", TagKinds.All)}.";
+        if (t.Deadband is < 0) yield return $"{m}.{t.Name}: deadband must be >= 0.";
+        if (t.Kind == TagKinds.State)
+        {
+            if (t.Map.Count == 0) yield return $"{m}.{t.Name}: a state tag needs map (PLC code -> Running, Idle, Down, Setup, PlannedStop).";
+            foreach (var (code, state) in t.Map)
+                // Offline is the MES's conclusion (no heartbeat, status offline), never a value read from a machine.
+                if (!Enum.TryParse<MachineState>(state, ignoreCase: false, out var s) || s == MachineState.Offline || int.TryParse(state, out _))
+                    yield return $"{m}.{t.Name}: map {code} -> '{state}' is not a machine state.";
+        }
+    }
+
+    private static bool IsNodeId(string text)
+    {
+        try { return !ExpandedNodeId.Parse(text).IsNull; }
+        catch (ServiceResultException) { return false; }
+        catch (ArgumentException) { return false; }
+    }
+}

@@ -6,6 +6,7 @@
     <Project Path="src/MiniMes.Client.Core/MiniMes.Client.Core.csproj" />
     <Project Path="src/MiniMes.Contracts/MiniMes.Contracts.csproj" />
     <Project Path="src/MiniMes.Domain/MiniMes.Domain.csproj" />
+    <Project Path="src/MiniMes.EdgeGateway/MiniMes.EdgeGateway.csproj" />
     <Project Path="src/MiniMes.Infrastructure/MiniMes.Infrastructure.csproj" />
     <Project Path="src/MiniMes.Kiosk.Wpf/MiniMes.Kiosk.Wpf.csproj" />
     <Project Path="src/MiniMes.MachineSimulator/MiniMes.MachineSimulator.csproj" />

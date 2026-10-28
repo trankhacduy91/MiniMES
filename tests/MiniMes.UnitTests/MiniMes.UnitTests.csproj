@@ -22,6 +22,8 @@
     <ProjectReference Include="..\..\src\MiniMes.Application\MiniMes.Application.csproj" />
     <ProjectReference Include="..\..\src\MiniMes.Contracts\MiniMes.Contracts.csproj" />
     <ProjectReference Include="..\..\src\MiniMes.Client.Core\MiniMes.Client.Core.csproj" />
+    <!-- M4b: the gateway's pure functions (config validation, backoff, register decoding) are unit-tested here (spec M4b step 3). -->
+    <ProjectReference Include="..\..\src\MiniMes.EdgeGateway\MiniMes.EdgeGateway.csproj" />
   </ItemGroup>
 
 </Project>

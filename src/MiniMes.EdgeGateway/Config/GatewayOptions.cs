@@ -1,0 +1,73 @@
+namespace MiniMes.EdgeGateway.Config;
+
+// Spec M4b 2.6: gateway.tags.json. The tag configuration lives in the gateway, not in the MES database (rule G2):
+// the gateway must start and keep reading the machines while the MES or the network is down.
+public sealed class GatewayOptions
+{
+    public GatewayIdentity Gateway { get; set; } = new();
+    public OpcUaClientOptions OpcUa { get; set; } = new();
+    public List<DeviceOptions> Devices { get; set; } = [];
+}
+
+// Where the gateway's machines sit in the Unified Namespace (minimes/{site}/{area}/{line}/...): must match the seeded
+// master data, like the simulator's machines.json.
+public sealed class GatewayIdentity
+{
+    public string Id { get; set; } = "";
+    public string Site { get; set; } = "";
+    public string Area { get; set; } = "";
+    public string Line { get; set; } = "";
+}
+
+public sealed class OpcUaClientOptions
+{
+    // null = only in Development (Program.cs). Accepting any server certificate in production is a security hole
+    // (spec 2.3, trap 4): there the server's certificate is copied into pki/trusted by hand.
+    public bool? AutoAcceptUntrustedCertificates { get; set; }
+    public string PkiPath { get; set; } = "pki";   // relative to the exe folder; a fixed place, mounted as a volume in Docker
+    public int KeepAliveMs { get; set; } = 2000;    // a dead server is noticed after about two missed keep-alives
+}
+
+public static class Protocols
+{
+    public const string OpcUa = "opcua";
+    public static readonly string[] Supported = [OpcUa];   // modbus: step 3
+}
+
+// One machine read by the gateway. Machine = Machine.MqttTopicKey of the MES (rule G3): a wrong code is data lost
+// silently, because the ingest drops messages of unknown machines.
+public sealed class DeviceOptions
+{
+    public string Machine { get; set; } = "";
+    public string Protocol { get; set; } = "";
+
+    // OPC UA
+    public string Endpoint { get; set; } = "";
+    public int PublishingMs { get; set; } = 1000;   // the server sends the gathered changes this often
+
+    public List<TagOptions> Tags { get; set; } = [];
+}
+
+public static class TagKinds
+{
+    public const string Count = "count";
+    public const string State = "state";
+    public const string Alarm = "alarm";
+    public const string Process = "process";
+    public static readonly string[] All = [Count, State, Alarm, Process];
+}
+
+public sealed class TagOptions
+{
+    public string Name { get; set; } = "";
+    public string Kind { get; set; } = "";
+
+    // OPC UA: "nsu=<namespace URI>;s=..." is preferred over "ns=2;s=...": the index can change with the server's
+    // firmware, the URI cannot (both work).
+    public string NodeId { get; set; } = "";
+    public int SamplingMs { get; set; } = 1000;     // how often the server samples the source (<= publishing interval)
+    public double? Deadband { get; set; }           // absolute; the server drops smaller changes (rule G10)
+
+    // state: the PLC's code -> MachineState name of the M4 contract ("1": "Running").
+    public Dictionary<string, string> Map { get; set; } = [];
+}

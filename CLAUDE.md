@@ -51,7 +51,8 @@ tests/MiniMes.UnitTests, tests/MiniMes.IntegrationTests
   - Infrastructure → Application
   - Api → Application, Infrastructure (Infrastructure chỉ để đăng ký DI)
   - Client.Core → Contracts; BackOffice.Wpf, Kiosk.Wpf → Client.Core (WPF không bao giờ thấy Domain/Application/Infrastructure → không thể nối DB)
-  - UnitTests → Domain, Application, Client.Core; IntegrationTests → Api, Infrastructure
+  - MachineSimulator, EdgeGateway → Contracts (chương trình riêng, chỉ chung hợp đồng MQTT với MES)
+  - UnitTests → Domain, Application, Client.Core, EdgeGateway (hàm thuần của gateway, spec M4b); IntegrationTests → Api, Infrastructure
 - Giữ chiều phụ thuộc bằng `tests/MiniMes.UnitTests/Architecture/DependencyTests.cs`. Không tạo project `Common`/`Shared`; không thêm project ngoài danh sách trên khi chưa hỏi.
 - Khung `OpenMES.*` (net9.0, có RabbitMQ) là bản tạo trước khi chốt spec: xóa ở M0 bước 1, không sửa tiếp.
 

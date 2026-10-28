@@ -31,6 +31,10 @@ public class DependencyTests
         // The simulator plays the machines: it knows only the shared contract (MQTT now, the kiosk's HTTP API in step 9).
         new("MiniMes.MachineSimulator", ["MiniMes.Contracts"],
             ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient"]),
+        // M4b: the edge gateway is a program on its own next to the machines; it shares only the MQTT contract with
+        // the MES and must run while the MES and its database are down (spec M4b 2.1, rule G2).
+        new("MiniMes.EdgeGateway", ["MiniMes.Contracts"],
+            ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient"]),
     ];
 
     public static TheoryData<string> ProjectNames
