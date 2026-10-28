@@ -13,7 +13,8 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 - **M1 (master data) xong:** Item, BOM đa cấp có version, routing, work center/máy, ca, lịch nhà máy, mã lỗi, lý do dừng; explode BOM bằng recursive CTE; import Excel; màn hình WPF Back-office. Xem [mục Master data](#master-data-m1).
 - **M2 (work order) xong:** tạo WO có preview NVL, Release (chụp BOM/routing + sinh serial trong một transaction, không trùng khi release đồng thời), state machine Hold/Resume/Complete/Close/Cancel, Priority + dispatch list theo line, nhãn ZPL (Code128 + DataMatrix) xem trước qua Labelary và log in lại. Xem [mục Work order](#work-order-m2).
 - **M3 (shop floor) xong:** scan serial tại trạm với route check (chặn nhảy bước, bo NG, bo Hold), chống scan lặp và scan đồng thời, cổng FAI, phiên trạm, Repair/Rework/Scrap; Kiosk WPF toàn màn hình cho máy quét mã vạch (NG + mã lỗi, form sửa chữa, SOP, offline); báo cáo FPY/RTY/WIP; đo hiệu năng trên 10 triệu dòng log (p95 24,8 ms). Xem [mục Shop floor](#shop-floor-m3) và [Performance](#performance).
-- Các module tiếp theo (M4 → M7) làm theo [lộ trình](spec/spec-v2.md).
+- **M4 (kết nối máy) xong:** MQTT (Mosquitto, topic UNS ISA-95) → ingest chống trùng, bộ đếm tích lũy, batch writer; Offline tách khỏi Down (heartbeat + LWT); SignalR realtime có throttle; Andon raise/ack/resolve + tự raise + leo thang; dashboard line WPF và nút Andon trên Kiosk; simulator vai máy + vai trạm tự động. Xem [mục Machine connectivity](#machine-connectivity-m4).
+- Các module tiếp theo (M4b → M7) làm theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
 
@@ -122,6 +123,7 @@ dotnet run --project src/MiniMes.Kiosk.Wpf        # trạm: gõ EMP00123 + Enter
 | `qc01` | `Demo@12345` | QC | BackOffice |
 | `mt01` | `Demo@12345` | Maintenance | BackOffice |
 | `EMP00123` | (không có, quẹt thẻ) | Operator | Kiosk |
+| `SIM-STATION` | (không có, quẹt thẻ) | Operator | Machine simulator (vai trạm tự động, scan ghi `Source = Machine`) |
 
 Tài khoản có mật khẩu không đăng nhập được bằng "quẹt thẻ" ở kiosk, và token kiosk chỉ mang role `Operator`.
 
@@ -136,10 +138,10 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | 3 | Kho nhập reel → QC làm IQC → lot `Available` | M6 | chưa làm |
 | 4 | Operator nạp reel lên máy SMT, MES kiểm tra đúng vật tư và FIFO | M6 | chưa làm |
 | 5 | FAI: serial đầu tiên qua hết các bước → QC duyệt → chạy hàng loạt | M2, M3, M7 | cổng FAI xong (M3); QC duyệt qua endpoint tạm, checklist FAI ở M7 |
-| 6 | Simulator: SMT qua MQTT, lò reflow OPC UA, máy dán keo Modbus (qua gateway) | M4, M4b | chưa làm |
+| 6 | Simulator: SMT qua MQTT, lò reflow OPC UA, máy dán keo Modbus (qua gateway) | M4, M4b | MQTT + trạm tự động xong (M4); OPC UA, Modbus ở M4b |
 | 7 | Operator scan trên kiosk, xem SOP; NG → Repair → Test lại → OK | M3 | xong |
 | 8 | Ngắt mạng gateway–broker 60 s → đệm → gửi bù, không mất bộ đếm | M4b | chưa làm |
-| 9 | Máy Down → Andon → quá 3 phút chưa Ack thì leo thang → chọn lý do dừng | M4, M5 | chưa làm |
+| 9 | Máy Down → Andon → quá 3 phút chưa Ack thì leo thang → chọn lý do dừng | M4, M5 | xong (M4); Pareto lý do dừng ở M5 |
 | 10 | Nhiệt độ reflow trôi → SPC báo vi phạm → NCR, Hold serial liên quan | M7 | chưa làm |
 | 11 | Trạm Pack: serial vào thùng 10 pcs → nhãn thùng → pallet | M3b | chưa làm |
 | 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M7 | chưa làm |
@@ -223,6 +225,37 @@ Những điểm đáng nói khi phỏng vấn:
 
 ![Form sửa chữa ở trạm Repair](docs/images/m3-kiosk-repair.png)
 
+## Machine connectivity (M4)
+
+![Dashboard line: ô máy theo state, Andon leo thang nhấp nháy](docs/images/m4-line-dashboard.png)
+
+**Chạy:** `docker compose up -d` (SQL Server + Mosquitto) → API → `dotnet run --project src/MiniMes.MachineSimulator` (thêm `-- --auto-operator` để simulator scan cả trạm thủ công Assembly/Pack) → BackOffice, menu **Line dashboard**. Lệnh simulator: `list`, `down L1-SMT-01 300`, `up`, `ng L1-TEST-01 1`, `reset`, `mute`/`unmute`, `dup`, `skew`, `tag L1-REFLOW-01 peakTemp 245.3` (gõ `help`).
+
+- **Vai máy (MQTT):** mỗi máy một client có LWT; `state` retained, `count` là bộ đếm tích lũy (QoS 1), `heartbeat` 5 giây.
+- **Vai trạm (HTTP):** máy SMT và Test lấy serial đang chờ ở bước của mình và gọi đúng `POST /api/stations/{id}/scan` của kiosk (badge `SIM-STATION`). Không có bo chờ thì máy chuyển `Idle`. Máy chỉ đếm khi scan được chấp nhận: Total Count (MQTT) và Good/NG (scan theo serial) kể cùng một câu chuyện ([ADR-007](ARCHITECTURE.md#adr-007-nguồn-dữ-liệu-oee-total-count-từ-máy-goodng-từ-scan-theo-serial)).
+- **Kiosk:** nút **ANDON** (chọn máy nếu trạm có nhiều máy, rồi loại sự cố), chip trạng thái máy của trạm và Andon đang mở.
+
+![Kiosk: Andon đã gửi, chip máy hiện trạng thái](docs/images/m4-kiosk-andon.png)
+
+Số đo (máy dev, 27/10/2026; DoD M4):
+
+| Đo gì | Kết quả | Yêu cầu |
+| --- | --- | --- |
+| Lệnh `down` → ô máy đỏ trên dashboard (UI Automation dò mỗi 50 ms) | 370 ms | < 2 s |
+| `RaisedAt` → client SignalR nhận `AndonChanged` (10 lần) | min 11 ms, TB 31 ms, max 186 ms | < 2 s |
+| Kill simulator → ô máy Offline (LWT + xác nhận 3 s) | 3,3 s | |
+| Máy chu kỳ 0,2 s → số đếm trên dashboard | 1 lần/giây/máy, UI không nghẽn | ≤ 1 lần/giây |
+| Tắt Mosquitto 2 phút (bước 5) | 0 máy bị Offline oan, máy về đúng state sau khi bật lại | không Offline oan |
+| Tắt Mosquitto 25 s (bước 2); chạy 5 phút có reset, `dup`, tắt SQL Server 20 s (bước 4) | message đầu sau khi nối lại mang đủ số; `SUM(Delta)` = counter cuối − đầu của simulator | không mất số đếm |
+
+| Việc | API |
+| --- | --- |
+| Snapshot dashboard | `GET /api/lines/{code}/status` (state, counter, số giờ này, tag process mới nhất, nguồn dữ liệu) |
+| Realtime | SignalR `/hubs/machines`: `JoinLine(code)`; event `MachineStateChanged`, `MachineCounterUpdated`, `MachineProcessUpdated`, `AndonChanged`, `AndonEscalated` |
+| Andon | `POST /api/andon` (Operator), `POST /api/andon/{id}/acknowledge`, `/resolve` `{ downtimeReasonId }`, `/cancel` (Supervisor, Maintenance), `GET /api/andon?status=open&line=L1`, `GET /api/andon/stats?from=&to=` |
+
+Những điểm đáng nói khi phỏng vấn: bộ đếm tích lũy + QoS 1 + chống trùng `msgId` (mất mạng không mất sản lượng); đường nóng (RAM + SignalR) tách đường lạnh (`Channel` + batch); Offline khác Down; snapshot REST + push SignalR + resync sau reconnect; Andon một bản mở mỗi (máy, loại) bằng filtered unique index, hai người cùng ack thì `RowVersion` cho một người 409. Ghi chú học theo từng bước ở [`docs/learning/`](docs/learning/).
+
 ## Performance
 
 Scan qua API, SQL Server 2022 trong Docker, `ScanLogs` **10 triệu dòng**, 8 luồng song song, máy i5-12400F / 16 GB / SSD. Chi tiết, plan và cách chạy lại ở [`docs/perf.md`](docs/perf.md).
@@ -241,7 +274,7 @@ Scan qua API, SQL Server 2022 trong Docker, `ScanLogs` **10 triệu dòng**, 8 l
 
 ```bash
 dotnet test tests/MiniMes.UnitTests          # nhanh, không cần Docker: Domain, ViewModel, ApiClient, luật kiến trúc
-dotnet test tests/MiniMes.IntegrationTests   # cần Docker: Testcontainers bật 1 SQL Server riêng, test xong tự xóa
+dotnet test tests/MiniMes.IntegrationTests   # cần Docker: Testcontainers bật SQL Server (+ 1 Mosquitto cho test MQTT), test xong tự xóa
 ```
 
 Integration test chạy API ở môi trường `Testing`: tự `MigrateAsync()` + seed trên DB mới, secret lấy từ biến môi trường (không đọc user-secrets). Docker không chạy thì test **fail**, không bị bỏ qua. CI (GitHub Actions) chạy cả hai, cộng build 2 app WPF trên Windows.

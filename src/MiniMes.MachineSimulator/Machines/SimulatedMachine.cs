@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MiniMes.Contracts.Machines;
 using MiniMes.MachineSimulator.Config;
 using MiniMes.MachineSimulator.Mqtt;
+using MiniMes.MachineSimulator.Stations;
 using MQTTnet.Protocol;
 
 namespace MiniMes.MachineSimulator.Machines;
@@ -10,11 +11,14 @@ namespace MiniMes.MachineSimulator.Machines;
 // One machine, like a PLC: a cycle loop (small state machine) and a separate heartbeat task (spec 2.8).
 // The counter is cumulative and keeps counting while nothing can be sent; the next count message carries the
 // new total, so the MES loses no production when the broker or the network is away (spec 2.3).
+// Step 9: a machine with a station also scans each board it makes at that station (AutoStationClient). No board
+// waiting = nothing to make: the machine goes Idle (starved) and looks again every few seconds.
 public sealed class SimulatedMachine
 {
     private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan CountMinInterval = TimeSpan.FromSeconds(1);   // at most 1 count msg/s
     private static readonly TimeSpan CountMaxInterval = TimeSpan.FromSeconds(30);  // at least every 30 s
+    private static readonly TimeSpan StarvedRetry = TimeSpan.FromSeconds(5);
 
     private readonly MachineOptions _cfg;
     private readonly string _site, _area;
@@ -39,9 +43,14 @@ public sealed class SimulatedMachine
     private DateTimeOffset? _downUntil;              // null while Down = until "up"
     private int _forceNg;
     private bool _duplicateNext;
+    private readonly AutoStationClient? _station;
+    private bool _starved;                           // Idle because no board waits (not an Idle from the console)
+    private DateTimeOffset _retryAt;
 
-    public SimulatedMachine(SimulatorOptions sim, MachineOptions cfg, Random rng, MachinePublisher publisher, TimeProvider clock, ILogger log)
+    public SimulatedMachine(SimulatorOptions sim, MachineOptions cfg, Random rng, MachinePublisher publisher, TimeProvider clock, ILogger log,
+        AutoStationClient? station = null)
     {
+        _station = station;
         _cfg = cfg;
         (_site, _area) = (sim.Site, sim.Area);
         _cycle = TimeSpan.FromSeconds(cfg.CycleTimeSec);
@@ -74,6 +83,7 @@ public sealed class SimulatedMachine
                 var now = _clock.GetUtcNow();
                 if (_state == MachineState.Running && now >= _nextCycleAt) await CompleteCycleAsync(now, ct);
                 else if (_state == MachineState.Down && _downUntil is { } until && now >= until) await ChangeStateAsync(MachineState.Running, ct);
+                else if (_state == MachineState.Idle && _starved && now >= _retryAt) await RetryStarvedAsync(now, ct);
 
                 await FlushCountAsync(force: false, ct);
                 _snapshot = TakeSnapshot();
@@ -111,9 +121,45 @@ public sealed class SimulatedMachine
 
         bool ng;
         if (_forceNg > 0) { ng = true; _forceNg--; } else ng = _rng.NextDouble() < _cfg.NgProb;
+        if (_station is not null && !await ScanNextBoardAsync(ng, now, ct))
+        {
+            if (ng) _forceNg++;                               // a forced NG is kept for the next real board
+            return;
+        }
         _counter++;                                           // cumulative: never goes down, except "reset"
         if (ng) { _ng++; _pendingNg++; } else { _good++; _pendingGood++; }
         _countChanged = true;
+    }
+
+    // The board is counted only once the MES accepted the scan: no serial, an unreachable API or a Blocked answer
+    // (route check) make no product, so the counter (MQTT) and the scans (Good/NG of OEE) tell the same story.
+    private async Task<bool> ScanNextBoardAsync(bool ng, DateTimeOffset now, CancellationToken ct)
+    {
+        if (await _station!.NextSerialAsync(ct) is { } serial
+            && await _station.ScanAsync(serial, ng, ct) is { Result: not "Blocked" })
+            return true;
+        await StarveAsync(now, ct);
+        return false;
+    }
+
+    private async Task StarveAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        _retryAt = now + StarvedRetry;
+        if (_starved) return;
+        _starved = true;
+        _log.LogInformation("{Machine}: no board waiting at {Station}, starved", Code, _station!.StationCode);
+        await ChangeStateAsync(MachineState.Idle, ct);
+    }
+
+    private async Task RetryStarvedAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        if (await _station!.NextSerialAsync(ct) is null)
+        {
+            _retryAt = now + StarvedRetry;
+            return;
+        }
+        _starved = false;
+        await ChangeStateAsync(MachineState.Running, ct);
     }
 
     private async Task ApplyAsync(MachineCommand command, CancellationToken ct)
@@ -121,9 +167,11 @@ public sealed class SimulatedMachine
         switch (command)
         {
             case GoDown d:
+                _starved = false;                              // the console decides the state now
                 await GoDownAsync(d.Seconds, "E999", ct);       // E999: forced from the console
                 break;
             case ChangeState c:
+                _starved = false;                              // e.g. "stop" while starved: stays PlannedStop
                 await ChangeStateAsync(c.State, ct);
                 break;
             case ForceNg n:

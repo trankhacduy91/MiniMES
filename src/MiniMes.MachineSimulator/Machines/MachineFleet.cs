@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MiniMes.Contracts.Machines;
 using MiniMes.MachineSimulator.Config;
 using MiniMes.MachineSimulator.Mqtt;
+using MiniMes.MachineSimulator.Stations;
 
 namespace MiniMes.MachineSimulator.Machines;
 
@@ -11,7 +12,7 @@ public sealed class MachineFleet : BackgroundService
 {
     private readonly ILogger<MachineFleet> _log;
 
-    public MachineFleet(SimulatorOptions options, TimeProvider clock, ILoggerFactory loggers)
+    public MachineFleet(SimulatorOptions options, TimeProvider clock, ILoggerFactory loggers, StationClients stations)
     {
         _log = loggers.CreateLogger<MachineFleet>();
         var machineLog = loggers.CreateLogger<SimulatedMachine>();
@@ -21,7 +22,8 @@ public sealed class MachineFleet : BackgroundService
         {
             var status = MachineTopic.Build(options.Site, options.Area, m.Line, m.Code, MachineKinds.Status);
             var publisher = new MachinePublisher(options.Mqtt, m.Code, status, clock, mqttLog);
-            return new SimulatedMachine(options, m, new Random(options.Seed + i), publisher, clock, machineLog);
+            var rng = new Random(options.Seed + i);
+            return new SimulatedMachine(options, m, rng, publisher, clock, machineLog, m.Station is { } st ? stations.Create(st, rng) : null);
         }).ToList();
     }
 

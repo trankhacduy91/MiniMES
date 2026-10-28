@@ -54,6 +54,26 @@ public class ProcessValueTests(ApiFixture api)
         Assert.Equal((-32768d, DataQuality.Bad), (rows[10].Value, rows[10].Quality));
     }
 
+    // Step 9: after an API restart the dashboard still shows each tag's latest reading (a gateway sends on change only).
+    // Latest by SourceTs, not by insert order: a late reading stored last must not win.
+    [Fact]
+    public async Task Loader_restores_the_latest_reading_of_each_tag()
+    {
+        var tag = await NewTagAsync();
+        var before = new MachineRuntimeStore();
+        await WriteAsync(
+            before.ApplyProcess(tag, Reading(241, T0), T0).Item!,
+            before.ApplyProcess(tag, Reading(-32768, T0.AddSeconds(10)), T0.AddSeconds(10)).Item!);
+        await WriteAsync(before.ApplyProcess(tag, Reading(239, T0.AddSeconds(5)), T0.AddSeconds(20)).Item!);   // arrived late
+
+        var after = new MachineRuntimeStore();   // "restart"
+        await MachineRuntimeLoader.LoadAsync(Scopes, after, default);
+
+        var reading = Assert.Single(after.Get(tag.MachineId)!.Process);
+        Assert.Equal((tag.TagName, -32768d, DataQuality.Bad, T0.AddSeconds(10)), (reading.Tag, reading.Value, reading.Quality, reading.SourceTs));
+        Assert.Empty(after.TakeDirty(T0).Process);   // restored, not new: nothing to push
+    }
+
     // 30 days kept, deleted in chunks of 5,000: 12,000 old rows take 3 statements, newer rows stay.
     [Fact]
     public async Task Retention_deletes_rows_older_than_30_days_in_chunks()

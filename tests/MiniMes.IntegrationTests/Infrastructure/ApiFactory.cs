@@ -8,8 +8,9 @@ using MiniMes.Infrastructure.Persistence;
 
 namespace MiniMes.IntegrationTests.Infrastructure;
 
-// Runs the real API in memory against the container DB.
-public sealed class ApiFactory(SqlServerFixture sql) : WebApplicationFactory<Program>
+// Runs the real API in memory against the container DB. With mqttPort (M4 step 9) the MQTT ingest and its
+// background services run too, against the test broker on localhost.
+public sealed class ApiFactory(SqlServerFixture sql, int? mqttPort = null) : WebApplicationFactory<Program>
 {
     public const string JwtKey = "integration-test-key-at-least-32-chars!";
 
@@ -19,7 +20,9 @@ public sealed class ApiFactory(SqlServerFixture sql) : WebApplicationFactory<Pro
         // (same mechanism as CI). Set before the host is built, i.e. before Program.cs reads config.
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", sql.ConnectionString);
         Environment.SetEnvironmentVariable("Jwt__Key", JwtKey);
-        Environment.SetEnvironmentVariable("Mqtt__Enabled", "false"); // no broker here: the ingest stays off
+        Environment.SetEnvironmentVariable("Mqtt__Enabled", mqttPort is null ? "false" : "true"); // no broker: ingest off
+        Environment.SetEnvironmentVariable("Mqtt__Host", "localhost");
+        Environment.SetEnvironmentVariable("Mqtt__Port", (mqttPort ?? 1883).ToString(System.Globalization.CultureInfo.InvariantCulture));
         builder.UseEnvironment("Testing"); // Program.cs: Testing -> MigrateAsync + seed
         // Tests never call the public Labelary service: a fake records the ZPL and returns a tiny PNG.
         builder.ConfigureTestServices(services =>

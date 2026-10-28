@@ -50,6 +50,15 @@ public sealed class MachineRuntimeStore(PlantTimeZone? plant = null)
             HourStart = hourStart, HourCount = hourCount,
         };
 
+    // Step 9: latest reading of a tag, loaded from the database at startup. Not dirty: nothing new to push.
+    public void SeedProcess(MachineTag tag, double value, DomainQuality quality, DateTime sourceTs)
+    {
+        var r = _machines.GetOrAdd(tag.MachineId, _ => new Runtime());
+        lock (r)
+            if (!r.Process.TryGetValue(tag.TagName, out var shown) || sourceTs >= shown.SourceTs)
+                r.Process[tag.TagName] = new ProcessReading(tag.TagName, tag.Unit, value, quality, sourceTs);
+    }
+
     public DateTime HourStartUtc(DateTime utc)
         => plant?.HourStartUtc(utc) ?? new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, 0, 0, DateTimeKind.Utc);
 

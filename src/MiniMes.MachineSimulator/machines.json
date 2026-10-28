@@ -5,12 +5,21 @@
   "area": "SMT-ASSY",
   "seed": 42,
   "mqtt": { "host": "localhost", "port": 1883, "heartbeatSec": 5 },
+  // Station role (step 9): same API as the kiosk; SIM-STATION is a seeded Operator badge without password.
+  "api": { "baseUrl": "http://localhost:5157", "badge": "SIM-STATION" },
   "machines": [
     { "code": "L1-SMT-01", "line": "L1", "cycleTimeSec": 12, "initialCounter": 15000,
-      "downProbPerCycle": 0.002, "downDurationSec": [30, 180], "ngProb": 0.01, "alarmCodes": ["E205", "E310"] },
+      "downProbPerCycle": 0.002, "downDurationSec": [30, 180], "ngProb": 0.01, "alarmCodes": ["E205", "E310"],
+      "station": { "code": "L1-SMT-01", "mode": "Auto" } },
     { "code": "L1-REFLOW-01", "line": "L1", "cycleTimeSec": 12, "initialCounter": 8000,
       "downProbPerCycle": 0.001, "downDurationSec": [60, 300], "ngProb": 0.0, "alarmCodes": ["T101"] },
     { "code": "L1-TEST-01", "line": "L1", "cycleTimeSec": 8, "initialCounter": 0,
-      "downProbPerCycle": 0.001, "downDurationSec": [20, 90], "ngProb": 0.03, "clockSkewSec": 0, "alarmCodes": ["F404"] }
+      "downProbPerCycle": 0.001, "downDurationSec": [20, 90], "ngProb": 0.03, "clockSkewSec": 0, "alarmCodes": ["F404"],
+      "station": { "code": "L1-TEST-01", "mode": "AutoTest", "defectCodes": ["FUN-NOPWR", "SLD-BRG", "CMP-MIS"] } }
+  ],
+  // Manual stations scanned by the simulator only when started with --auto-operator.
+  "autoOperators": [
+    { "station": "L1-ASM-01", "cycleTimeSec": 10 },
+    { "station": "L1-PACK-01", "cycleTimeSec": 10 }
   ]
 }

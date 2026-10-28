@@ -10,6 +10,8 @@ Mỗi quyết định ghi theo khung ADR (Architecture Decision Record): bối c
 | [ADR-004](#adr-004-auditlog-chặn-sửaxóa-bằng-trigger) | `AuditLog` chặn sửa/xóa bằng trigger | 10/2026 |
 | [ADR-005](#adr-005-explode-bom-bằng-recursive-cte-cây-bom-dựng-trong-bộ-nhớ) | Explode BOM bằng recursive CTE, cây BOM dựng trong bộ nhớ | 10/2026 |
 | [ADR-006](#adr-006-bom-và-routing-có-version-draft--approved-hiệu-lực-nửa-mở) | BOM và Routing có version: Draft → Approved, hiệu lực nửa mở | 10/2026 |
+| [ADR-007](#adr-007-nguồn-dữ-liệu-oee-total-count-từ-máy-goodng-từ-scan-theo-serial) | Nguồn dữ liệu OEE: Total Count từ máy, Good/NG từ scan theo serial | 10/2026 |
+| [ADR-008](#adr-008-dữ-liệu-máy-đi-qua-mqtt-hợp-đồng-chung-cho-mọi-giao-thức) | Dữ liệu máy đi qua MQTT, hợp đồng chung cho mọi giao thức | 10/2026 |
 
 ---
 
@@ -141,3 +143,44 @@ Integration test (Testcontainers SQL Server) so CTE với bảng của spec (202
 - *Hiệu lực theo ngày (`date`, giờ địa phương):* đơn giản hơn nhưng không đúng với ca đêm qua nửa đêm và lệch với quy ước UTC toàn dự án.
 
 **Đánh đổi / giới hạn.** Thêm thao tác cho người dùng (New version → sửa → Approve thay vì sửa trực tiếp), đúng với yêu cầu kiểm soát thay đổi ở nhà máy. MVP chưa có phê duyệt hai người (người tạo khác người duyệt) và chưa có "alternate BOM" theo khách hàng; cả hai thêm được trên khung này.
+
+---
+
+## ADR-007: Nguồn dữ liệu OEE: Total Count từ máy, Good/NG từ scan theo serial
+
+**Bối cảnh.** OEE = Availability × Performance × Quality (M5). Performance cần **tổng số sản phẩm máy làm ra**; Quality cần **số tốt / số hỏng**. Trong dự án có hai nguồn cùng nói về sản lượng: (1) bộ đếm của máy gửi qua MQTT (`counter`, kèm `goodDelta`/`ngDelta` do máy tự phân loại), (2) kết quả scan từng serial ở trạm (M3: OK/NG + mã lỗi, qua route check). Hai nguồn **không bao giờ khớp tuyệt đối**: máy đếm cả bo chạy thử, bo bị gạt ra trước khi scan; scan đi trễ hơn máy; một bo NG ở Test là do lỗi ở SMT chứ không phải ở máy test. Nếu mỗi báo cáo lấy một nguồn, OEE, FPY và báo cáo chất lượng sẽ tự mâu thuẫn.
+
+**Quyết định.**
+
+1. **Total Count = bộ đếm tích lũy của máy (MQTT).** `MachineEvents.Delta` tính bằng `CounterMath` (xử lý reset, mất message không mất số, ADR-008). Đây là nhịp thật của máy: Performance = Total Count × Ideal Cycle Time / Run Time.
+2. **Good/NG = kết quả scan theo serial (M3).** Một nguồn sự thật cho chất lượng là **serial**: cùng dữ liệu cho Quality của OEE, FPY/RTY, truy xuất và Repair. NG có mã lỗi, có người/máy scan, có route check.
+3. **`goodDelta`/`ngDelta` của máy chỉ để đối chiếu** (cảnh báo khi lệch nhiều: máy báo NG mà không có scan NG nào → trạm bỏ sót scan), **không bao giờ** vào công thức OEE.
+4. Simulator đi đúng đường đó (M4 bước 9): máy **có trạm** (SMT, Test) chỉ tăng bộ đếm khi bo đã được MES chấp nhận scan (`AutoStationClient`), không tự bịa serial hay kết quả; máy không có trạm (lò reflow) chỉ đếm.
+
+**Phương án đã loại.**
+- *Tất cả từ máy (counter + good/ng của máy):* không có serial, không có mã lỗi, không truy xuất được; máy test NG nhưng lỗi do SMT thì quy sai cho trạm.
+- *Tất cả từ scan:* trạm thủ công scan trễ hoặc gom, Performance theo phút sai; máy không có trạm scan (lò reflow) thì không có số.
+- *Lấy trung bình/ưu tiên tùy báo cáo:* mỗi màn hình một con số, mất niềm tin vào hệ thống.
+
+**Đánh đổi / giới hạn.** Quality của OEE và Performance tính từ hai nguồn khác nhau, nên Good có thể > Total trong một khoảng ngắn (scan đến trước count) → M5 phải tính trên khoảng thời gian đủ dài (ca) và kẹp tỉ lệ ≤ 100 %. Máy không có trạm scan chỉ có Total Count; Quality lấy theo serial ở trạm kiểm tra cuối của line.
+
+---
+
+## ADR-008: Dữ liệu máy đi qua MQTT, hợp đồng chung cho mọi giao thức
+
+**Bối cảnh.** Máy nói nhiều giao thức (PLC Mitsubishi/Omron/Siemens, OPC UA, Modbus TCP, giao thức hãng). Mạng xưởng chập chờn; MES phải restart để cập nhật; một máy chết không được kéo theo cả hệ thống. Cần đường dữ liệu chịu được mất kết nối, không mất sản lượng, và MES không phải biết từng giao thức.
+
+**Quyết định.**
+
+1. Máy (hoặc **Edge Gateway**, M4b, cho máy OPC UA/Modbus) phát **MQTT** lên **Mosquitto** theo **một hợp đồng** (`MiniMes.Contracts/Machines`): topic Unified Namespace ISA-95 `minimes/{site}/{area}/{line}/{machine}/{kind}`, JSON có `msgId`, `ts` UTC, `source`, `quality`.
+2. **Bộ đếm tích lũy**, không gửi "+1": mất message chỉ mất độ mịn, message kế tiếp mang tổng mới. **QoS 1** cho state/count/alarm, QoS 0 cho heartbeat; chống trùng bằng cache `msgId` + unique index (QoS 1 = ít nhất một lần).
+3. `state` **retained**: ingest khởi động lại nhận ngay trạng thái hiện tại. **LWT** `status = offline` + heartbeat 30 giây để phân biệt **Offline** (MES không nghe thấy máy) với **Down** (máy báo lỗi).
+4. Ingest là `BackgroundService` trong API: đường nóng (RAM, SignalR, < 2 giây) tách đường lạnh (`Channel` + batch writer vào SQL Server).
+
+**Phương án đã loại.**
+- *MES gọi thẳng PLC (OPC UA client / Modbus master trong MES):* mỗi giao thức một driver trong MES; MES restart là mất kết nối tất cả máy; không có bộ đệm khi mạng đứt.
+- *Máy tự gọi HTTP POST vào MES:* MES tắt là mất message; máy nào cũng phải biết địa chỉ và token của MES; không có retained/LWT.
+- *Sparkplug B:* chuẩn công nghiệp trên MQTT nhưng payload protobuf và quy ước birth/death khó đọc khi học; giữ được hợp đồng hiện tại và thêm lớp chuyển đổi ở gateway khi cần.
+
+**Đánh đổi / giới hạn.** Thêm một thành phần phải vận hành (broker) và một điểm có thể hỏng (gateway). Dev chạy `allow_anonymous`; production cần user/password hoặc chứng chỉ + TLS và ACL theo topic. Một instance ingest (`ClientId` cố định); scale ngang cần shared subscription (MQTT 5) và chuyển runtime store sang Redis.
+

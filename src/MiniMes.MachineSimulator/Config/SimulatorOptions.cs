@@ -8,7 +8,10 @@ public sealed class SimulatorOptions
     public string Area { get; set; } = "";
     public int Seed { get; set; } = 42;               // same seed, same demo: a bug seen once can be replayed
     public MqttOptions Mqtt { get; set; } = new();
+    public ApiOptions? Api { get; set; }              // station role (step 9); without it the machines only talk MQTT
     public List<MachineOptions> Machines { get; set; } = [];
+    // Manual stations (Assembly, Pack) scanned by the simulator only with --auto-operator; otherwise people use the kiosk.
+    public List<AutoOperatorOptions> AutoOperators { get; set; } = [];
 
     public IEnumerable<string> Validate()
     {
@@ -25,7 +28,18 @@ public sealed class SimulatorOptions
                 yield return $"{m.Code}: downDurationSec must be [min, max] seconds.";
             if (m.AlarmCodes.Length == 0) yield return $"{m.Code}: alarmCodes needs at least one code.";
             if (m.NgProb is < 0 or > 1 || m.DownProbPerCycle is < 0 or > 1) yield return $"{m.Code}: probabilities must be in 0..1.";
+            if (m.Station is { } st)
+            {
+                if (string.IsNullOrWhiteSpace(st.Code)) yield return $"{m.Code}: station.code is required.";
+                if (st.Mode == StationMode.AutoTest && st.DefectCodes.Length == 0)
+                    yield return $"{m.Code}: station mode AutoTest needs defectCodes for its NG boards.";
+            }
         }
+        foreach (var o in AutoOperators)
+            if (string.IsNullOrWhiteSpace(o.Station) || o.CycleTimeSec <= 0) yield return "every autoOperator needs station and cycleTimeSec > 0.";
+        if ((Machines.Any(m => m.Station is not null) || AutoOperators.Count > 0)
+            && !Uri.TryCreate(Api?.BaseUrl, UriKind.Absolute, out _))
+            yield return "api.baseUrl is required when a machine has a station or autoOperators are listed.";
     }
 }
 
@@ -34,6 +48,30 @@ public sealed class MqttOptions
     public string Host { get; set; } = "localhost";
     public int Port { get; set; } = 1883;
     public int HeartbeatSec { get; set; } = 5;
+}
+
+// Step 9: the API the station role calls, like the kiosk. The badge is a seeded Operator without a password
+// (DevSeeder.SimulatorBadge): no secret in this file.
+public sealed class ApiOptions
+{
+    public string BaseUrl { get; set; } = "";
+    public string Badge { get; set; } = "SIM-STATION";
+}
+
+// Auto = always OK (a placement machine does not judge the board); AutoTest = the tester's verdict, NG with a defect.
+public enum StationMode { Auto, AutoTest }
+
+public sealed class StationOptions
+{
+    public string Code { get; set; } = "";
+    public StationMode Mode { get; set; } = StationMode.Auto;
+    public string[] DefectCodes { get; set; } = [];     // seeded codes; one is picked for each NG board
+}
+
+public sealed class AutoOperatorOptions
+{
+    public string Station { get; set; } = "";
+    public double CycleTimeSec { get; set; } = 10;
 }
 
 public sealed class MachineOptions
@@ -49,4 +87,5 @@ public sealed class MachineOptions
     public double NgProb { get; set; }
     public int ClockSkewSec { get; set; }              // a PLC whose clock is off; also settable by the "skew" command
     public string[] AlarmCodes { get; set; } = [];        // one is picked when the machine goes Down by itself
+    public StationOptions? Station { get; set; }          // step 9: this machine also scans each board at that station
 }

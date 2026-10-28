@@ -10,6 +10,8 @@ namespace MiniMes.Infrastructure.Machines;
 // Without it the first count after a restart is a mere baseline (delta 0) and the production since the last stored
 // count is lost; and the first state message would look like a change and split the open segment.
 // Step 8: also what each machine made in the current plant hour, so the tile does not restart from 0 after a restart.
+// Step 9: and the latest reading of every active tag: a gateway sends on change only (deadband), so a stable oven
+// temperature may not come again for a long time, and the dashboard would show nothing until it does.
 public static class MachineRuntimeLoader
 {
     public static async Task<int> LoadAsync(IServiceScopeFactory scopes, MachineRuntimeStore store, CancellationToken ct)
@@ -42,6 +44,16 @@ public static class MachineRuntimeLoader
             store.Seed(machineId, segment?.Item1, segment?.Item2, count?.Counter, count?.MachineTs,
                 thisHour.ContainsKey(machineId) ? hour : null, thisHour.GetValueOrDefault(machineId));
         }
+        // Newest reading per tag (index (MachineTagId, SourceTs)); only the 30 days the retention job keeps.
+        var latest = await (
+            from t in db.MachineTags.AsNoTracking()
+            where t.IsActive
+            let v = db.ProcessValues.Where(p => p.MachineTagId == t.Id).OrderByDescending(p => p.SourceTs).ThenByDescending(p => p.Id).FirstOrDefault()
+            where v != null
+            select new { Tag = t, v.Value, v.Quality, v.SourceTs })
+            .ToListAsync(ct);
+        foreach (var r in latest) store.SeedProcess(r.Tag, r.Value, r.Quality, r.SourceTs);
+
         return machineIds.Count;
     }
 }

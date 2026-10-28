@@ -8,6 +8,19 @@ namespace MiniMes.IntegrationTests;
 [Collection(ApiCollection.Name)]
 public class AuthTests(ApiFixture api)
 {
+    // M4 step 9: the machine simulator logs in with its own badge (no password), like an operator at a kiosk.
+    [Fact]
+    public async Task Simulator_badge_logs_in_as_an_operator_at_a_station()
+    {
+        var response = await api.Anonymous().PostAsJsonAsync("/api/auth/login-operator",
+            new OperatorLoginRequest(MiniMes.Infrastructure.Persistence.DevSeeder.SimulatorBadge, "L1-SMT-01"));
+
+        response.EnsureSuccessStatusCode();
+        var session = (await response.Content.ReadFromJsonAsync<LoginResponse>())!;
+        Assert.Equal(("SIM-STATION", "L1-SMT-01"), (session.EmployeeCode, session.StationCode));
+        Assert.Equal(["Operator"], session.Roles);
+    }
+
     [Fact]
     public async Task Admin_login_returns_token_with_admin_role()
     {

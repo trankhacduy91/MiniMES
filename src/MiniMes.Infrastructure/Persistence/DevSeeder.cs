@@ -12,10 +12,26 @@ public class DevSeeder(AppDbContext db, IPasswordHasher<AppUser> hasher)
 {
     public const string DemoPassword = "Demo@12345"; // dev only, listed in README
 
+    // M4 step 9: the machine simulator's station role logs in with this badge (POST /api/auth/login-operator), like
+    // an operator at a kiosk. No password, so nothing secret sits in machines.json; its scans are recorded under this
+    // code with Source = Machine, never under a real worker's name.
+    public const string SimulatorBadge = "SIM-STATION";
+
     public async Task SeedAsync(CancellationToken ct = default)
     {
         await SeedFactoryAsync(ct);
         await SeedUsersAsync(ct);
+        await SeedSimulatorUserAsync(ct);
+    }
+
+    // Separate from SeedUsersAsync, which stops when any user exists: databases seeded before M4 get it too.
+    private async Task SeedSimulatorUserAsync(CancellationToken ct)
+    {
+        if (await db.Users.AnyAsync(u => u.EmployeeCode == SimulatorBadge, ct)) return;
+        var simulator = new AppUser(SimulatorBadge, "Machine simulator");
+        simulator.AddRole(Role.Operator);
+        db.Users.Add(simulator);
+        await db.SaveChangesAsync(ct);
     }
 
     // 1 site, 1 area, 2 lines, 5 stations each (4 in routing + 1 Repair) = 10 stations.
