@@ -28,6 +28,8 @@ public sealed record ProcessReading(string Tag, string Unit, double Value, Domai
 //  - Delta comes from the cumulative counter (CounterMath). A count older than the last one processed is dropped:
 //    taken as is, a late 15290 after 3 would read as a reset and add production twice.
 //  - Time: the machine's ts when it is within 60 s of the server's, otherwise the received time (PLC clock off).
+//    [M4b] Except a message from the edge gateway (source opcua/modbus) whose ts is in the PAST by up to 7 days: it
+//    waited in the gateway's outbox while the broker was away, its ts is right and it is kept (EventTime).
 //  - A state change older than the start of the current segment is stored as an event only, history is not rewritten.
 //  - Not stored: heartbeats, counts that did not change, and a state equal to the current one (the retained state
 //    is delivered again on every reconnect; storing it would only add rows, and after an API restart it would hit
@@ -39,6 +41,23 @@ public sealed record ProcessReading(string Tag, string Unit, double Value, Domai
 public sealed class MachineRuntimeStore(PlantTimeZone? plant = null)
 {
     public static readonly TimeSpan MaxClockSkew = TimeSpan.FromSeconds(60);
+
+    // [M4b] The edge gateway's outbox keeps messages up to 7 days (its default maxAgeDays): that late, a ts is still
+    // a delivery delay, not a clock error.
+    public static readonly TimeSpan MaxStoreAndForwardDelay = TimeSpan.FromDays(7);
+
+    // Which time an event is stored with, and whether the machine's clock looks wrong.
+    // A direct MQTT machine sends at once: a ts more than 60 s away from now is its clock (spec M4 2.5).
+    // The gateway sends from a queue: a ts in the past is normal after a broker outage (M4b rule G5: the hour of a
+    // count must stay the hour the PLC made it); only a ts in the future, or older than the queue can hold, is a clock.
+    public static (DateTime At, bool Skewed) EventTime(MachineMessage msg, DateTime receivedAt)
+    {
+        var ts = msg.Ts.UtcDateTime;
+        var ahead = ts - receivedAt;
+        if (ahead.Duration() <= MaxClockSkew) return (ts, false);
+        var lateFromGateway = msg.Source != MachineSources.Mqtt && ahead < TimeSpan.Zero && -ahead <= MaxStoreAndForwardDelay;
+        return lateFromGateway ? (ts, false) : (receivedAt, true);
+    }
 
     private readonly ConcurrentDictionary<int, Runtime> _machines = new();
 
@@ -94,9 +113,7 @@ public sealed class MachineRuntimeStore(PlantTimeZone? plant = null)
     public IngestResult Apply(int machineId, string kind, MachineMessage msg, DateTime receivedAt)
     {
         var r = _machines.GetOrAdd(machineId, _ => new Runtime());
-        var machineTs = msg.Ts.UtcDateTime;
-        var skewed = (machineTs - receivedAt).Duration() > MaxClockSkew;
-        var at = skewed ? receivedAt : machineTs;
+        var (at, skewed) = EventTime(msg, receivedAt);
 
         lock (r)
         {
@@ -188,9 +205,7 @@ public sealed class MachineRuntimeStore(PlantTimeZone? plant = null)
     public IngestResult ApplyProcess(MachineTag tag, MachineMessage msg, DateTime receivedAt)
     {
         var r = _machines.GetOrAdd(tag.MachineId, _ => new Runtime());
-        var sourceTs = msg.Ts.UtcDateTime;
-        var skewed = (sourceTs - receivedAt).Duration() > MaxClockSkew;
-        var at = skewed ? receivedAt : sourceTs;
+        var (at, skewed) = EventTime(msg, receivedAt);
         var reported = Enum.Parse<DomainQuality>(msg.Quality.ToString());
         var quality = tag.Judge(msg.Value!.Value, reported);
 

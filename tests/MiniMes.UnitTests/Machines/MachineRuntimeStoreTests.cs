@@ -133,6 +133,52 @@ public class MachineRuntimeStoreTests
         Assert.Equal(received, _store.Get(M)!.LastSeenAt);
     }
 
+    // [M4b] A gateway message that waited in the outbox while the broker was away keeps its ts (up to 7 days late);
+    // a direct MQTT machine does not (its old ts is a wrong clock), and nobody sends from the future.
+    [Theory]
+    [InlineData("opcua", -87, false)]          // broker away 87 s: late, not skewed
+    [InlineData("modbus", -6 * 24 * 3600, false)]
+    [InlineData("modbus", -8 * 24 * 3600, true)] // older than the outbox can hold: a clock problem
+    [InlineData("opcua", 61, true)]            // in the future: always the clock
+    [InlineData("mqtt", -87, true)]            // direct machine: unchanged M4 rule
+    public void Late_gateway_messages_keep_their_time(string source, int skewSec, bool skewed)
+    {
+        var received = T0.AddDays(10);
+
+        var result = _store.Apply(M, MachineKinds.Alarm, Msg(received.AddSeconds(skewSec)) with { AlarmCode = "301", Source = source }, received);
+
+        Assert.Equal(skewed, result.ClockSkewed);
+        Assert.Equal(skewed ? received : received.AddSeconds(skewSec), result.Item!.Event!.MachineTs);
+    }
+
+    // The case met in M4b step 5: after a 87 s outage the outbox replays counts 87, 60 and 30 s old, then a fresh one.
+    // Before the fix the first was moved to "now" and the next two were dropped as older: right total, wrong detail.
+    [Fact]
+    public void A_replayed_outbox_keeps_every_count_at_its_own_time()
+    {
+        var received = T0.AddMinutes(30);
+        Count(100, T0.AddMinutes(28));   // last count before the outage
+        long[] counters = [101, 102, 103, 104];
+        int[] ago = [87, 60, 30, 0];
+
+        var results = counters.Zip(ago, (c, s) => _store.Apply(M, MachineKinds.Count,
+            Msg(received.AddSeconds(-s)) with { Counter = c, Source = "modbus" }, received)).ToList();
+
+        Assert.All(results, r => Assert.Equal(1, r.Item!.Event!.Delta));
+        Assert.Equal(ago.Select(s => received.AddSeconds(-s)), results.Select(r => r.Item!.Event!.MachineTs));
+    }
+
+    [Fact]
+    public void Late_gateway_process_value_keeps_its_time()
+    {
+        var received = T0.AddMinutes(10);
+
+        var result = _store.ApplyProcess(PeakTemp, Process(245.3, received.AddSeconds(-90)) with { Source = "opcua" }, received);
+
+        Assert.False(result.ClockSkewed);
+        Assert.Equal(received.AddSeconds(-90), result.Item!.ProcessValue!.SourceTs);
+    }
+
     [Fact]
     public void Process_kind_is_not_stored_by_the_event_path()
         => Assert.Null(_store.Apply(M, MachineKinds.Process, Msg(T0) with { Tag = "peakTemp", Value = 245 }, T0).Item);

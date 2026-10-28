@@ -134,3 +134,11 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Nguyên nhân:** slave nghe `IPAddress.Any` (chỉ IPv4). `localhost` phân giải ra `::1` (IPv6) trước; trên Windows, kết nối loopback tới cổng không ai nghe bị từ chối sau khoảng **2 giây** (hệ điều hành gửi lại SYN), đúng bằng timeout kết nối của gateway, nên client chưa kịp thử `127.0.0.1`.
 - **Cách sửa:** slave dùng `TcpListener.Create(port)` (dual mode IPv6 + IPv4).
 - **Bài học:** "timeout đúng bằng con số mình cấu hình" là dấu hiệu bị cắt ngang chứ không phải mạng chậm. `localhost` ≠ `127.0.0.1`. Ngoài nhà máy cấu hình PLC bằng IP cụ thể, ít gặp; nhưng chạy trên máy dev thì gặp ngay.
+
+## 2026-10-28 — Gửi bù đủ message nhưng sản lượng theo giờ vẫn sai (M4b bước 5, sửa ingest M4)
+
+- **Triệu chứng:** dừng Mosquitto 87 giây, gateway gửi bù 66 message trong 2,9 giây, `SUM(Delta)` khớp PLC, không trùng, không reset giả. Nhưng trong 2 phút máy dán keo chỉ có **3** sự kiện count thay vì khoảng 11, và API log `Clock of L1-GLUE-01 is off ... the received time is used instead`.
+- **Nguyên nhân:** luật M4 "ts lệch quá 60 s so với giờ nhận = đồng hồ PLC sai, dùng giờ nhận". Message đầu hàng đợi (cũ 87 s) bị dời sang **giờ nhận**; message kế tiếp (cũ 50 s, trong ngưỡng) giữ ts thật, mà ts đó lại **sớm hơn** mốc vừa dời, nên bị bỏ với lý do "count older than the last one processed". Bộ đếm tích lũy nên tổng vẫn đúng, nhưng chi tiết theo giờ (OEE theo giờ, dashboard "giờ này") dồn hết vào lúc nối lại.
+- **Cách tìm:** kiểm tra không chỉ tổng (`SUM(Delta)`) mà cả **số dòng** và `MachineTs` từng dòng; đọc warning của API trong đúng khoảng thời gian gửi bù.
+- **Cách sửa (user duyệt):** `MachineRuntimeStore.EventTime`: message từ gateway (`source` ≠ `mqtt`) có `ts` ở quá khứ tới 7 ngày (= tuổi tối đa của outbox) là **gửi muộn**, giữ `ts`; chỉ `ts` tương lai > 60 s hoặc cũ hơn 7 ngày mới là lệch giờ. Máy MQTT trực tiếp giữ luật cũ. Sau khi sửa: 9 count trong 70 s mất broker, mỗi cái đúng giờ máy, `Delta = 1`.
+- **Bài học:** "lệch giờ" và "đến muộn" trông giống hệt nhau nếu chỉ nhìn `ts` vs giờ nhận; phải biết **đường đi** của message (trực tiếp hay qua hàng đợi). Hai tính năng đúng riêng lẻ (chống lệch giờ của M4, store-and-forward của M4b) có thể sai khi ghép lại: kiểm tra đầu-cuối bằng dữ liệu chi tiết, không chỉ bằng tổng.

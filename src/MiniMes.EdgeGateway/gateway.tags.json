@@ -4,6 +4,8 @@
   "gateway": { "id": "GW01", "site": "VN-BN01", "area": "SMT-ASSY", "line": "L1" },
   // The MES broker (M4). clientId unique per gateway.
   "mqtt": { "host": "localhost", "port": 1883, "clientId": "minimes-gw-GW01" },
+  // Store-and-forward (M4b step 5): every message is written here first, deleted after the broker's PUBACK.
+  "queue": { "path": "data/outbox.db", "maxRows": 500000, "maxAgeDays": 7 },
   // autoAcceptUntrustedCertificates: left out = only in Development (dotnet run). Never true in production.
   "opcUa": { "pkiPath": "pki", "keepAliveMs": 2000 },
   "devices": [

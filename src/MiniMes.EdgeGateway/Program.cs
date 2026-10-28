@@ -8,6 +8,7 @@ using MiniMes.EdgeGateway.Drivers.OpcUa;
 using MiniMes.EdgeGateway.Health;
 using MiniMes.EdgeGateway.Mqtt;
 using MiniMes.EdgeGateway.Pipeline;
+using MiniMes.EdgeGateway.Queue;
 
 // Edge gateway (spec M4b): reads the PLCs (OPC UA, Modbus TCP), normalises the readings and publishes the M4 MQTT
 // contract. A program on its own: it shares only MiniMes.Contracts with the MES, never its database.
@@ -51,10 +52,20 @@ builder.Services.AddSingleton<IEnumerable<IDeviceDriver>>(sp => sp.GetRequiredSe
     })
     .ToList());
 
+// The outbox is opened once at start (creates the file and the table); a gateway without its queue must not run.
+builder.Services.AddSingleton(sp =>
+{
+    var q = sp.GetRequiredService<GatewayOptions>().Queue;
+    var path = Path.IsPathRooted(q.Path) ? q.Path : Path.Combine(AppContext.BaseDirectory, q.Path);
+    return SqliteOutbox.OpenAsync(path, q.MaxRows, TimeSpan.FromDays(q.MaxAgeDays), sp.GetRequiredService<TimeProvider>(),
+        sp.GetRequiredService<ILogger<SqliteOutbox>>()).GetAwaiter().GetResult();
+});
 builder.Services.AddSingleton<Normalizer>();
 builder.Services.AddSingleton<HealthPublisher>();
 builder.Services.AddSingleton<GatewayMqttClient>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayMqttClient>());
+builder.Services.AddHostedService<ForwarderService>();
+builder.Services.AddHostedService<OutboxMaintenanceService>();
 builder.Services.AddHostedService<PipelineService>();
 builder.Services.AddHostedService<DriverHost>();
 

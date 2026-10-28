@@ -10,23 +10,29 @@ namespace MiniMes.EdgeGateway.Mqtt;
 
 // The gateway's one MQTT connection (clientId minimes-gw-{id}; two gateways with the same id would kick each other
 // off the broker). MQTTnet does not reconnect by itself: ExecuteAsync keeps the connection, 1-2-4..30 s backoff.
-// Step 4: messages are published straight away and lost while the broker is away. Step 5 puts the SQLite outbox in
-// front (store first, delete after PUBACK); step 6 adds the gateway's LWT.
+// Data messages reach it only through the outbox (ForwarderService); heartbeats directly (QoS 0, worthless if late).
+// Step 6 adds the gateway's LWT.
 public sealed class GatewayMqttClient(GatewayOptions options, TimeProvider clock, ILogger<GatewayMqttClient> log) : BackgroundService
 {
     private readonly IMqttClient _client = new MqttClientFactory().CreateMqttClient();
 
     public bool IsConnected => _client.IsConnected;
 
+    public Task<bool> PublishAsync(string topic, MachineMessage message, bool retain, MqttQualityOfServiceLevel qos, CancellationToken ct)
+        => PublishRawAsync(topic, Serialize(message), retain, qos, ct);
+
+    public static string Serialize(MachineMessage message) => JsonSerializer.Serialize(message, MachineJson.Options);
+
     // QoS 1: returns once the broker has acknowledged (PUBACK). false = not sent (not connected, or refused).
-    public async Task<bool> PublishAsync(string topic, MachineMessage message, bool retain, MqttQualityOfServiceLevel qos, CancellationToken ct)
+    // The payload is the exact text stored in the outbox: a resend is byte for byte the same message, same msgId.
+    public async Task<bool> PublishRawAsync(string topic, string payload, bool retain, MqttQualityOfServiceLevel qos, CancellationToken ct)
     {
         if (!_client.IsConnected) return false;
         try
         {
             var result = await _client.PublishAsync(new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
-                .WithPayload(JsonSerializer.Serialize(message, MachineJson.Options))
+                .WithPayload(payload)
                 .WithQualityOfServiceLevel(qos)
                 .WithRetainFlag(retain)
                 .Build(), ct);

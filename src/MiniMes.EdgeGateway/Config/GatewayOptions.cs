@@ -8,6 +8,7 @@ public sealed class GatewayOptions
 {
     public GatewayIdentity Gateway { get; set; } = new();
     public GatewayMqttOptions Mqtt { get; set; } = new();
+    public QueueOptions Queue { get; set; } = new();
     public OpcUaClientOptions OpcUa { get; set; } = new();
     public List<DeviceOptions> Devices { get; set; } = [];
 }
@@ -28,6 +29,15 @@ public sealed class GatewayMqttOptions
     public string Host { get; set; } = "localhost";
     public int Port { get; set; } = 1883;
     public string ClientId { get; set; } = "";
+}
+
+// Spec M4b 2.7: the SQLite outbox. Path relative to the exe folder (a fixed place, never a temp folder that gets
+// cleaned; a volume in Docker). The cap (rule G11): over maxRows or older than maxAgeDays, the oldest are dropped.
+public sealed class QueueOptions
+{
+    public string Path { get; set; } = "data/outbox.db";
+    public long MaxRows { get; set; } = 500_000;
+    public int MaxAgeDays { get; set; } = 7;
 }
 
 public sealed class OpcUaClientOptions
