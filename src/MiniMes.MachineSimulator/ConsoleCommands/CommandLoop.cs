@@ -22,7 +22,7 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
         ("unmute", "unmute <m>           resume sending"),
         ("dup", "dup <m>              send the next message twice, same msgId"),
         ("skew", "skew <m> <sec>       shift the machine clock (0 = back to normal)"),
-        ("tag", "tag <m> <tag> <value>  publish one process value, e.g. tag L1-REFLOW-01 peakTemp 245.3"),
+        ("tag", "tag <m> <tag> <value>  publish one process value over MQTT (MQTT machines only; the oven's peakTemp comes through the gateway)"),
         ("drift", "drift <m> <c/min|off> oven peak temperature drifts by c °C per minute (off = back to set point)"),
         ("sensor", "sensor <m> bad|good  thermocouple broken: PeakTemp quality BadSensorFailure on OPC UA"),
         ("opcua", "opcua stop|start     stop/start the OPC UA servers (the PLC is switched off / on)"),

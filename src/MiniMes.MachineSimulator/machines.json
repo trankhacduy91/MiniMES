@@ -1,6 +1,6 @@
 {
   // Codes = the seeded master data (DevSeeder / MasterDataSeeder): site VN-BN01, area SMT-ASSY, line L1.
-  // L1-REFLOW-01 is OPC UA in M1; until the edge gateway of M4b reads it, it is played here as an MQTT machine too.
+  // L1-REFLOW-01 (OPC UA) and L1-GLUE-01 (Modbus) speak no MQTT: the MES hears them through the edge gateway (M4b).
   "site": "VN-BN01",
   "area": "SMT-ASSY",
   "seed": 42,
@@ -11,15 +11,15 @@
     { "code": "L1-SMT-01", "line": "L1", "cycleTimeSec": 12, "initialCounter": 15000,
       "downProbPerCycle": 0.002, "downDurationSec": [30, 180], "ngProb": 0.01, "alarmCodes": ["E205", "E310"],
       "station": { "code": "L1-SMT-01", "mode": "Auto" } },
-    // M4b: also an OPC UA server (ns=2;s=Reflow.PeakTemp, .Counter, .State) for the edge gateway; still MQTT until M4b step 4.
-    { "code": "L1-REFLOW-01", "line": "L1", "cycleTimeSec": 12, "initialCounter": 8000,
+    // M4b: an OPC UA server (ns=2;s=Reflow.PeakTemp, .Counter, .State) read by the edge gateway; no MQTT of its own.
+    { "code": "L1-REFLOW-01", "line": "L1", "cycleTimeSec": 12, "initialCounter": 8000, "mqtt": false,
       "downProbPerCycle": 0.001, "downDurationSec": [60, 300], "ngProb": 0.0, "alarmCodes": ["T101"],
       "opcua": { "host": "localhost", "port": 4840, "peakTempC": 245, "noiseC": 0.8 } },
     { "code": "L1-TEST-01", "line": "L1", "cycleTimeSec": 8, "initialCounter": 0,
       "downProbPerCycle": 0.001, "downDurationSec": [20, 90], "ngProb": 0.03, "clockSkewSec": 0, "alarmCodes": ["F404"],
       "station": { "code": "L1-TEST-01", "mode": "AutoTest", "defectCodes": ["FUN-NOPWR", "SLD-BRG", "CMP-MIS"] } },
     // M4b: an old glue dispenser without MQTT, only a Modbus TCP slave (counter CDAB in HR0-1, state HR2, alarm HR3).
-    // The MES hears it only through the edge gateway (from M4b step 4). Alarm codes carry a number for the register.
+    // The MES hears it only through the edge gateway. Alarm codes carry a number for the register.
     { "code": "L1-GLUE-01", "line": "L1", "cycleTimeSec": 10, "initialCounter": 100000, "mqtt": false,
       "downProbPerCycle": 0.002, "downDurationSec": [30, 120], "ngProb": 0.0, "alarmCodes": ["G301", "G302"],
       "modbus": { "port": 5020, "unitId": 1 } }

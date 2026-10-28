@@ -7,6 +7,7 @@ namespace MiniMes.EdgeGateway.Config;
 public sealed class GatewayOptions
 {
     public GatewayIdentity Gateway { get; set; } = new();
+    public GatewayMqttOptions Mqtt { get; set; } = new();
     public OpcUaClientOptions OpcUa { get; set; } = new();
     public List<DeviceOptions> Devices { get; set; } = [];
 }
@@ -19,6 +20,14 @@ public sealed class GatewayIdentity
     public string Site { get; set; } = "";
     public string Area { get; set; } = "";
     public string Line { get; set; } = "";
+}
+
+// The broker of the MES (M4). ClientId must be unique per gateway: two clients with one id kick each other off.
+public sealed class GatewayMqttOptions
+{
+    public string Host { get; set; } = "localhost";
+    public int Port { get; set; } = 1883;
+    public string ClientId { get; set; } = "";
 }
 
 public sealed class OpcUaClientOptions

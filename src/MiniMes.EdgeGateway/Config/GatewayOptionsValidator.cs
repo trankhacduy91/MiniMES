@@ -20,6 +20,8 @@ public sealed class GatewayOptionsValidator : IValidateOptions<GatewayOptions>
         var g = o.Gateway;
         if (new[] { g.Id, g.Site, g.Area, g.Line }.Any(string.IsNullOrWhiteSpace))
             yield return "gateway.id, site, area and line are required.";
+        if (string.IsNullOrWhiteSpace(o.Mqtt.Host) || o.Mqtt.Port is < 1 or > 65535) yield return "mqtt.host and mqtt.port (1..65535) are required.";
+        if (string.IsNullOrWhiteSpace(o.Mqtt.ClientId)) yield return "mqtt.clientId is required (unique per gateway, e.g. minimes-gw-GW01).";
         if (o.Devices.Count == 0) yield return "at least one device is required.";
         foreach (var dup in o.Devices.GroupBy(d => d.Machine, StringComparer.OrdinalIgnoreCase).Where(x => x.Count() > 1))
             yield return $"machine {dup.Key} is listed twice: two drivers reading one machine send everything twice.";

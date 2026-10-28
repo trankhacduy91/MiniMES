@@ -2,6 +2,8 @@
   // Spec M4b 2.6. Gateway GW01 reads the machines of line L1 that do not speak MQTT themselves.
   // site/area/line and every "machine" must match the seeded master data (Machine.MqttTopicKey), like machines.json.
   "gateway": { "id": "GW01", "site": "VN-BN01", "area": "SMT-ASSY", "line": "L1" },
+  // The MES broker (M4). clientId unique per gateway.
+  "mqtt": { "host": "localhost", "port": 1883, "clientId": "minimes-gw-GW01" },
   // autoAcceptUntrustedCertificates: left out = only in Development (dotnet run). Never true in production.
   "opcUa": { "pkiPath": "pki", "keepAliveMs": 2000 },
   "devices": [

@@ -5,9 +5,11 @@ using MiniMes.EdgeGateway.Config;
 using MiniMes.EdgeGateway.Drivers;
 using MiniMes.EdgeGateway.Drivers.Modbus;
 using MiniMes.EdgeGateway.Drivers.OpcUa;
+using MiniMes.EdgeGateway.Health;
+using MiniMes.EdgeGateway.Mqtt;
 using MiniMes.EdgeGateway.Pipeline;
 
-// Edge gateway (spec M4b): reads the PLCs (OPC UA, Modbus TCP) and, from step 4, publishes the M4 MQTT
+// Edge gateway (spec M4b): reads the PLCs (OPC UA, Modbus TCP), normalises the readings and publishes the M4 MQTT
 // contract. A program on its own: it shares only MiniMes.Contracts with the MES, never its database.
 //   dotnet run --project src/MiniMes.EdgeGateway [-- --config other.tags.json]
 var builder = Host.CreateApplicationBuilder(args);
@@ -49,6 +51,10 @@ builder.Services.AddSingleton<IEnumerable<IDeviceDriver>>(sp => sp.GetRequiredSe
     })
     .ToList());
 
+builder.Services.AddSingleton<Normalizer>();
+builder.Services.AddSingleton<HealthPublisher>();
+builder.Services.AddSingleton<GatewayMqttClient>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayMqttClient>());
 builder.Services.AddHostedService<PipelineService>();
 builder.Services.AddHostedService<DriverHost>();
 

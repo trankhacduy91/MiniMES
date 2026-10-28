@@ -22,6 +22,8 @@ public class GatewayOptionsValidatorTests
         { "no machine", o => o.Devices[0].Machine = "", "every device needs machine" },
         { "no gateway id", o => o.Gateway.Id = "", "gateway.id, site, area and line are required" },
         { "no device", o => o.Devices.Clear(), "at least one device is required" },
+        { "no mqtt client id", o => o.Mqtt.ClientId = "", "mqtt.clientId is required" },
+        { "no mqtt host", o => o.Mqtt.Host = "", "mqtt.host and mqtt.port" },
         { "no tags", o => o.Devices[0].Tags.Clear(), "L1-REFLOW-01: no tags" },
         { "unknown kind", o => o.Devices[0].Tags[0].Kind = "temperature", "kind 'temperature' is not one of" },
         { "two count tags", o => o.Devices[0].Tags[0].Kind = "count", "only one count tag per machine" },
@@ -85,6 +87,7 @@ public class GatewayOptionsValidatorTests
     private static GatewayOptions Valid() => new()
     {
         Gateway = new GatewayIdentity { Id = "GW01", Site = "VN-BN01", Area = "SMT-ASSY", Line = "L1" },
+        Mqtt = new GatewayMqttOptions { Host = "localhost", Port = 1883, ClientId = "minimes-gw-GW01" },
         Devices = [Device(), Glue()],
     };
 
