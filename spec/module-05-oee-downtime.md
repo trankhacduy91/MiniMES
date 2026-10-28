@@ -485,7 +485,7 @@ public void Ca_8_gio_mau_khop_so_tinh_tay()
 | Nhiều WO trong ca | 2 segment: (20 s × 600) + (30 s × 200) | ideal = 12.000 + 6.000 = 18.000 s |
 | Good > Total | good 1.010, total 1.000 | Q = 1,01, cờ `GoodExceedsTotal` |
 
-Ngoài ra thêm một **test tính chất (invariant)**: với dữ liệu ngẫu nhiên hợp lệ, `A × P × Q` phải bằng `ideal × good / planned` (sai số 1e-9). Nếu công thức bị sửa sai một chỗ, test này bắt được dù bạn chưa nghĩ ra ca test nào cụ thể.
+Ngoài ra thêm một **test tính chất (invariant)**: với dữ liệu ngẫu nhiên hợp lệ, `A × P × Q` phải bằng `ideal × (good / total) / planned` (sai số 1e-9; một cycle time thì đúng là `cycle × good / planned`, nhiều WO thì phải dùng dạng có `good / total` — sửa ở Bước 2). Nếu công thức bị sửa sai một chỗ, test này bắt được dù bạn chưa nghĩ ra ca test nào cụ thể.
 
 **Bẫy thường gặp.**
 
@@ -965,17 +965,19 @@ public static byte[] BuildOeeWorkbook(IReadOnlyList<OeeRow> rows, string tzLabel
 
 Thứ tự cố ý đi từ "không cần máy chạy" (giấy, hàm thuần, thời gian) đến "cần cả hệ thống" (dashboard). Bạn có thể làm bước 1–3 khi Module 4 chưa xong.
 
-- [ ] **Bước 1 — Tính tay và chốt bảng test** (1,5 giờ)
+- [x] **Bước 1 — Tính tay và chốt bảng test** (1,5 giờ)
   - Mục tiêu: hiểu OEE đến mức không cần công thức để nhớ.
   - Việc cần làm: làm lại ví dụ 1.2.2 trên giấy hoặc Excel; tự bịa thêm ba ca: (a) P > 100%, (b) PlannedStop trùng giờ nghỉ, (c) ca có hai WO cycle time khác nhau. Viết ra kết quả A/P/Q/OEE và phép rút gọn `ideal × good / planned` cho từng ca.
   - File: `docs/oee-hand-calcs.md` (hoặc `.xlsx`).
   - Kiểm tra: với mọi ca, `A × P × Q` bằng phép rút gọn; bạn giải thích được "thác nước thời gian" của từng ca bằng lời.
+  - Đã làm (28/10/2026): `docs/oee-hand-calcs.md` có ca mẫu (0,7984) và ba ca: (a) cycle time chuẩn 20 s, máy chạy 15 s → P 1,3333, OEE 1,1687; (b) họp 07:55–08:20 chồng giờ nghỉ 08:00–08:15 → Planned 410 (trừ hai lần ra 395, OEE ảo +3,3 điểm), Down trong giờ ăn không tính; (c) hai WO 20 s × 600 + 30 s × 200 → Ideal 18.000 s, OEE 0,7009. Số kiểm bằng script. Ghi chú: với nhiều WO, phép rút gọn tổng quát là `Ideal × Q / Planned` (Q gộp); `cycle time × Good / Planned` chỉ đúng khi một cycle time. Tài liệu học: `docs/learning/M5-step01-oee-hand-calcs.md`.
 
-- [ ] **Bước 2 — `OeeCalculator` và unit test** (2 giờ)
+- [x] **Bước 2 — `OeeCalculator` và unit test** (2 giờ)
   - Mục tiêu: một hàm thuần duy nhất cho toàn hệ thống.
   - Việc cần làm: `OeeInput`, `ProductionSegment`, `OeeResult`, `OeeWarning`, `OeeCalculator.Calculate` (mục 2.1); chuyển bảng test ở 2.1 thành `[Fact]`/`[Theory]`; thêm test tính chất.
   - File: `src/MiniMes.Domain/Oee/OeeCalculator.cs` (+ các record), `tests/MiniMes.UnitTests/Oee/OeeCalculatorTests.cs`.
   - Kiểm tra: `dotnet test` xanh; ca mẫu ra A 0,8889 / P 0,9259 / Q 0,97 / OEE 0,7984; phá thử công thức (đổi `*` thành `+`) thì ít nhất 3 test đỏ.
+  - Đã làm (28/10/2026): `src/MiniMes.Domain/Oee/OeeCalculator.cs` đúng snippet 2.1 (`Oee` là `double?`, `null` chỉ khi Planned = 0); `tests/MiniMes.UnitTests/Oee/OeeCalculatorTests.cs` 10 test: 8 dòng bảng 2.1 + ca (b) họp trùng giờ nghỉ của `docs/oee-hand-calcs.md` + test tính chất 1.000 bộ ngẫu nhiên (seed cố định). Unit test 822/822 xanh. Đột biến `a * pp * qq` → `a + pp + qq`: 6/10 test đỏ, đã khôi phục. Test tính chất dùng `ideal × (good / total) / planned` (dạng của spec chỉ đúng với một cycle time).
 
 - [ ] **Bước 3 — Thời gian: `ShiftCalendar`, ngày sản xuất, `IntervalMath`** (3,5 giờ)
   - Mục tiêu: xác định đúng ca/ngày sản xuất và tính đúng thời gian kế hoạch/downtime thật.
