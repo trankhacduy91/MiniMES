@@ -12,4 +12,5 @@ public interface IRealtimeNotifier
     Task MachineProcessUpdatedAsync(MachineProcessDto dto, CancellationToken ct = default);
     Task AndonChangedAsync(AndonDto dto, CancellationToken ct = default);
     Task AndonEscalatedAsync(AndonDto dto, IReadOnlyList<string> roles, CancellationToken ct = default);   // [v2] role groups
+    Task GatewayStatusChangedAsync(GatewayStatusDto dto, CancellationToken ct = default);                  // [M4b] everyone
 }

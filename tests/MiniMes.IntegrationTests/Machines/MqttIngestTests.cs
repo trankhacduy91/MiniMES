@@ -86,7 +86,37 @@ public class MqttIngestTests(MqttApiFixture mqtt)
         Assert.Equal(7L, events.Sum(e => e.Delta));
     }
 
+    // [M4b step 6] The "_sys" branch: the gateway status reaches the store (the dashboard card), and its LWT turns it
+    // offline while keeping the machines it was reading.
+    [Fact]
+    public async Task Gateway_status_and_its_lwt_reach_the_gateway_store()
+    {
+        var store = mqtt.Factory.Services.GetRequiredService<MiniMes.Application.Machines.GatewayStatusStore>();
+        var topic = GatewayTopic.Status("VN-BN01", "GW-IT");
+        var online = new GatewayStatusMessage("GW-IT", GatewayStates.Online, QueueLength: 7,
+            Devices: new Dictionary<string, string> { ["L1-REFLOW-01"] = GatewayStates.Connected }, Ts: DateTimeOffset.UtcNow);
+
+        await PublishRawAsync(topic, JsonSerializer.Serialize(online, MachineJson.Options));
+        var first = await WaitForAsync(() => Task.FromResult(store.Get("GW-IT")), s => s is { QueueLength: 7 });
+        await PublishRawAsync(topic, """{"gateway":"GW-IT","state":"offline"}""");
+        var lwt = await WaitForAsync(() => Task.FromResult(store.Get("GW-IT")), s => s?.State == GatewayStates.Offline);
+
+        Assert.Equal(GatewayStates.Connected, first!.Devices["L1-REFLOW-01"]);
+        Assert.Equal(GatewayStates.Disconnected, lwt!.Devices["L1-REFLOW-01"]);
+        Assert.Equal(["GW-IT"], store.ForMachines(["L1-REFLOW-01"]).Select(g => g.Gateway).Where(g => g == "GW-IT"));
+    }
+
     // ---------- helpers ----------
+
+    private async Task PublishRawAsync(string topic, string payload)
+    {
+        using var client = new MqttClientFactory().CreateMqttClient();
+        await client.ConnectAsync(new MqttClientOptionsBuilder()
+            .WithTcpServer("localhost", mqtt.Broker.Port).WithClientId("test-" + Guid.NewGuid().ToString("N")[..8]).Build());
+        await client.PublishAsync(new MqttApplicationMessageBuilder().WithTopic(topic).WithPayload(payload)
+            .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce).Build());
+        await client.DisconnectAsync(new MqttClientDisconnectOptions());
+    }
 
     private static MachineMessage Message(string machine, DateTimeOffset ts) => new(Guid.NewGuid(), machine, ts);
 

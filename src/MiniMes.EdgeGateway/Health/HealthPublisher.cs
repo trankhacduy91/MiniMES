@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using MiniMes.Contracts.Machines;
 using MiniMes.EdgeGateway.Config;
 using MiniMes.EdgeGateway.Pipeline;
@@ -13,15 +14,16 @@ public sealed class HealthPublisher(GatewayOptions options)
     public static readonly TimeSpan Interval = TimeSpan.FromSeconds(5);
 
     private readonly Dictionary<string, string> _protocolOf = options.Devices.ToDictionary(d => d.Machine, d => d.Protocol);
-    private readonly HashSet<string> _connected = [];
+    // Written by the pipeline, read by the gateway status publisher (another thread).
+    private readonly ConcurrentDictionary<string, byte> _connected = new();
     private DateTime _lastAt = DateTime.MinValue;
 
-    public IReadOnlyCollection<string> Connected => _connected;
+    public bool IsConnected(string machine) => _connected.ContainsKey(machine);
 
     public void ConnectionChanged(string machine, bool connected)
     {
-        if (connected) _connected.Add(machine);
-        else _connected.Remove(machine);
+        if (connected) _connected[machine] = 0;
+        else _connected.TryRemove(machine, out _);
     }
 
     // Called at every pipeline tick; returns the heartbeats that are due. A machine whose state is not known yet
@@ -31,7 +33,7 @@ public sealed class HealthPublisher(GatewayOptions options)
         if (nowUtc - _lastAt < Interval) return [];
         _lastAt = nowUtc;
         var gw = options.Gateway;
-        return _connected
+        return _connected.Keys.Order()
             .Select(machine => (machine, state: stateOf(machine)))
             .Where(x => x.state is not null)
             .Select(x => new Outgoing(

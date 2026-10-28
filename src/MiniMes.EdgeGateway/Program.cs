@@ -64,10 +64,13 @@ builder.Services.AddSingleton<Normalizer>();
 builder.Services.AddSingleton<HealthPublisher>();
 builder.Services.AddSingleton<GatewayMqttClient>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayMqttClient>());
+builder.Services.AddSingleton<GatewayStatusPublisher>();
 builder.Services.AddHostedService<ForwarderService>();
 builder.Services.AddHostedService<OutboxMaintenanceService>();
 builder.Services.AddHostedService<PipelineService>();
 builder.Services.AddHostedService<DriverHost>();
+// Registered after the MQTT client: hosted services stop in reverse order, so the clean "offline" goes out first.
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayStatusPublisher>());
 
 try
 {

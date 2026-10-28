@@ -46,7 +46,7 @@ public sealed class OpcUaClientOptions
     // (spec 2.3, trap 4): there the server's certificate is copied into pki/trusted by hand.
     public bool? AutoAcceptUntrustedCertificates { get; set; }
     public string PkiPath { get; set; } = "pki";   // relative to the exe folder; a fixed place, mounted as a volume in Docker
-    public int KeepAliveMs { get; set; } = 2000;    // a dead server is noticed after about two missed keep-alives
+    public int KeepAliveMs { get; set; } = 1000;    // a dead server is noticed within ~1-2 s (step 6: machine Offline <= 5 s)
 }
 
 public static class Protocols

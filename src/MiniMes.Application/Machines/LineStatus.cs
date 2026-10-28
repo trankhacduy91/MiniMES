@@ -12,7 +12,8 @@ namespace MiniMes.Application.Machines;
 // Line codes are unique per area; the MVP has one area, so the code is enough (same key as the SignalR group).
 public sealed record GetLineStatusQuery(string LineCode) : IRequest<LineStatusDto>;
 
-public sealed class GetLineStatusHandler(IAppDbContext db, MachineRuntimeStore store, TimeProvider time) : IRequestHandler<GetLineStatusQuery, LineStatusDto>
+public sealed class GetLineStatusHandler(IAppDbContext db, MachineRuntimeStore store, GatewayStatusStore gateways, TimeProvider time)
+    : IRequestHandler<GetLineStatusQuery, LineStatusDto>
 {
     public async Task<LineStatusDto> Handle(GetLineStatusQuery q, CancellationToken ct)
     {
@@ -35,6 +36,7 @@ public sealed class GetLineStatusHandler(IAppDbContext db, MachineRuntimeStore s
                 rt?.State is { } s ? Enum.Parse<WireState>(s.ToString()) : null, rt?.StateSince, rt?.LastCounter,
                 rt is null ? 0 : store.CountThisHour(rt, now), rt?.LastSeenAt,
                 rt?.Process.Select(p => new ProcessReadingDto(p.Tag, p.Unit, p.Value, Enum.Parse<WireQuality>(p.Quality.ToString()), p.SourceTs)).ToList() ?? []);
-        }).ToList());
+        }).ToList(),
+            gateways.ForMachines(machines.Select(m => m.Code)));   // [M4b] the gateway cards of this line
     }
 }

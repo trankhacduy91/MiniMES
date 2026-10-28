@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddSingleton<MachineDirectory>();
         services.AddSingleton(sp => new RecentIdCache(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<MachineRuntimeStore>();
+        services.AddSingleton<GatewayStatusStore>();   // [M4b]
         services.AddSingleton<MqttConnectionState>();
         services.AddSingleton(sp => new OfflineDetector(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<MachineStateService>();

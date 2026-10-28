@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MiniMes.Contracts.Machines;
 using MiniMes.EdgeGateway.Config;
+using MiniMes.EdgeGateway.Drivers;
 using MQTTnet;
 using MQTTnet.Protocol;
 
@@ -10,13 +11,22 @@ namespace MiniMes.EdgeGateway.Mqtt;
 
 // The gateway's one MQTT connection (clientId minimes-gw-{id}; two gateways with the same id would kick each other
 // off the broker). MQTTnet does not reconnect by itself: ExecuteAsync keeps the connection, 1-2-4..30 s backoff.
-// Data messages reach it only through the outbox (ForwarderService); heartbeats directly (QoS 0, worthless if late).
-// Step 6 adds the gateway's LWT.
+// Data messages reach it only through the outbox (ForwarderService); heartbeats and the gateway status directly.
+// LWT (step 6): if the gateway dies without a clean disconnect, the broker publishes {"state":"offline"} (retained) on
+// minimes/{site}/_sys/gateway/{id}/status for it: the MES knows at once that the gateway, not a machine, is gone.
 public sealed class GatewayMqttClient(GatewayOptions options, TimeProvider clock, ILogger<GatewayMqttClient> log) : BackgroundService
 {
     private readonly IMqttClient _client = new MqttClientFactory().CreateMqttClient();
 
     public bool IsConnected => _client.IsConnected;
+
+    // After every (re)connect: the gateway status publishes "online" at once (it replaces the retained LWT).
+    public event Func<CancellationToken, Task>? Connected;
+
+    public Task<bool> PublishStatusAsync(GatewayStatusMessage status, CancellationToken ct)
+        => PublishRawAsync(StatusTopic, JsonSerializer.Serialize(status, MachineJson.Options), retain: true, MqttQualityOfServiceLevel.AtLeastOnce, ct);
+
+    private string StatusTopic => GatewayTopic.Status(options.Gateway.Site, options.Gateway.Id);
 
     public Task<bool> PublishAsync(string topic, MachineMessage message, bool retain, MqttQualityOfServiceLevel qos, CancellationToken ct)
         => PublishRawAsync(topic, Serialize(message), retain, qos, ct);
@@ -53,6 +63,10 @@ public sealed class GatewayMqttClient(GatewayOptions options, TimeProvider clock
             .WithClientId(mqtt.ClientId)
             .WithKeepAlivePeriod(TimeSpan.FromSeconds(15))
             .WithTimeout(TimeSpan.FromSeconds(5))
+            .WithWillTopic(StatusTopic)
+            .WithWillPayload(JsonSerializer.Serialize(new GatewayStatusMessage(options.Gateway.Id, GatewayStates.Offline), MachineJson.Options))
+            .WithWillQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+            .WithWillRetain()
             .Build();
         _client.DisconnectedAsync += e =>
         {
@@ -61,7 +75,7 @@ public sealed class GatewayMqttClient(GatewayOptions options, TimeProvider clock
             return Task.CompletedTask;
         };
 
-        var backoff = TimeSpan.FromSeconds(1);
+        var backoff = Backoff.Exponential(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -69,18 +83,19 @@ public sealed class GatewayMqttClient(GatewayOptions options, TimeProvider clock
                 if (!_client.IsConnected)
                 {
                     await _client.ConnectAsync(connectOptions, stoppingToken);
-                    backoff = TimeSpan.FromSeconds(1);
+                    backoff.Reset();
                     log.LogInformation("Gateway connected to the broker {Host}:{Port} as {ClientId}", mqtt.Host, mqtt.Port, mqtt.ClientId);
+                    if (Connected is { } connected) await connected(stoppingToken);
                 }
                 await Task.Delay(TimeSpan.FromSeconds(1), clock, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex)
             {
-                log.LogWarning("Gateway cannot reach the broker {Host}:{Port} ({Error}), retry in {Backoff}s", mqtt.Host, mqtt.Port, ex.Message, backoff.TotalSeconds);
-                try { await Task.Delay(backoff, clock, stoppingToken); }
+                var delay = backoff.Next();
+                log.LogWarning("Gateway cannot reach the broker {Host}:{Port} ({Error}), retry in {Backoff:F1}s", mqtt.Host, mqtt.Port, ex.Message, delay.TotalSeconds);
+                try { await Task.Delay(delay, clock, stoppingToken); }
                 catch (OperationCanceledException) { break; }
-                backoff = TimeSpan.FromSeconds(Math.Min(backoff.TotalSeconds * 2, 30));
             }
         }
     }

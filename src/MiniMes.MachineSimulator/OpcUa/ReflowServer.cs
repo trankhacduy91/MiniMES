@@ -101,6 +101,10 @@ public sealed class ReflowServer(string machine, OpcUaOptions options, ITelemetr
                 // No Local Discovery Server here. Left on, the server registers itself every few seconds with the LDS
                 // at opc.tcp://localhost:4840, the LDS's standard port, so on this port it calls itself and fails.
                 MaxRegistrationInterval = 0,
+                // "opcua stop" = the PLC is switched off: gone at once. The default (5 s) first announces ServerState.Shutdown
+                // and keeps accepting sessions meanwhile, so a client reconnects into a dying server and the machine flaps
+                // Offline/online/Offline (M4b step 6). The gateway still handles that announcement for real servers.
+                ShutdownDelay = 0,
             },
         };
         await config.ValidateAsync(ApplicationType.Server);

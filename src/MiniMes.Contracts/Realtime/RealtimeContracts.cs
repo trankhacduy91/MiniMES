@@ -12,6 +12,7 @@ public interface IMachineClient
     Task MachineProcessUpdated(MachineProcessDto dto);       // [v2] throttled like the counter
     Task AndonChanged(AndonDto dto);                         // pushed at once: raise, acknowledge, resolve, cancel
     Task AndonEscalated(AndonDto dto);                       // [v2] to role groups: nobody acknowledged in time
+    Task GatewayStatusChanged(GatewayStatusDto dto);         // [M4b] to every dashboard: a handful of gateways
 }
 
 public static class RealtimeHub
@@ -38,7 +39,13 @@ public sealed record MachineProcessDto(string Machine, string Line, string Tag, 
 
 // REST snapshot (GET /api/lines/{code}/status): loaded first and again after every reconnect, then kept up to date
 // by the pushes above. SignalR does not replay what a disconnected client missed.
-public sealed record LineStatusDto(string Line, IReadOnlyList<MachineStatusDto> Machines);
+// [M4b] Gateways: those reading at least one machine of the line (null from an older server).
+public sealed record LineStatusDto(string Line, IReadOnlyList<MachineStatusDto> Machines, IReadOnlyList<GatewayStatusDto>? Gateways = null);
+
+// [M4b] The edge gateway card: alive or not (LWT), its outbox, which PLCs it can read. ReceivedAt = server time.
+public sealed record GatewayStatusDto(
+    string Gateway, string Site, string State, long QueueLength, long DroppedCount, double OldestAgeSec,
+    IReadOnlyDictionary<string, string> Devices, DateTime ReceivedAt);
 
 public sealed record MachineStatusDto(
     int Id, string Code, string Name, string Type, string DataSource,

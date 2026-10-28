@@ -29,6 +29,14 @@ public sealed class SignalRRealtimeNotifier(IHubContext<MachineHub, IMachineClie
         catch (Exception ex) { log.LogWarning(ex, "SignalR escalation push for Andon {AndonId} failed", dto.Id); }
     }
 
+    // [M4b] Not tied to one line (a gateway may read machines of several): every dashboard gets it and keeps the
+    // gateways of its line.
+    public async Task GatewayStatusChangedAsync(GatewayStatusDto dto, CancellationToken ct = default)
+    {
+        try { await hub.Clients.All.GatewayStatusChanged(dto); }
+        catch (Exception ex) { log.LogWarning(ex, "SignalR push for gateway {Gateway} failed", dto.Gateway); }
+    }
+
     private async Task SafeAsync(string line, Func<IMachineClient, Task> push, string machine)
     {
         try { await push(hub.Clients.Group(RealtimeHub.LineGroup(line))); }

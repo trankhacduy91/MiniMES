@@ -62,9 +62,13 @@ public sealed class OpcUaDriver(DeviceOptions device, OpcUaClientConfiguration c
         // A bad status is the only sign of a server that vanished without closing the TCP connection.
         var broken = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         session.KeepAliveInterval = client.KeepAliveMs;
+        // A server that shuts down cleanly (firmware update) first announces ServerState.Shutdown for its ShutdownDelay
+        // (5 s by default) while still answering: treat it as lost at once, not when the socket finally closes.
+        // Unknown is not on the list: right after a server starts, a keep-alive may come back without a state.
         session.KeepAlive += (_, e) =>
         {
             if (ServiceResult.IsBad(e.Status)) broken.TrySetResult($"keep-alive failed ({StatusCodes.GetBrowseName(e.Status!.StatusCode.Code)})");
+            else if (e.CurrentState is ServerState.Shutdown or ServerState.Failed) broken.TrySetResult($"server state {e.CurrentState}");
         };
 
         var subscription = new Subscription(session.DefaultSubscription)

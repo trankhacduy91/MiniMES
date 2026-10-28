@@ -15,6 +15,7 @@ public interface IRealtimeClient : IAsyncDisposable
     event Action<MachineProcessDto>? MachineProcessUpdated;
     event Action<AndonDto>? AndonChanged;
     event Action<AndonDto>? AndonEscalated;
+    event Action<GatewayStatusDto>? GatewayStatusChanged;   // [M4b]
 
     // false = "Reconnecting..." banner; true = live again.
     event Action<bool>? ConnectionChanged;
@@ -56,6 +57,7 @@ public sealed class RealtimeClient : IRealtimeClient
     public event Action<MachineProcessDto>? MachineProcessUpdated;
     public event Action<AndonDto>? AndonChanged;
     public event Action<AndonDto>? AndonEscalated;
+    public event Action<GatewayStatusDto>? GatewayStatusChanged;
     public event Action<bool>? ConnectionChanged;
     public event Func<Task>? Resync;
 
@@ -75,6 +77,7 @@ public sealed class RealtimeClient : IRealtimeClient
         _conn.On<MachineProcessDto>(nameof(IMachineClient.MachineProcessUpdated), d => MachineProcessUpdated?.Invoke(d));
         _conn.On<AndonDto>(nameof(IMachineClient.AndonChanged), d => AndonChanged?.Invoke(d));
         _conn.On<AndonDto>(nameof(IMachineClient.AndonEscalated), d => AndonEscalated?.Invoke(d));
+        _conn.On<GatewayStatusDto>(nameof(IMachineClient.GatewayStatusChanged), d => GatewayStatusChanged?.Invoke(d));
 
         _conn.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
         // New ConnectionId: the server forgot our groups (role groups it re-adds itself, line groups we must join).

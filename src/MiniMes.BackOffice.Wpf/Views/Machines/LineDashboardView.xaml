@@ -79,6 +79,43 @@
             </DockPanel>
         </Border>
 
+        <!-- [M4b] Edge gateway cards: online (outline) or OFFLINE (red, LWT), its outbox, how many PLCs it can read.
+             A lost PLC = grey tile + "1/2 machines connected" here; a dead gateway = this card red. -->
+        <ItemsControl DockPanel.Dock="Top" AutomationProperties.AutomationId="Gateways" ItemsSource="{Binding Gateways}" Margin="0,0,0,8">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border AutomationProperties.AutomationId="{Binding Gateway}" Margin="0,0,10,0" Padding="10,6" CornerRadius="4" BorderThickness="2">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="BorderBrush" Value="#FF2E7D32" />
+                                <Setter Property="Background" Value="#FFF1F8E9" />
+                                <Setter Property="TextElement.Foreground" Value="#FF212121" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                                        <Setter Property="BorderBrush" Value="#FFC62828" />
+                                        <Setter Property="Background" Value="#FFC62828" />
+                                        <Setter Property="TextElement.Foreground" Value="White" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Title}" FontWeight="Bold" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding StateText}" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding DevicesText}" Margin="16,0,0,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding QueueText}" Margin="16,0,0,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding DroppedText}" Margin="16,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
         <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
                    Style="{StaticResource PageError}" />
 

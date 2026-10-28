@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MiniMes.Application.Machines;
+using MiniMes.Application.Realtime;
 using MiniMes.Contracts.Machines;
 using MQTTnet;
 using MQTTnet.Protocol;
@@ -24,6 +25,8 @@ public sealed class MqttIngestService(
     IServiceScopeFactory scopes,
     MqttConnectionState connection,
     MachineStateService states,
+    GatewayStatusStore gateways,
+    IRealtimeNotifier notifier,
     TimeProvider clock,
     ILogger<MqttIngestService> log) : BackgroundService
 {
@@ -122,6 +125,14 @@ public sealed class MqttIngestService(
         var topic = e.ApplicationMessage.Topic;
         try
         {
+            // [M4b] The only change of M4b on the MES side: the edge gateway's own status ("_sys" is not an area,
+            // so this goes before the machine lookup, which would drop it as an unknown machine).
+            if (GatewayTopic.TryParseStatus(topic, out var site, out var gatewayId))
+            {
+                await OnGatewayStatusAsync(site, gatewayId, e.ApplicationMessage.ConvertPayloadToString(), ct);
+                return;
+            }
+
             var read = MachineMessageReader.Read(topic, e.ApplicationMessage.ConvertPayloadToString());
             if (!read.IsAccepted)
             {
@@ -202,6 +213,22 @@ public sealed class MqttIngestService(
     }
 
     // Once when a machine's clock goes off (> 60 s) and once when it is back, not on every message.
+    private async Task OnGatewayStatusAsync(string site, string gatewayId, string payload, CancellationToken ct)
+    {
+        var previous = gateways.Get(gatewayId);
+        var (status, error) = GatewayStatusStore.Read(site, gatewayId, payload, clock.GetUtcNow().UtcDateTime, previous);
+        if (status is null)
+        {
+            log.LogWarning("MQTT dropped status of gateway {Gateway}: {Reason}", gatewayId, error);
+            return;
+        }
+        gateways.Set(status);
+        if (status.State != previous?.State)
+            log.Log(status.State == GatewayStates.Offline ? LogLevel.Warning : LogLevel.Information,
+                "Gateway {Gateway} is {State} (queue {QueueLength}, dropped {DroppedCount})", gatewayId, status.State, status.QueueLength, status.DroppedCount);
+        await notifier.GatewayStatusChangedAsync(status, ct);
+    }
+
     private void LogClockSkew(MachineRef machine, bool skewed, MachineMessage msg)
     {
         if (_skewed.GetValueOrDefault(machine.Id) == skewed) return;

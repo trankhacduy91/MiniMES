@@ -46,12 +46,14 @@ public partial class LineDashboardViewModel : ObservableObject, ILoadable, IClos
         _realtime.AndonChanged += d => _ui.Post(() => { if (d.Line == _line) ApplyAndon(d); });
         _realtime.AndonEscalated += d => _ui.Post(() => EscalationAlert = string.Format(Strings.Dashboard_Escalated,
             d.Machine, d.Type, d.EscalationLevel, AndonRowViewModel.ToLocal(d.RaisedAt, _time).ToString("HH:mm")));
+        _realtime.GatewayStatusChanged += d => _ui.Post(() => ApplyGateway(d));
         _realtime.ConnectionChanged += connected => _ui.Post(() => IsConnected = connected);
         _realtime.Resync += ResyncAsync;
     }
 
     public ObservableCollection<LineDto> Lines { get; } = [];
     public ObservableCollection<MachineTileViewModel> Tiles { get; } = [];
+    public ObservableCollection<GatewayCardViewModel> Gateways { get; } = [];   // [M4b] edge gateways of the line
     public ObservableCollection<AndonRowViewModel> Andons { get; } = [];
     public ObservableCollection<DowntimeReasonDto> DowntimeReasons { get; } = [];
 
@@ -122,6 +124,8 @@ public partial class LineDashboardViewModel : ObservableObject, ILoadable, IClos
                 if (_line != line) return;   // the user switched line meanwhile
                 Tiles.Clear();
                 foreach (var m in status.Machines) Tiles.Add(new MachineTileViewModel(m));
+                Gateways.Clear();
+                foreach (var g in status.Gateways ?? []) Gateways.Add(new GatewayCardViewModel(g));
                 Andons.Clear();
                 foreach (var a in andons) ApplyAndon(a);
                 if (!keepError) ErrorMessage = string.Empty;
@@ -135,6 +139,13 @@ public partial class LineDashboardViewModel : ObservableObject, ILoadable, IClos
 
     private MachineTileViewModel? TileFor(string line, string machine)
         => line == _line ? Tiles.FirstOrDefault(t => t.Code == machine) : null;
+
+    // [M4b] Every dashboard receives every gateway's status: keep the ones reading a machine of this line.
+    private void ApplyGateway(GatewayStatusDto dto)
+    {
+        if (Gateways.FirstOrDefault(g => g.Gateway == dto.Gateway) is { } card) card.Apply(dto);
+        else if (dto.Devices.Keys.Any(code => Tiles.Any(t => t.Code == code))) Gateways.Add(new GatewayCardViewModel(dto));
+    }
 
     // Insert, update or remove one row, never going back to an older version of the call.
     private void ApplyAndon(AndonDto dto)
