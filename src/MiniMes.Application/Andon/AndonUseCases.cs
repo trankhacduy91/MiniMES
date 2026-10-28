@@ -3,6 +3,7 @@ using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MiniMes.Application.Common;
+using MiniMes.Application.Oee.Downtime;
 using MiniMes.Application.Realtime;
 using MiniMes.Contracts.Andon;
 using MiniMes.Domain.Andon;
@@ -114,7 +115,9 @@ public abstract class AndonTransitionValidator<T> : AbstractValidator<T> where T
 //  - both read before either saved -> both pass this check, the second UPDATE matches 0 rows -> 409 (AppDbContext).
 internal sealed class AndonTransition(IAppDbContext db, ICurrentUser user, TimeProvider time, IRealtimeNotifier notifier)
 {
-    public async Task<AndonDto> RunAsync(IAndonTransition cmd, Action<AndonCall, string, DateTime> change, CancellationToken ct)
+    /// <param name="beforeSave">Work that must commit together with the transition (M5: classify the stops).</param>
+    public async Task<AndonDto> RunAsync(IAndonTransition cmd, Action<AndonCall, string, DateTime> change, CancellationToken ct,
+        Func<AndonCall, Task>? beforeSave = null)
     {
         var call = await db.AndonCalls.SingleOrDefaultAsync(a => a.Id == cmd.Id, ct)
             ?? throw new KeyNotFoundException($"Andon {cmd.Id} not found.");
@@ -125,6 +128,7 @@ internal sealed class AndonTransition(IAppDbContext db, ICurrentUser user, TimeP
 
         var by = user.EmployeeCode ?? throw new InvalidOperationException("Changing an Andon needs a logged-in user.");
         change(call, by, time.GetUtcNow().UtcDateTime);   // wrong status -> 422
+        if (beforeSave is not null) await beforeSave(call);
         await db.SaveChangesAsync(ct);
 
         var dto = await db.GetAndonDtoAsync(call.Id, ct);
@@ -164,7 +168,9 @@ public sealed class ResolveAndonHandler(IAppDbContext db, ICurrentUser user, Tim
         var reasonId = cmd.DowntimeReasonId!.Value;
         if (!await db.DowntimeReasons.AnyAsync(r => r.Id == reasonId && r.IsActive, ct))
             throw new ValidationException([new ValidationFailure(nameof(cmd.DowntimeReasonId), $"Unknown or inactive downtime reason {reasonId}.")]);
-        return await new AndonTransition(db, user, time, notifier).RunAsync(cmd, (a, by, now) => a.Resolve(by, reasonId, cmd.Note, now), ct);
+        // M5 step 6: the reason also explains the machine's stops during the call (Pareto, Availability), same save.
+        return await new AndonTransition(db, user, time, notifier).RunAsync(cmd, (a, by, now) => a.Resolve(by, reasonId, cmd.Note, now), ct,
+            call => DowntimeClassification.ClassifyFromAndonAsync(db, call, ct));
     }
 }
 

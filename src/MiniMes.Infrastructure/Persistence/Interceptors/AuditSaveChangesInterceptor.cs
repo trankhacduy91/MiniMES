@@ -132,6 +132,7 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUser currentUser, TimePr
 
         // ToList first: we add AuditLog entries to the same ChangeTracker below.
         var audited = db.ChangeTracker.Entries().Where(e => e.Entity is IAudited).ToList();
+        var columnsOnly = db.ChangeTracker.Entries().Where(e => e.Entity is IAuditedColumns && e.State == EntityState.Modified);
         var logs = new List<AuditLog>();
 
         foreach (var entry in audited)
@@ -154,6 +155,13 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUser currentUser, TimePr
                         ToJson(entry, original: true), null, by, now));
                     break;
             }
+        }
+
+        foreach (var entry in columnsOnly)
+        {
+            var key = RecordKey(entry);
+            foreach (var p in entry.Properties.Where(p => p.IsModified && IsAuditedColumn(p) && !Equals(p.OriginalValue, p.CurrentValue)))
+                logs.Add(new AuditLog(TableName(entry), key, p.Metadata.Name, Format(p.OriginalValue), Format(p.CurrentValue), by, now));
         }
 
         db.Set<AuditLog>().AddRange(logs);
@@ -187,6 +195,9 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUser currentUser, TimePr
         => JsonSerializer.Serialize(entry.Properties.ToDictionary(
             p => p.Metadata.Name,
             p => IsIgnored(p) ? Masked : Format(original ? p.OriginalValue : p.CurrentValue)));
+
+    private static bool IsAuditedColumn(PropertyEntry p)
+        => p.Metadata.PropertyInfo?.GetCustomAttribute<AuditedColumnAttribute>() is not null;
 
     private static bool IsIgnored(PropertyEntry p)
         => p.Metadata.PropertyInfo?.GetCustomAttribute<AuditIgnoreAttribute>() is not null;

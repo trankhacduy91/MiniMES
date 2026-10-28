@@ -256,6 +256,7 @@ public class MasterDataSeeder(AppDbContext db, TimeProvider time)
         ("FDR-JAM", "Feeder jam", DowntimeCategory.Unplanned, true),
         ("QC-WAIT", "Waiting for QC approval", DowntimeCategory.Unplanned, true),
         ("NO-OPR", "No operator", DowntimeCategory.Unplanned, true),
+        ("OTHER", "Other (note required)", DowntimeCategory.Unplanned, true),   // M5: a note says what it was
     ];
 
     private async Task SeedCatalogsAsync(CancellationToken ct)

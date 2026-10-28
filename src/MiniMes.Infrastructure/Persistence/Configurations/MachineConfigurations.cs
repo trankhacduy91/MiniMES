@@ -35,6 +35,7 @@ public class MachineStateHistoryConfiguration : IEntityTypeConfiguration<Machine
         b.Property(x => x.StartAt).HasPrecision(3);
         b.Property(x => x.EndAt).HasPrecision(3);
         b.HasOne<Machine>().WithMany().HasForeignKey(x => x.MachineId).OnDelete(DeleteBehavior.Restrict);
+        b.Property(x => x.DowntimeNote).HasMaxLength(MachineStateHistory.NoteMaxLength);
         b.HasOne<DowntimeReason>().WithMany().HasForeignKey(x => x.DowntimeReasonId).OnDelete(DeleteBehavior.Restrict);
         // Exactly one open segment per machine, guarded by the database even if the code has a bug.
         b.HasIndex(x => x.MachineId).IsUnique().HasFilter("[EndAt] IS NULL").HasDatabaseName("UX_MachineStateHistory_OpenPerMachine");

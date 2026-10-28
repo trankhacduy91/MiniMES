@@ -579,6 +579,10 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("DowntimeNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<int?>("DowntimeReasonId")
                         .HasColumnType("int");
 
