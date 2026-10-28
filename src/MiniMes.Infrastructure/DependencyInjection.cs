@@ -6,6 +6,7 @@ using MiniMes.Application.Auth;
 using MiniMes.Application.Common;
 using MiniMes.Application.Execution;
 using MiniMes.Application.Machines;
+using MiniMes.Application.Oee;
 using MiniMes.Application.MasterData.Boms;
 using MiniMes.Application.Planning;
 using MiniMes.Domain.Users;
@@ -13,6 +14,7 @@ using MiniMes.Infrastructure.Auth;
 using MiniMes.Infrastructure.Execution;
 using MiniMes.Application.Realtime;
 using MiniMes.Infrastructure.Machines;
+using MiniMes.Infrastructure.Oee;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Interceptors;
 using MiniMes.Infrastructure.Persistence.Queries;
@@ -53,6 +55,8 @@ public static class DependencyInjection
         services.AddScoped<IBomExplosionQuery, BomExplosionQuery>();
         services.AddScoped<ISequenceNumbers, SequenceNumbers>();
         services.AddScoped<IExecutionReportQueries, ExecutionReportQueries>();
+        services.Configure<OeeOptions>(config.GetSection(OeeOptions.SectionName));   // M5
+        services.AddScoped<IOeeInputReader, OeeInputReader>();
         // IANA id works on Windows and Linux (.NET uses ICU); a wrong id fails at startup, not at the first WO.
         services.AddSingleton(new PlantTimeZone(TimeZoneInfo.FindSystemTimeZoneById(config["Plant:TimeZone"] ?? "Asia/Ho_Chi_Minh")));
         // M4: MQTT ingest. Off in Testing (no broker there; the MQTT integration tests start their own, step 9).

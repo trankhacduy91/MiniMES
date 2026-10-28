@@ -298,6 +298,10 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SerialNo", "ScannedAt");
 
+                    b.HasIndex("StationId", "ScannedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("StationId", "ScannedAt"), new[] { "Result", "WorkOrderId" });
+
                     b.ToTable("ScanLogs", (string)null);
                 });
 
@@ -575,6 +579,9 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int?>("DowntimeReasonId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("EndAt")
                         .HasPrecision(3)
                         .HasColumnType("datetime2(3)");
@@ -591,12 +598,16 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DowntimeReasonId");
+
                     b.HasIndex("MachineId")
                         .IsUnique()
                         .HasDatabaseName("UX_MachineStateHistory_OpenPerMachine")
                         .HasFilter("[EndAt] IS NULL");
 
                     b.HasIndex("MachineId", "StartAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("MachineId", "StartAt"), new[] { "EndAt", "State", "DowntimeReasonId" });
 
                     b.ToTable("MachineStateHistory", (string)null);
                 });
@@ -1656,6 +1667,11 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("MiniMes.Domain.Machines.MachineStateHistory", b =>
                 {
+                    b.HasOne("MiniMes.Domain.MasterData.Downtime.DowntimeReason", null)
+                        .WithMany()
+                        .HasForeignKey("DowntimeReasonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("MiniMes.Domain.MasterData.Equipment.Machine", null)
                         .WithMany()
                         .HasForeignKey("MachineId")

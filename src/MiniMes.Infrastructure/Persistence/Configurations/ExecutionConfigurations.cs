@@ -17,6 +17,8 @@ public class ScanLogConfiguration : IEntityTypeConfiguration<ScanLog>
         // varchar, not nvarchar: an nvarchar parameter against a varchar column forces CONVERT_IMPLICIT and a scan.
         b.HasIndex(x => new { x.SerialNo, x.ScannedAt });
         b.HasIndex(x => x.WorkOrderId);   // reports per WO
+        // OEE (M5): Good/NG per station and time window, split by WO.
+        b.HasIndex(x => new { x.StationId, x.ScannedAt }).IncludeProperties(x => new { x.Result, x.WorkOrderId });
         b.Property(x => x.SerialNo).HasMaxLength(Serial.SerialNoMaxLength).IsUnicode(false);
         b.Property(x => x.Result).HasConversion<string>().HasMaxLength(10).IsUnicode(false);
         b.Property(x => x.Source).HasConversion<string>().HasMaxLength(10).IsUnicode(false);

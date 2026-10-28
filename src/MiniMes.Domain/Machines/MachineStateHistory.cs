@@ -12,6 +12,7 @@ public class MachineStateHistory
     public MachineState State { get; private set; }
     public DateTime StartAt { get; private set; }
     public DateTime? EndAt { get; private set; }         // null = the current state
+    public int? DowntimeReasonId { get; private set; }   // M5: why it stopped; null on a stop = "to classify"
 
     private MachineStateHistory() { }
 
@@ -30,5 +31,13 @@ public class MachineStateHistory
         // Segments must not overlap: a message older than the open segment only goes to MachineEvent.
         if (endAt < StartAt) throw new DomainException("A state segment cannot end before it starts.");
         EndAt = endAt;
+    }
+
+    // Spec M5 1.2.4: the reason decides the OEE maths (CountsAgainstAvailability). Who may set it and when: step 6.
+    public void AssignReason(int downtimeReasonId)
+    {
+        if (downtimeReasonId <= 0) throw new DomainException("A downtime reason id must be positive.");
+        if (State == MachineState.Running) throw new DomainException("A running segment has no downtime reason.");
+        DowntimeReasonId = downtimeReasonId;
     }
 }
