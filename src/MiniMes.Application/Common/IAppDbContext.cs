@@ -13,6 +13,7 @@ using MiniMes.Domain.MasterData.Downtime;
 using MiniMes.Domain.MasterData.Equipment;
 using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Routings;
+using MiniMes.Domain.Oee;
 using MiniMes.Domain.Planning;
 using MiniMes.Domain.Users;
 
@@ -61,6 +62,9 @@ public interface IAppDbContext
     DbSet<ProcessValue> ProcessValues { get; }
     DbSet<AndonCall> AndonCalls { get; }
     DbSet<AndonEscalationRule> AndonEscalationRules { get; }
+
+    // M5: OEE
+    DbSet<OeeSnapshot> OeeSnapshots { get; }
 
     // A unique-index violation (two requests racing past the "already exists" check) comes out as
     // ConflictException (409), so handlers never see provider-specific SQL errors.

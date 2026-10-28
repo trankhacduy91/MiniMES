@@ -149,3 +149,49 @@ public class OeeCalculatorTests
         }
     }
 }
+
+// Rule 12 / spec 1.5 #6: OEE of several hours = add the totals and divide, never average the percentages.
+public class OeeCombineTests
+{
+    private static OeeResult Hour(double plannedMinutes, double idealCycleSec, long count)
+        => OeeCalculator.Calculate(new OeeInput(TimeSpan.FromMinutes(plannedMinutes), TimeSpan.Zero, TimeSpan.Zero,
+            TimeSpan.Zero, [new ProductionSegment(idealCycleSec, count)], count));
+
+    // Hour 1: 60 planned minutes at 90 %; hour 2: 6 planned minutes at 40 %. Average = 65 %, real = 85.45 %.
+    [Fact]
+    public void Two_hours_are_added_not_averaged()
+    {
+        var h1 = Hour(60, 20, 162);     // 3,240 s ideal / 3,600 s = 0.90
+        var h2 = Hour(6, 1, 144);       //   144 s ideal /   360 s = 0.40
+
+        var both = OeeCalculator.Combine([h1, h2]);
+
+        Assert.Equal(0.9, h1.Oee!.Value, 9);
+        Assert.Equal(0.4, h2.Oee!.Value, 9);
+        Assert.Equal(3384.0 / 3960.0, both.Oee!.Value, 9);   // 0.8545, not (0.9 + 0.4) / 2
+        Assert.Equal((66.0, 306L), (both.PlannedTime.TotalMinutes, both.TotalCount));
+    }
+
+    // A lunch hour (planned 0) adds nothing and does not turn the shift into "undefined".
+    [Fact]
+    public void Lunch_hour_does_not_change_the_shift()
+    {
+        var h1 = Hour(60, 20, 162);
+        var lunch = OeeCalculator.Calculate(new OeeInput(TimeSpan.FromMinutes(60), TimeSpan.FromMinutes(60), TimeSpan.Zero,
+            TimeSpan.Zero, [new ProductionSegment(20, 0)], 0));
+
+        Assert.Equal(h1.Oee, OeeCalculator.Combine([h1, lunch]).Oee);
+        Assert.Null(OeeCalculator.Combine([lunch]).Oee);
+    }
+
+    // An hour above 100 % keeps its flag; the shift is judged on its own totals (6,660 s ideal / 7,200 s run = 0.925).
+    [Fact]
+    public void Flags_are_recomputed_on_the_totals()
+    {
+        var fast = Hour(60, 30, 162);   // P = 4,860 / 3,600 = 1.35
+
+        Assert.Equal(OeeWarning.PerformanceOver100, fast.Warnings);
+        Assert.Equal(OeeWarning.None, OeeCalculator.Combine([fast, Hour(60, 20, 90)]).Warnings);
+        Assert.Equal(OeeWarning.PerformanceOver100, OeeCalculator.Combine([fast, Hour(60, 20, 180)]).Warnings);   // 8,460 / 7,200
+    }
+}

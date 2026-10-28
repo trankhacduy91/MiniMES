@@ -57,6 +57,10 @@ public static class DependencyInjection
         services.AddScoped<IExecutionReportQueries, ExecutionReportQueries>();
         services.Configure<OeeOptions>(config.GetSection(OeeOptions.SectionName));   // M5
         services.AddScoped<IOeeInputReader, OeeInputReader>();
+        services.AddScoped<OeeSnapshotService>();
+        // Off in Testing: the tests call the service with a FakeTimeProvider (and one thin test drives the worker).
+        if (config.GetValue(OeeOptions.SectionName + ":" + nameof(OeeOptions.SnapshotJobEnabled), true))
+            services.AddHostedService<OeeSnapshotWorker>();
         // IANA id works on Windows and Linux (.NET uses ICU); a wrong id fails at startup, not at the first WO.
         services.AddSingleton(new PlantTimeZone(TimeZoneInfo.FindSystemTimeZoneById(config["Plant:TimeZone"] ?? "Asia/Ho_Chi_Minh")));
         // M4: MQTT ingest. Off in Testing (no broker there; the MQTT integration tests start their own, step 9).

@@ -150,3 +150,10 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Cách tìm:** đặt cạnh nhau ba mốc thời gian: lệnh `opcua stop`, log "server stopped" của simulator, `DISCONNECTED` của gateway, rồi "is Offline" của API. Khoảng hở nằm giữa lệnh và lúc server thực sự dừng, không phải ở gateway hay MES (từ lúc server dừng tới Offline chỉ 3 s).
 - **Cách sửa:** (1) gateway: keep-alive báo `ServerState.Shutdown`/`Failed` = mất máy ngay (server thật cập nhật firmware cũng báo trước như vậy); **không** tính `Unknown` (ngay sau khi server khởi động, keep-alive có thể chưa có state, tính vào sẽ ngắt nhầm); (2) simulator `ShutdownDelay = 0`: `opcua stop` mô phỏng "PLC bị tắt"; (3) `keepAliveMs` 2000 → 1000. Kết quả: Offline sau 4,1–4,6 s, mỗi lần stop đúng một lần ngắt.
 - **Bài học:** "dừng server" trong OPC UA là một quy trình có pha báo trước; client nên nghe `ServerState`, không chỉ chờ lỗi socket. Đo thời gian phản ứng phải tính từ **sự kiện thật** và lần theo từng mốc, không đoán tham số (giảm keep-alive một mình không giúp gì, vì nút thắt nằm ở chỗ khác).
+
+## 2026-10-28 — Unique index của snapshot OEE không chặn được dòng tổng ca trùng (M5 bước 5, bắt được trước khi chạy)
+
+- **Triệu chứng:** đọc migration EF sinh ra cho `HasIndex(MachineId, ShiftDate, ShiftId, Hour).IsUnique()` thấy dòng `filter: "[Hour] IS NOT NULL"` mà mình không viết.
+- **Nguyên nhân:** với unique index có cột nullable, EF Core (provider SQL Server) **tự thêm** filter `IS NOT NULL` để giống hành vi chuẩn ANSI (NULL không bằng NULL). Dự án lại dùng `Hour = NULL` làm dòng **tổng ca**: có filter thì hai lần chạy job song song có thể chèn hai dòng tổng ca cho cùng (máy, ca, ngày), đúng loại lỗi index được tạo ra để chặn.
+- **Cách sửa:** `.HasFilter(null)`: index không filter, SQL Server coi các NULL là bằng nhau trong unique index, nên mỗi khóa chỉ có một dòng tổng ca. Thêm integration test `Database_refuses_a_second_shift_total_row`.
+- **Bài học:** luôn đọc migration EF sinh ra trước khi chạy, nhất là index/constraint. "Index unique" của EF trên cột nullable không giống "index unique" của SQL Server viết tay.

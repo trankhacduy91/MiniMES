@@ -15,6 +15,7 @@ using MiniMes.Domain.MasterData.Downtime;
 using MiniMes.Domain.MasterData.Equipment;
 using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Routings;
+using MiniMes.Domain.Oee;
 using MiniMes.Domain.Planning;
 using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Persistence.Configurations;
@@ -60,6 +61,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ProcessValue> ProcessValues => Set<ProcessValue>();
     public DbSet<AndonCall> AndonCalls => Set<AndonCall>();
     public DbSet<AndonEscalationRule> AndonEscalationRules => Set<AndonEscalationRule>();
+    public DbSet<OeeSnapshot> OeeSnapshots => Set<OeeSnapshot>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
         => Database.BeginTransactionAsync(ct);

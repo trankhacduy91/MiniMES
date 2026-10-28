@@ -1224,6 +1224,88 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Oee.OeeSnapshot", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<double?>("Availability")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("CalculatedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<long>("GoodCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte?>("Hour")
+                        .HasColumnType("tinyint");
+
+                    b.Property<double>("IdealSeconds")
+                        .HasColumnType("float");
+
+                    b.Property<bool>("IsFinal")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("Oee")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("Performance")
+                        .HasColumnType("float");
+
+                    b.Property<int>("PlannedSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("Quality")
+                        .HasColumnType("float");
+
+                    b.Property<int>("RunSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ScanCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateOnly>("ShiftDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("TotalCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Warnings")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("WindowEndUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("WindowStartUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsFinal")
+                        .HasFilter("[IsFinal] = 0");
+
+                    b.HasIndex("ShiftId");
+
+                    b.HasIndex("MachineId", "ShiftDate", "ShiftId", "Hour")
+                        .IsUnique()
+                        .HasDatabaseName("UX_OeeSnapshots_MachineShiftHour");
+
+                    b.ToTable("OeeSnapshots", (string)null);
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Planning.LabelPrintLog", b =>
                 {
                     b.Property<long>("Id")
@@ -1782,6 +1864,21 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.HasOne("MiniMes.Domain.MasterData.Equipment.WorkCenter", null)
                         .WithMany()
                         .HasForeignKey("WorkCenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Oee.OeeSnapshot", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Equipment.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.MasterData.Calendar.Shift", null)
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

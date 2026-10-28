@@ -10,6 +10,14 @@ public sealed class OeeOptions
     // Spec M5 1.2.5: stops shorter than this are micro stops (no reason needed, they show in Performance).
     // Keep it equal to Andon:AutoRaiseAfterSeconds so nobody is called for a stop that does not count.
     public int MicroStopThresholdSec { get; set; } = 60;
+
+    // Step 5: an hour is closed this long after it ends, so late MQTT messages (QoS 1, gateway outbox) are in.
+    public int SnapshotGraceMinutes { get; set; } = 5;
+
+    // How far back the job looks for buckets it has not closed (server down over a weekend).
+    public int CatchUpDays { get; set; } = 2;
+
+    public bool SnapshotJobEnabled { get; set; } = true;
 }
 
 /// <param name="Input">Totals for OeeCalculator.</param>

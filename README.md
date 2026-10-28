@@ -256,6 +256,23 @@ Số đo (máy dev, 27/10/2026; DoD M4):
 
 Những điểm đáng nói khi phỏng vấn: bộ đếm tích lũy + QoS 1 + chống trùng `msgId` (mất mạng không mất sản lượng); đường nóng (RAM + SignalR) tách đường lạnh (`Channel` + batch); Offline khác Down; snapshot REST + push SignalR + resync sau reconnect; Andon một bản mở mỗi (máy, loại) bằng filtered unique index, hai người cùng ack thì `RowVersion` cho một người 409. Ghi chú học theo từng bước ở [`docs/learning/`](docs/learning/).
 
+## OEE (M5)
+
+OEE = Availability × Performance × Quality, tính ở **một** hàm thuần (`Domain/Oee/OeeCalculator`); dashboard, job và báo cáo đều gọi nó. Ca mẫu tính tay: [docs/oee-hand-calcs.md](docs/oee-hand-calcs.md) (79,84 %).
+
+**Realtime vs định kỳ.** Dùng cả hai, cho hai nhu cầu khác nhau, nhưng cùng một hàm tính:
+
+| | OEE ca hiện tại (realtime) | `OeeSnapshot` theo giờ / cuối ca (định kỳ) |
+| --- | --- | --- |
+| Tính khi nào | Mỗi lần dashboard hỏi, cắt cửa sổ đến "bây giờ" | Job mỗi phút chốt bucket đã qua `End + 5 phút` (grace chờ message QoS 1 về muộn) |
+| Ưu | Số tức thời | Đã chốt thì không đổi (trừ khi đổi lý do dừng), dễ kiểm chứng; báo cáo nhiều ngày chỉ đọc vài dòng |
+| Nhược | Tốn truy vấn mỗi lần mở; số nhảy khi dữ liệu về muộn | Trễ tới 1 giờ + grace |
+| Dùng cho | Thẻ A/P/Q đang chạy, Line TV | Lịch sử, sản lượng theo giờ, Excel, so sánh ca/ngày |
+
+Job **bắt kịp**: mỗi lượt hỏi "bucket nào đến hạn mà chưa chốt" (không "đúng phút 0 thì chốt"), nên API tắt 3 giờ thì lượt kế tiếp chốt bù 3 giờ (tối đa `Oee:CatchUpDays` = 2 ngày); chạy lại không sinh dòng trùng (upsert theo unique index `(MachineId, ShiftDate, ShiftId, Hour)`, `Hour = NULL` là tổng ca). Tổng nhiều giờ/ngày = cộng thời gian và số đếm rồi chia, không lấy trung bình các %.
+
+**Quy ước đã chọn** (spec M5 1.2.4–1.2.8): Total từ bộ đếm máy, Good từ scan theo serial; ngày sản xuất = ngày bắt đầu ca (giờ nhà máy); dừng < 60 s (`Oee:MicroStopThresholdSec`) là micro stop; Down/Setup/Offline chưa có lý do vẫn phạt A; Idle phạt A khi trạm của máy có scan trong ca; P > 100 % giữ số thô + cờ.
+
 ## Edge Gateway (M4b)
 
 Máy không nói MQTT thì đi qua **edge gateway** (`MiniMes.EdgeGateway`, .NET Worker): đọc PLC, chuẩn hóa sang đúng hợp đồng MQTT của M4, đệm vào SQLite khi mất mạng. MES không biết máy nói giao thức gì ([ADR-009](ARCHITECTURE.md#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật)).

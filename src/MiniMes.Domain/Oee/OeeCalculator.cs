@@ -36,14 +36,33 @@ public static class OeeCalculator
         var warnings = OeeWarning.None;
         var run = planned - x.UnplannedDowntime;
         if (run < TimeSpan.Zero) { run = TimeSpan.Zero; warnings |= OeeWarning.DowntimeExceedsPlanned; }
+        return FromTotals(planned, run, total, x.GoodCount, ideal, warnings);
+    }
 
+    // Rule 12: several hours or machines together = add the times and counts, then divide with the same formula.
+    // Averaging the hourly OEEs is wrong as soon as the hours have different planned times (spec 1.5 #6).
+    public static OeeResult Combine(IEnumerable<OeeResult> parts)
+    {
+        var list = parts.ToList();
+        var planned = list.Aggregate(TimeSpan.Zero, (t, r) => t + r.PlannedTime);
+        long total = list.Sum(r => r.TotalCount), good = list.Sum(r => r.GoodCount);
+        double ideal = list.Sum(r => r.IdealSeconds);
+        if (planned <= TimeSpan.Zero)
+            return new(TimeSpan.Zero, TimeSpan.Zero, total, good, ideal, null, null, null, null, OeeWarning.None);
+        var run = list.Aggregate(TimeSpan.Zero, (t, r) => t + r.RunTime);
+        var carried = list.Aggregate(OeeWarning.None, (w, r) => w | r.Warnings) & OeeWarning.DowntimeExceedsPlanned;
+        return FromTotals(planned, run, total, good, ideal, carried);
+    }
+
+    private static OeeResult FromTotals(TimeSpan planned, TimeSpan run, long total, long good, double ideal, OeeWarning warnings)
+    {
         double a = run / planned;
         double? p = run > TimeSpan.Zero ? ideal / run.TotalSeconds : null;
-        double? q = total > 0 ? (double)x.GoodCount / total : null;
+        double? q = total > 0 ? (double)good / total : null;
         // Raw values are kept: clipping P to 100 % would hide a wrong cycle time (rule 9).
         if (p > 1.0) warnings |= OeeWarning.PerformanceOver100;
-        if (x.GoodCount > total) warnings |= OeeWarning.GoodExceedsTotal;
+        if (good > total) warnings |= OeeWarning.GoodExceedsTotal;
         double oee = p is { } pp && q is { } qq ? a * pp * qq : 0.0;   // planned time but nothing made: 0 %
-        return new(planned, run, total, x.GoodCount, ideal, a, p, q, oee, warnings);
+        return new(planned, run, total, good, ideal, a, p, q, oee, warnings);
     }
 }
