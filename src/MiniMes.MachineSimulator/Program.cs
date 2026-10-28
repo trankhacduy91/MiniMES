@@ -18,6 +18,8 @@ var builder = Host.CreateApplicationBuilder(args);
 // Next to the exe by default, so "dotnet run --project" works from any folder.
 var configFile = builder.Configuration["config"] ?? Path.Combine(AppContext.BaseDirectory, "machines.json");
 builder.Configuration.AddJsonFile(Path.GetFullPath(configFile), optional: false, reloadOnChange: false);
+// After the file: Docker overrides a few values (mqtt__host=mosquitto, machines__1__opcua__host=simulator...).
+builder.Configuration.AddEnvironmentVariables();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "HH:mm:ss "; });

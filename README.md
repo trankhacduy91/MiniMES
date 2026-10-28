@@ -229,7 +229,7 @@ Những điểm đáng nói khi phỏng vấn:
 
 ![Dashboard line: ô máy theo state, Andon leo thang nhấp nháy](docs/images/m4-line-dashboard.png)
 
-**Chạy:** `docker compose up -d` (SQL Server + Mosquitto) → API → `dotnet run --project src/MiniMes.MachineSimulator` (thêm `-- --auto-operator` để simulator scan cả trạm thủ công Assembly/Pack) → BackOffice, menu **Line dashboard**. Lệnh simulator: `list`, `down L1-SMT-01 300`, `up`, `ng L1-TEST-01 1`, `reset`, `mute`/`unmute`, `dup`, `skew`, `tag L1-REFLOW-01 peakTemp 245.3` (gõ `help`).
+**Chạy:** `docker compose up -d` (SQL Server + Mosquitto) → API → `dotnet run --project src/MiniMes.MachineSimulator` (thêm `-- --auto-operator` để simulator scan cả trạm thủ công Assembly/Pack) → `dotnet run --project src/MiniMes.EdgeGateway` (lò reflow và máy dán keo, xem M4b) → BackOffice, menu **Line dashboard**. Lệnh simulator: `list`, `down L1-SMT-01 300`, `up`, `ng L1-TEST-01 1`, `reset`, `mute`/`unmute`, `dup`, `skew`, `tag <máy MQTT> <tag> <giá trị>` (gõ `help`).
 
 - **Vai máy (MQTT):** mỗi máy một client có LWT; `state` retained, `count` là bộ đếm tích lũy (QoS 1), `heartbeat` 5 giây.
 - **Vai trạm (HTTP):** máy SMT và Test lấy serial đang chờ ở bước của mình và gọi đúng `POST /api/stations/{id}/scan` của kiosk (badge `SIM-STATION`). Không có bo chờ thì máy chuyển `Idle`. Máy chỉ đếm khi scan được chấp nhận: Total Count (MQTT) và Good/NG (scan theo serial) kể cùng một câu chuyện ([ADR-007](ARCHITECTURE.md#adr-007-nguồn-dữ-liệu-oee-total-count-từ-máy-goodng-từ-scan-theo-serial)).
@@ -251,10 +251,63 @@ Số đo (máy dev, 27/10/2026; DoD M4):
 | Việc | API |
 | --- | --- |
 | Snapshot dashboard | `GET /api/lines/{code}/status` (state, counter, số giờ này, tag process mới nhất, nguồn dữ liệu) |
-| Realtime | SignalR `/hubs/machines`: `JoinLine(code)`; event `MachineStateChanged`, `MachineCounterUpdated`, `MachineProcessUpdated`, `AndonChanged`, `AndonEscalated` |
+| Realtime | SignalR `/hubs/machines`: `JoinLine(code)`; event `MachineStateChanged`, `MachineCounterUpdated`, `MachineProcessUpdated`, `AndonChanged`, `AndonEscalated`, `GatewayStatusChanged` (M4b) |
 | Andon | `POST /api/andon` (Operator), `POST /api/andon/{id}/acknowledge`, `/resolve` `{ downtimeReasonId }`, `/cancel` (Supervisor, Maintenance), `GET /api/andon?status=open&line=L1`, `GET /api/andon/stats?from=&to=` |
 
 Những điểm đáng nói khi phỏng vấn: bộ đếm tích lũy + QoS 1 + chống trùng `msgId` (mất mạng không mất sản lượng); đường nóng (RAM + SignalR) tách đường lạnh (`Channel` + batch); Offline khác Down; snapshot REST + push SignalR + resync sau reconnect; Andon một bản mở mỗi (máy, loại) bằng filtered unique index, hai người cùng ack thì `RowVersion` cho một người 409. Ghi chú học theo từng bước ở [`docs/learning/`](docs/learning/).
+
+## Edge Gateway (M4b)
+
+Máy không nói MQTT thì đi qua **edge gateway** (`MiniMes.EdgeGateway`, .NET Worker): đọc PLC, chuẩn hóa sang đúng hợp đồng MQTT của M4, đệm vào SQLite khi mất mạng. MES không biết máy nói giao thức gì ([ADR-009](ARCHITECTURE.md#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật)).
+
+```
+ MachineSimulator                              MiniMes.EdgeGateway                                   Broker / MES
+ lò reflow  L1-REFLOW-01  ──OPC UA subscription──▶ OpcUaDriver ─┐
+ (opc.tcp://…:4840, ns=2;s=Reflow.PeakTemp …)                   ├▶ Channel ─▶ Normalizer ─▶ outbox SQLite ─▶ Forwarder ─QoS 1─▶ Mosquitto ─▶ MqttIngestService
+ máy dán keo L1-GLUE-01 ◀──Modbus FC03 mỗi 1 s──── ModbusDriver ┘   (msgId = hash nội dung)  (xóa sau PUBACK)            (M4, chỉ thêm nhánh _sys)
+ (5020, HR0-1 bộ đếm CDAB, HR2 state, HR3 alarm)   HealthPublisher: heartbeat máy · status máy online/offline · status gateway + LWT
+```
+
+**Chạy trên máy dev** (thêm vào phần M4): `dotnet run --project src/MiniMes.EdgeGateway` đọc `gateway.tags.json` (GW01: lò OPC UA + máy dán keo Modbus). Lệnh simulator thêm: `drift L1-REFLOW-01 0.3` (nhiệt độ trôi 0,3 °C/phút, `off` để tắt), `sensor L1-REFLOW-01 bad|good`, `opcua stop|start`, `modbus stop|start`.
+
+**Chạy bằng Docker** (simulator + gateway trong container, API vẫn chạy trên máy):
+
+```bash
+docker compose --profile plant up -d --build     # sqlserver, mosquitto, simulator, gateway
+docker attach mes-simulator                       # gõ lệnh simulator; thoát: Ctrl+P rồi Ctrl+Q (Ctrl+C sẽ dừng nó)
+docker compose --profile plant down               # volume gateway-data (outbox), gateway-pki (chứng chỉ) được giữ
+```
+
+Profile `plant` tách riêng để `docker compose up -d` quen thuộc không đụng simulator chạy bằng `dotnet run` (trùng cổng 4840/5020 và MQTT client id). Trong container, cấu hình ghi đè bằng biến môi trường (`mqtt__host=mosquitto`, `devices__0__endpoint=opc.tcp://simulator:4840`…).
+
+**Xem node bằng UaExpert** (Unified Automation, miễn phí, cần đăng ký): *Server → Add* → *Custom Discovery* → `opc.tcp://localhost:4840` → chọn endpoint *None – None* (dev) → *Connect*; nếu UaExpert báo hostname khác (`simulator` khi chạy Docker) thì chọn dùng hostname của URL discovery. Trong *Address Space*: `Objects/Reflow/PeakTemp`, `Counter`, `State` (`ns=2`); kéo `PeakTemp` sang *Data Access View* để thấy subscription, gõ `drift L1-REFLOW-01 1` ở simulator và nhìn giá trị tăng. Không có UaExpert: `dotnet run docs/learning/labs/opcua-lab.cs -- opc.tcp://localhost:4840 0.5 20 urn:minimes:simulator:reflow Reflow.PeakTemp Reflow.Counter Reflow.State`.
+
+**Chạy như Windows Service** (PC công nghiệp trong tủ điện; PowerShell admin; gateway có `AddWindowsService`):
+
+```powershell
+dotnet publish src/MiniMes.EdgeGateway -c Release -o C:\MiniMes\Gateway
+sc.exe create MiniMesGateway binPath= "C:\MiniMes\Gateway\MiniMes.EdgeGateway.exe" start= auto
+sc.exe failure MiniMesGateway reset= 86400 actions= restart/5000/restart/5000/restart/30000   # tự khởi động lại khi chết
+sc.exe start MiniMesGateway
+sc.exe stop MiniMesGateway; sc.exe delete MiniMesGateway                                        # gỡ
+```
+
+Service chạy ở môi trường Production: **không** tự chấp nhận chứng chỉ OPC UA lạ. Chứng chỉ của PLC nằm ở `pki\rejected`, người vận hành chuyển sang `pki\trusted` (production nên dùng `SignAndEncrypt`).
+
+Số đo (máy dev, 28/10/2026; DoD M4b):
+
+| Đo gì | Kết quả | Yêu cầu |
+| --- | --- | --- |
+| `opcua stop` → ô lò Offline (3 lần) | 4,1–4,6 s, không Andon | ≤ 5 s, không Andon |
+| Kill gateway → thẻ gateway đỏ (LWT) / 2 máy của nó Offline | 0 s / ~28–30 s; `L1-SMT-01` (MQTT trực tiếp) không đổi | |
+| Dừng Mosquitto 87 s → gửi bù | 66 message trong 2,9 s; `SUM(Delta)` khớp simulator; 0 reset giả; mỗi count đúng giờ máy | không mất, không trùng |
+| Kill gateway khi 16 dòng đang chờ → chạy lại | gửi tiếp 47 message trong 2,1 s, 0 msgId trùng ở MES | không trùng |
+| Deadband 0,5 °C (lò, 15 s) | 13 → 8 notification | |
+| `wordOrder: ABCD` (cố tình sai) | bộ đếm 100.000 đọc thành 2.258.632.705 ([incidents](docs/incidents.md)) | |
+
+Test tự động: `tests/MiniMes.IntegrationTests/Gateway/GatewayEndToEndTests.cs` chạy Mosquitto thật (Testcontainers) + OPC UA server và Modbus slave của simulator + host gateway thật trong một process: đúng topic/schema (đọc bằng chính `MachineMessageReader` của MES), dừng broker 20 giây không mất message và đúng thứ tự (đã thử đột biến: bỏ outbox thì test đỏ), tắt Modbus slave → `status = offline`.
+
+Điểm đáng nói khi phỏng vấn: vì sao có gateway (MES chỉ hiểu một hợp đồng; thêm S7/MC Protocol = thêm một driver), subscription vs polling, outbox luôn bật + xóa sau PUBACK + `msgId` cố định (ít nhất một lần + idempotent), Offline ≠ Down ≠ gateway chết, sự cố "2 tỷ sản phẩm" do thứ tự word Modbus. Ghi chú học từng bước: [`docs/learning/M4b-*`](docs/learning/).
 
 ## Performance
 
@@ -274,7 +327,7 @@ Scan qua API, SQL Server 2022 trong Docker, `ScanLogs` **10 triệu dòng**, 8 l
 
 ```bash
 dotnet test tests/MiniMes.UnitTests          # nhanh, không cần Docker: Domain, ViewModel, ApiClient, luật kiến trúc
-dotnet test tests/MiniMes.IntegrationTests   # cần Docker: Testcontainers bật SQL Server (+ 1 Mosquitto cho test MQTT), test xong tự xóa
+dotnet test tests/MiniMes.IntegrationTests   # cần Docker: Testcontainers bật SQL Server (+ Mosquitto cho test MQTT và gateway), test xong tự xóa
 ```
 
 Integration test chạy API ở môi trường `Testing`: tự `MigrateAsync()` + seed trên DB mới, secret lấy từ biến môi trường (không đọc user-secrets). Docker không chạy thì test **fail**, không bị bỏ qua. CI (GitHub Actions) chạy cả hai, cộng build 2 app WPF trên Windows.
@@ -315,6 +368,9 @@ src/MiniMes.Contracts       DTO dùng chung API ↔ WPF
 src/MiniMes.Client.Core     ApiClient, ViewModel dùng chung, Strings.resx
 src/MiniMes.BackOffice.Wpf  app văn phòng
 src/MiniMes.Kiosk.Wpf       app trạm
+src/MiniMes.MachineSimulator giả lập máy: MQTT, OPC UA server (lò reflow), Modbus slave (máy dán keo), vai trạm scan
+src/MiniMes.EdgeGateway     edge gateway: OPC UA + Modbus → MQTT, outbox SQLite (Worker Service / Windows Service)
+docker/                     mosquitto.conf, Dockerfile của simulator và gateway
 tests/                      unit test, integration test (Testcontainers)
 spec/                       spec dự án và từng module
 scripts/                    seed 10 triệu dòng ScanLog, đo SQL các phương án index, benchmark API scan (docs/perf.md)

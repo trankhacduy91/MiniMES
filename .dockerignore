@@ -1,0 +1,13 @@
+# Build context = repo root (the images need global.json, Directory.Build.props and the shared Contracts).
+**/bin/
+**/obj/
+**/data/
+**/pki/
+.git/
+.vs/
+.vscode/
+tests/
+docs/
+spec/
+*.md
+.env

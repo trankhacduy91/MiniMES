@@ -23,6 +23,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MiniMes.Api\MiniMes.Api.csproj" />
     <ProjectReference Include="..\..\src\MiniMes.Infrastructure\MiniMes.Infrastructure.csproj" />
+    <!-- M4b step 7: the plant side in-process (simulator's OPC UA server and Modbus slave, the gateway's host).
+         Aliased: both are programs with their own top-level Program, like the API's (WebApplicationFactory<Program>). -->
+    <ProjectReference Include="..\..\src\MiniMes.EdgeGateway\MiniMes.EdgeGateway.csproj" Aliases="gateway" />
+    <ProjectReference Include="..\..\src\MiniMes.MachineSimulator\MiniMes.MachineSimulator.csproj" Aliases="simulator" />
   </ItemGroup>
 
 </Project>

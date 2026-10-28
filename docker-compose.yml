@@ -1,5 +1,8 @@
 # Local infrastructure: SQL Server 2022 + Mosquitto MQTT broker.
 # Usage: cp .env.example .env && docker compose up -d && docker compose ps
+# M4b: the plant side (machine simulator + edge gateway) is the "plant" profile, so the usual "up -d" does not clash
+# with a simulator started by "dotnet run" (ports 4840/5020, MQTT client ids):
+#   docker compose --profile plant up -d --build
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -34,6 +37,53 @@ services:
       timeout: 5s
       retries: 5
 
+  # M4b: the machines. MQTT machines talk to the broker; the reflow oven is an OPC UA server (4840) and the glue
+  # dispenser a Modbus TCP slave (5020), read by the gateway below. The station role calls the API on the host.
+  simulator:
+    profiles: ["plant"]
+    build:
+      context: .
+      dockerfile: docker/simulator.Dockerfile
+    container_name: mes-simulator
+    environment:
+      mqtt__host: mosquitto
+      api__baseUrl: http://host.docker.internal:5157
+      # The URL the OPC UA server announces must resolve for its clients (spec 2.2, trap 1): the service name.
+      machines__1__opcua__host: simulator
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "4840:4840"   # UaExpert from the host: opc.tcp://localhost:4840
+      - "5020:5020"
+    stdin_open: true  # console commands: docker attach mes-simulator
+    tty: true
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+
+  # M4b: OPC UA + Modbus -> MQTT, with the SQLite outbox and the OPC UA certificates on volumes.
+  gateway:
+    profiles: ["plant"]
+    build:
+      context: .
+      dockerfile: docker/gateway.Dockerfile
+    container_name: mes-gateway
+    environment:
+      mqtt__host: mosquitto
+      devices__0__endpoint: opc.tcp://simulator:4840
+      devices__1__host: simulator
+      opcUa__autoAcceptUntrustedCertificates: "true"   # dev only: production trusts the PLC certificate by hand
+    volumes:
+      - gateway-data:/app/data
+      - gateway-pki:/app/pki
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      simulator:
+        condition: service_started
+
 volumes:
   mssql-data:
   mosquitto-data:
+  gateway-data:
+  gateway-pki:

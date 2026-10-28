@@ -12,6 +12,7 @@ Mỗi quyết định ghi theo khung ADR (Architecture Decision Record): bối c
 | [ADR-006](#adr-006-bom-và-routing-có-version-draft--approved-hiệu-lực-nửa-mở) | BOM và Routing có version: Draft → Approved, hiệu lực nửa mở | 10/2026 |
 | [ADR-007](#adr-007-nguồn-dữ-liệu-oee-total-count-từ-máy-goodng-từ-scan-theo-serial) | Nguồn dữ liệu OEE: Total Count từ máy, Good/NG từ scan theo serial | 10/2026 |
 | [ADR-008](#adr-008-dữ-liệu-máy-đi-qua-mqtt-hợp-đồng-chung-cho-mọi-giao-thức) | Dữ liệu máy đi qua MQTT, hợp đồng chung cho mọi giao thức | 10/2026 |
+| [ADR-009](#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật) | Edge Gateway tự viết: OPC UA subscription, Modbus polling, outbox SQLite luôn bật | 10/2026 |
 
 ---
 
@@ -184,3 +185,31 @@ Integration test (Testcontainers SQL Server) so CTE với bảng của spec (202
 
 **Đánh đổi / giới hạn.** Thêm một thành phần phải vận hành (broker) và một điểm có thể hỏng (gateway). Dev chạy `allow_anonymous`; production cần user/password hoặc chứng chỉ + TLS và ACL theo topic. Một instance ingest (`ClientId` cố định); scale ngang cần shared subscription (MQTT 5) và chuyển runtime store sang Redis.
 
+---
+
+## ADR-009: Edge Gateway tự viết: OPC UA subscription, Modbus polling, outbox SQLite luôn bật
+
+**Bối cảnh.** Phần lớn máy trong nhà máy điện tử không nói MQTT: lò reflow đời mới có **OPC UA**, máy dán keo đời cũ chỉ có **Modbus TCP**. MES (Level 3) không nên nói chuyện trực tiếp với từng PLC (Level 1) (ADR-008). Mạng giữa xưởng và phòng server có thể đứt vài phút; gateway chạy trên một PC công nghiệp có thể bị restart.
+
+**Quyết định.** Một chương trình riêng `MiniMes.EdgeGateway` (.NET Worker, chạy như Windows Service hoặc container), chỉ chung `MiniMes.Contracts` với MES:
+
+```
+PLC ──OPC UA subscription / Modbus FC03 polling──▶ driver ─▶ Channel ─▶ Normalizer ─▶ outbox SQLite ─▶ forwarder ─QoS 1─▶ Mosquitto ─▶ ingest M4
+                                                                   (msgId = hash nội dung)  (xóa sau PUBACK, tuần tự)
+```
+
+1. **Vì sao có gateway**: dịch giao thức, chuẩn hóa tên/ý nghĩa (thanh ghi `40001-40002` CDAB hay `ns=2;s=Reflow.Counter` đều thành `count` của máy trong UNS), đệm khi mạng đứt. Cấu hình tag ở file `gateway.tags.json` của gateway, không ở DB MES: gateway phải chạy khi MES hỏng. Thêm giao thức (S7, MC Protocol) = thêm một `IDeviceDriver`.
+2. **Subscription cho OPC UA, polling cho Modbus.** OPC UA: một session, một subscription, deadband ở server (giảm 60–90 % message), `SourceTimestamp` làm `ts`. Modbus không đẩy được: đọc **một khối** thanh ghi mỗi giây, giải mã bằng `RegisterDecoder` (4 thứ tự word, unit test); bộ đếm tích lũy nên bỏ lỡ một lần hỏi không mất sản lượng.
+3. **Outbox luôn bật.** Mọi message dữ liệu ghi SQLite (WAL) trước, forwarder gửi **tuần tự** theo `Id`, **xóa sau PUBACK**. Một đường duy nhất nên thứ tự luôn đúng; restart gateway không mất hàng đợi; có trần (500.000 dòng / 7 ngày, bỏ bản cũ nhất, log Error). Heartbeat và status gateway thì gửi thẳng (bản cũ gửi bù là thông tin sai).
+4. **`msgId` cố định theo nội dung** (SHA-256 của máy, tag, ts, giá trị): OPC UA phát lại sau reconnect hay gateway gửi lại sau crash đều ra cùng `msgId`, MES khử trùng. Ít nhất một lần trên đường truyền + idempotent ở MES = đúng một lần trong DB.
+5. **Offline ≠ Down.** Mất PLC: gateway publish `status = offline` (retained) cho máy, ngừng heartbeat, **không** đoán `Down` (MES Offline trong ≤ 5 s, không Andon). Gateway chết: **LWT** trên `minimes/{site}/_sys/gateway/{id}/status`, thẻ gateway đỏ ngay, máy của nó Offline sau 30 s (watchdog M4). Ba sự cố, ba cách hiển thị, ba người xử lý.
+6. **Phía MES chỉ sửa hai chỗ**: nhánh `_sys/gateway` đầu ingest (thẻ gateway), và luật thời gian: message từ gateway có `ts` quá khứ ≤ 7 ngày là **gửi muộn** từ outbox, giữ `ts` (không coi là PLC lệch giờ), để sản lượng theo giờ vẫn đúng sau khi mất mạng.
+
+**Phương án đã loại.**
+- *MES làm OPC UA client / Modbus master:* như ADR-008; thêm nữa mạng IT phải mở đường vào mạng OT.
+- *Kepware, Ignition Edge, Node-RED, United Manufacturing Hub:* đúng lựa chọn khi có ngân sách và nhiều loại PLC; ở dự án học, tự viết để hiểu cơ chế (subscription, giải mã thanh ghi, store-and-forward). MES chỉ cần đúng hợp đồng MQTT nên đổi sang sản phẩm thương mại không phải sửa MES.
+- *Polling OPC UA bằng `Read` mỗi giây:* tốn tải, bỏ lỡ thay đổi ngắn, bỏ phí deadband ở server.
+- *Hàng đợi trong RAM / chỉ ghi đĩa khi mất mạng:* RAM mất khi restart; hai đường gửi dễ sai thứ tự.
+- *`Guid.NewGuid()` làm msgId:* bản phát lại thành message "mới", đếm trùng.
+
+**Đánh đổi / giới hạn.** Một lần ghi đĩa mỗi message (không đáng kể với WAL và ghi theo lô). Bảo mật OPC UA ở dev là `None` + auto-accept chứng chỉ; production phải `SignAndEncrypt` (Basic256Sha256) và trust chứng chỉ thủ công, theo dõi ngày hết hạn. Modbus không có bảo mật: cô lập mạng OT, gateway chỉ đọc. Một gateway cho một nhóm máy; hai gateway đọc cùng một máy sẽ gửi đôi. Hàng đợi tràn mất chi tiết của khoảng bị bỏ (tổng sản lượng vẫn đúng nhờ bộ đếm tích lũy).
