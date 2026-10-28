@@ -111,3 +111,26 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Cách tìm:** URL trong thông báo lỗi trùng endpoint của chính server; tra cấu hình `ServerConfiguration` thấy `RegistrationEndpoint` / `MaxRegistrationInterval`.
 - **Cách sửa:** `MaxRegistrationInterval = 0` (tắt đăng ký LDS; simulator không cần discovery). Nhân tiện lọc log của stack xuống Warning: category log là tên class con `ReflowServer+OvenServer` của ta chứ không phải `Opc.Ua.*`, nên filter `"Opc.Ua"` không bắt được.
 - **Bài học:** cổng "mặc định" của một giao thức có thể đã có chủ (4840 = LDS). Khi log báo lỗi tới một địa chỉ, đối chiếu xem địa chỉ đó có phải chính mình không. Ngoài nhà máy, PLC/máy thường dùng 4840 và **không** có LDS trên cùng thiết bị, nên lỗi này hay gặp với server tự viết chạy trên PC.
+
+## 2026-10-28 — Máy dán keo báo 2,26 tỷ sản phẩm (M4b bước 3, cố tình tái hiện)
+
+- **Triệu chứng:** máy `L1-GLUE-01` (Modbus TCP) đang ở bộ đếm 100.000, gateway đọc ra **2.258.632.705**; mỗi bo sau đó làm bộ đếm tăng **65.536** thay vì 1. Không có lỗi, không có exception, chất lượng `Good`.
+- **Nguyên nhân:** bộ đếm uint32 nằm trên 2 thanh ghi 16-bit (40001–40002). PLC lưu **word thấp trước** (`CDAB`: HR0 = `0x86A0`, HR1 = `0x0001`), cấu hình gateway ghép theo `ABCD` (word cao trước), ra `0x86A0_0001`. Word thấp bị hiểu thành word cao nên mỗi đơn vị thật thành 65.536.
+- **Cách tìm:** so với một giá trị đã biết (màn hình HMI / `list` của simulator: 100.000). Bước 65.536 = 2^16 giữa hai lần đọc là dấu hiệu chắc chắn của đảo word. Thử 4 kiểu `ABCD/CDAB/BADC/DCBA` đến khi khớp.
+- **Cách sửa:** `"wordOrder": "CDAB"` trong `gateway.tags.json`, restart gateway. `RegisterDecoder` có unit test bảng cho cả 4 thứ tự.
+- **Bài học:** với Modbus mọi cấu hình sai (địa chỉ lệch 1, FC03/FC04, thứ tự word, có dấu/không dấu) đều vẫn trả về **một con số**. Kiểm tra cấu hình mới bằng giá trị đã biết trước khi tin dữ liệu; ở M5 OEE sẽ bật "Performance 1.000.000 %" nếu lọt.
+
+## 2026-10-28 — Switch expression âm thầm đổi bộ đếm uint32 thành float (M4b bước 3)
+
+- **Triệu chứng:** unit test `Decode(...)` báo `Expected: 100000, Actual: 100000` mà vẫn fail.
+- **Nguyên nhân:** `object Decode(...) => type switch { "uint16" => block[i], "uint32" => ToUInt32(...), "float32" => ToFloat(...), ... }`. C# chọn **kiểu chung tốt nhất** cho cả switch expression: `ushort`, `short`, `uint`, `int` đều đổi ngầm sang `float`, nên mọi nhánh trả `float`, rồi mới boxing thành `object`. `Assert.Equal(100000u, (object)100000f)` khác kiểu nên fail, dù in ra giống nhau. Ngoài đời: float chỉ có 24 bit mantissa, bộ đếm 16.777.217 thành 16.777.216 → mất sản lượng lặt vặt, rất khó thấy.
+- **Cách tìm:** "giá trị in ra giống nhau nhưng không bằng" → nghi kiểu dữ liệu; kiểm tra `value.GetType()`.
+- **Cách sửa:** ép từng nhánh `(object)...`; thêm test hồi quy `A_large_counter_keeps_every_digit_and_its_type` (2^24 + 1, `Assert.IsType<uint>`).
+- **Bài học:** switch expression/toán tử `?:` có kiểu tự suy; khi kết quả là `object`, kiểu "tự nhiên" vẫn được chọn trước khi boxing. Test nên kiểm cả kiểu khi kiểu là một phần của hợp đồng.
+
+## 2026-10-28 — Gateway không nối được Modbus slave ở `localhost` dù slave đang chạy (M4b bước 3)
+
+- **Triệu chứng:** `Modbus L1-GLUE-01 at localhost:5020: connect timed out after 2000 ms` lặp mãi; simulator báo slave đang nghe cổng 5020.
+- **Nguyên nhân:** slave nghe `IPAddress.Any` (chỉ IPv4). `localhost` phân giải ra `::1` (IPv6) trước; trên Windows, kết nối loopback tới cổng không ai nghe bị từ chối sau khoảng **2 giây** (hệ điều hành gửi lại SYN), đúng bằng timeout kết nối của gateway, nên client chưa kịp thử `127.0.0.1`.
+- **Cách sửa:** slave dùng `TcpListener.Create(port)` (dual mode IPv6 + IPv4).
+- **Bài học:** "timeout đúng bằng con số mình cấu hình" là dấu hiệu bị cắt ngang chứ không phải mạng chậm. `localhost` ≠ `127.0.0.1`. Ngoài nhà máy cấu hình PLC bằng IP cụ thể, ít gặp; nhưng chạy trên máy dev thì gặp ngay.

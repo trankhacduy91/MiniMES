@@ -20,6 +20,8 @@ public sealed record SetSensor(bool Ok) : MachineCommand;                     //
 public sealed record MachineSnapshot(
     string Code, MachineState State, long Counter, long Good, long Ng,
     bool Connected, bool Muted, int SkewSec, DateTimeOffset? DownUntil,
-    OpcUaSnapshot? OpcUa = null);
+    OpcUaSnapshot? OpcUa = null, ModbusSnapshot? Modbus = null, bool Mqtt = true);
+
+public sealed record ModbusSnapshot(string Endpoint, bool Running, string? AlarmCode);
 
 public sealed record OpcUaSnapshot(string Endpoint, bool Running, double PeakTemp, bool SensorOk, double DriftPerMin);

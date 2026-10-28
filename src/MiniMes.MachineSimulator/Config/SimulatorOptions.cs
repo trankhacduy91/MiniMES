@@ -1,3 +1,5 @@
+using MiniMes.MachineSimulator.Modbus;
+
 namespace MiniMes.MachineSimulator.Config;
 
 // Spec M4 2.8: machines.json. Codes must match the seeded master data (site, area, line, Machine.MqttTopicKey):
@@ -29,6 +31,14 @@ public sealed class SimulatorOptions
             if (m.AlarmCodes.Length == 0) yield return $"{m.Code}: alarmCodes needs at least one code.";
             if (m.NgProb is < 0 or > 1 || m.DownProbPerCycle is < 0 or > 1) yield return $"{m.Code}: probabilities must be in 0..1.";
             if (m.OpcUa is { Port: < 1 or > 65535 }) yield return $"{m.Code}: opcua.port must be 1..65535.";
+            if (m.Modbus is { Port: < 1 or > 65535 }) yield return $"{m.Code}: modbus.port must be 1..65535.";
+            if (m.Modbus is { UnitId: < 1 or > 247 }) yield return $"{m.Code}: modbus.unitId must be 1..247.";
+            if (!m.Mqtt && m.OpcUa is null && m.Modbus is null) yield return $"{m.Code}: mqtt false needs an opcua or modbus side, or nobody hears it.";
+            if (!m.Mqtt && m.Station is not null) yield return $"{m.Code}: a station machine must speak MQTT.";
+            // The Modbus alarm register holds the digits of the code (G301 -> 301): they must fit in 16 bits.
+            if (m.Modbus is not null)
+                foreach (var code in m.AlarmCodes.Append("E999").Where(c => GlueMachineSlave.AlarmRegister(c) is null))
+                    yield return $"{m.Code}: alarm code {code} has no number 1..65535 for the Modbus alarm register.";
             if (m.Station is { } st)
             {
                 if (string.IsNullOrWhiteSpace(st.Code)) yield return $"{m.Code}: station.code is required.";
@@ -36,8 +46,10 @@ public sealed class SimulatorOptions
                     yield return $"{m.Code}: station mode AutoTest needs defectCodes for its NG boards.";
             }
         }
-        foreach (var dup in Machines.Where(m => m.OpcUa is not null).GroupBy(m => m.OpcUa!.Port).Where(g => g.Count() > 1))
-            yield return $"opcua port {dup.Key} is used by {string.Join(", ", dup.Select(m => m.Code))}.";
+        var ports = Machines.Where(m => m.OpcUa is not null).Select(m => (m.Code, m.OpcUa!.Port))
+            .Concat(Machines.Where(m => m.Modbus is not null).Select(m => (m.Code, m.Modbus!.Port)));
+        foreach (var dup in ports.GroupBy(p => p.Port).Where(g => g.Count() > 1))
+            yield return $"port {dup.Key} is used twice ({string.Join(", ", dup.Select(p => p.Code))}).";
         foreach (var o in AutoOperators)
             if (string.IsNullOrWhiteSpace(o.Station) || o.CycleTimeSec <= 0) yield return "every autoOperator needs station and cycleTimeSec > 0.";
         if ((Machines.Any(m => m.Station is not null) || AutoOperators.Count > 0)
@@ -92,6 +104,16 @@ public sealed class MachineOptions
     public string[] AlarmCodes { get; set; } = [];        // one is picked when the machine goes Down by itself
     public StationOptions? Station { get; set; }          // step 9: this machine also scans each board at that station
     public OpcUaOptions? OpcUa { get; set; }              // M4b: the machine also shows its values on an OPC UA server
+    public ModbusOptions? Modbus { get; set; }            // M4b: the machine also keeps its values in Modbus registers
+    // false = an old machine without MQTT: the MES only hears it through the edge gateway (Modbus/OPC UA side).
+    public bool Mqtt { get; set; } = true;
+}
+
+// M4b step 3: the glue dispenser as a Modbus TCP slave (registers in GlueMachineSlave). Listens on every interface.
+public sealed class ModbusOptions
+{
+    public int Port { get; set; } = 5020;
+    public byte UnitId { get; set; } = 1;
 }
 
 // M4b step 1: the reflow oven as an OPC UA server (PeakTemp, Counter, State). Host = the name clients use to reach it

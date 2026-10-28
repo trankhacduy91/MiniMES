@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using MiniMes.Contracts.Machines;
+using MiniMes.EdgeGateway.Drivers.Modbus;
 using Opc.Ua;
 
 namespace MiniMes.EdgeGateway.Config;
@@ -38,8 +39,8 @@ public sealed class GatewayOptionsValidator : IValidateOptions<GatewayOptions>
             foreach (var dup in d.Tags.Where(t => t.Kind != TagKinds.Process).GroupBy(t => t.Kind).Where(x => x.Count() > 1))
                 yield return $"{m}: only one {dup.Key} tag per machine.";
 
-            if (d.Protocol == Protocols.OpcUa)
-                foreach (var e in OpcUaErrors(m, d)) yield return e;
+            var protocolErrors = d.Protocol == Protocols.OpcUa ? OpcUaErrors(m, d) : ModbusErrors(m, d);
+            foreach (var e in protocolErrors) yield return e;
             foreach (var t in d.Tags)
                 foreach (var e in TagErrors(m, t)) yield return e;
         }
@@ -56,6 +57,28 @@ public sealed class GatewayOptionsValidator : IValidateOptions<GatewayOptions>
             else if (!IsNodeId(t.NodeId)) yield return $"{m}.{t.Name}: nodeId '{t.NodeId}' is not valid (e.g. nsu=urn:...;s=Reflow.PeakTemp).";
             if (t.SamplingMs <= 0) yield return $"{m}.{t.Name}: samplingMs must be > 0.";
             if (t.SamplingMs > d.PublishingMs) yield return $"{m}.{t.Name}: samplingMs must be <= publishingMs ({d.PublishingMs}).";
+        }
+    }
+
+    private static IEnumerable<string> ModbusErrors(string m, DeviceOptions d)
+    {
+        if (string.IsNullOrWhiteSpace(d.Host)) yield return $"{m}: host is required.";
+        if (d.Port is < 1 or > 65535) yield return $"{m}: port must be 1..65535.";
+        if (d.UnitId > 247) yield return $"{m}: unitId must be 0..247.";
+        if (d.PollMs < 100) yield return $"{m}: pollMs must be >= 100 (a PLC polled too fast slows down).";
+        if (d.TimeoutMs <= 0 || d.TimeoutMs >= d.PollMs * 10) yield return $"{m}: timeoutMs must be > 0 and well under 10 polls.";
+        // FC03 returns at most 125 registers per request.
+        if (d.Count is < 1 or > 125) yield return $"{m}: count must be 1..125 registers (one FC03 request).";
+        foreach (var t in d.Tags)
+        {
+            if (!RegisterTypes.All.Contains(t.Type))
+            {
+                yield return $"{m}.{t.Name}: type '{t.Type}' is not one of {string.Join(", ", RegisterTypes.All)}.";
+                continue;
+            }
+            if (t.Offset < 0 || t.Offset + RegisterTypes.Width(t.Type) > d.Count)
+                yield return $"{m}.{t.Name}: offset {t.Offset} ({t.Type}) is outside the block of {d.Count} registers.";
+            if (!string.IsNullOrWhiteSpace(t.NodeId)) yield return $"{m}.{t.Name}: nodeId is OPC UA; a Modbus tag uses offset.";
         }
     }
 

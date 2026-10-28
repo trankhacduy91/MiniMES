@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MiniMes.Contracts.Machines;
 using MiniMes.MachineSimulator.Config;
+using MiniMes.MachineSimulator.Modbus;
 using MiniMes.MachineSimulator.Mqtt;
 using MiniMes.MachineSimulator.OpcUa;
 using MiniMes.MachineSimulator.Stations;
@@ -9,7 +10,8 @@ using MiniMes.MachineSimulator.Stations;
 namespace MiniMes.MachineSimulator.Machines;
 
 // All machines of machines.json. Per machine three tasks: the cycle, the heartbeat, the MQTT connection.
-// M4b: plus one OPC UA server per machine that has "opcua", started with the fleet and stopped before the MQTT goodbye.
+// M4b: plus one OPC UA server per machine that has "opcua" and one Modbus slave per machine that has "modbus", started
+// with the fleet and stopped before the MQTT goodbye. A machine with "mqtt": false runs no MQTT client at all.
 public sealed class MachineFleet : BackgroundService
 {
     private readonly ILogger<MachineFleet> _log;
@@ -18,6 +20,7 @@ public sealed class MachineFleet : BackgroundService
     {
         var telemetry = new HostTelemetry(loggers);
         var opcUaLog = loggers.CreateLogger<ReflowServer>();
+        var modbusLog = loggers.CreateLogger<GlueMachineSlave>();
         _log = loggers.CreateLogger<MachineFleet>();
         var machineLog = loggers.CreateLogger<SimulatedMachine>();
         var mqttLog = loggers.CreateLogger<MachinePublisher>();
@@ -30,12 +33,15 @@ public sealed class MachineFleet : BackgroundService
             var opcUa = m.OpcUa is { } ua
                 ? (new ReflowServer(m.Code, ua, telemetry, opcUaLog), new OvenTemperature(ua, new Random(options.Seed + 100 + i)))
                 : ((ReflowServer, OvenTemperature)?)null;
-            return new SimulatedMachine(options, m, rng, publisher, clock, machineLog, m.Station is { } st ? stations.Create(st, rng) : null, opcUa);
+            var modbus = m.Modbus is { } mb ? new GlueMachineSlave(m.Code, mb, modbusLog) : null;
+            return new SimulatedMachine(options, m, rng, publisher, clock, machineLog, m.Station is { } st ? stations.Create(st, rng) : null, opcUa, modbus);
         }).ToList();
         OpcUaServers = Machines.Select(m => m.OpcUaServer).OfType<ReflowServer>().ToList();
+        ModbusSlaves = Machines.Select(m => m.ModbusSlave).OfType<GlueMachineSlave>().ToList();
     }
 
     public IReadOnlyList<ReflowServer> OpcUaServers { get; }
+    public IReadOnlyList<GlueMachineSlave> ModbusSlaves { get; }
 
     public IReadOnlyList<SimulatedMachine> Machines { get; }
 
@@ -46,11 +52,12 @@ public sealed class MachineFleet : BackgroundService
     {
         _log.LogInformation("Simulating {Count} machines: {Codes}", Machines.Count, string.Join(", ", Machines.Select(m => m.Code)));
         await Task.WhenAll(OpcUaServers.Select(s => s.StartAsync(stoppingToken)));
+        foreach (var slave in ModbusSlaves) slave.Start();
         try
         {
             await Task.WhenAll(Machines.SelectMany(m => new[]
             {
-                m.Publisher.RunAsync(stoppingToken), m.RunAsync(stoppingToken), m.HeartbeatAsync(stoppingToken),
+                m.SpeaksMqtt ? m.Publisher.RunAsync(stoppingToken) : Task.CompletedTask, m.RunAsync(stoppingToken), m.HeartbeatAsync(stoppingToken),
             }));
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
@@ -61,7 +68,8 @@ public sealed class MachineFleet : BackgroundService
     {
         await base.StopAsync(cancellationToken);
         await Task.WhenAll(OpcUaServers.Select(s => s.StopAsync(cancellationToken)));
-        await Task.WhenAll(Machines.Select(m => m.Publisher.StopAsync(cancellationToken)));
+        foreach (var slave in ModbusSlaves) slave.Stop();
+        await Task.WhenAll(Machines.Where(m => m.SpeaksMqtt).Select(m => m.Publisher.StopAsync(cancellationToken)));
         foreach (var m in Machines) m.Publisher.Dispose();
         _log.LogInformation("All machines stopped");
     }

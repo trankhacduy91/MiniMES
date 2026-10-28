@@ -33,6 +33,17 @@ public class GatewayOptionsValidatorTests
         { "map to unknown state", o => o.Devices[0].Tags[2].Map["6"] = "Broken", "map 6 -> 'Broken' is not a machine state" },
         { "map to Offline", o => o.Devices[0].Tags[2].Map["6"] = "Offline", "map 6 -> 'Offline' is not a machine state" },
         { "map to a number", o => o.Devices[0].Tags[2].Map["6"] = "2", "map 6 -> '2' is not a machine state" },
+        // Modbus (step 3): Devices[1] is the glue dispenser.
+        { "modbus without host", o => o.Devices[1].Host = "", "L1-GLUE-01: host is required" },
+        { "modbus bad port", o => o.Devices[1].Port = 0, "port must be 1..65535" },
+        { "modbus unit id", o => o.Devices[1].UnitId = 248, "unitId must be 0..247" },
+        { "polled too fast", o => o.Devices[1].PollMs = 50, "pollMs must be >= 100" },
+        { "block too big", o => o.Devices[1].Count = 126, "count must be 1..125" },
+        { "empty block", o => o.Devices[1].Count = 0, "count must be 1..125" },
+        { "uint32 past the end", o => o.Devices[1].Tags[0].Offset = 3, "offset 3 (uint32) is outside the block of 4 registers" },
+        { "uint16 past the end", o => o.Devices[1].Tags[2].Offset = 4, "offset 4 (uint16) is outside the block of 4 registers" },
+        { "unknown type", o => o.Devices[1].Tags[0].Type = "double", "type 'double' is not one of" },
+        { "nodeId on a modbus tag", o => o.Devices[1].Tags[0].NodeId = "ns=2;s=X", "a Modbus tag uses offset" },
     };
 
     [Theory]
@@ -74,7 +85,25 @@ public class GatewayOptionsValidatorTests
     private static GatewayOptions Valid() => new()
     {
         Gateway = new GatewayIdentity { Id = "GW01", Site = "VN-BN01", Area = "SMT-ASSY", Line = "L1" },
-        Devices = [Device()],
+        Devices = [Device(), Glue()],
+    };
+
+    private static DeviceOptions Glue() => new()
+    {
+        Machine = "L1-GLUE-01",
+        Protocol = "modbus",
+        Host = "localhost",
+        Port = 5020,
+        UnitId = 1,
+        PollMs = 1000,
+        StartAddress = 0,
+        Count = 4,
+        Tags =
+        [
+            new() { Name = "counter", Kind = "count", Offset = 0, Type = "uint32", WordOrder = MiniMes.EdgeGateway.Drivers.Modbus.WordOrder.CDAB },
+            new() { Name = "state", Kind = "state", Offset = 2, Type = "uint16", Map = new() { ["1"] = "Running", ["3"] = "Down" } },
+            new() { Name = "alarm", Kind = "alarm", Offset = 3, Type = "uint16", ZeroMeansNone = true },
+        ],
     };
 
     private static DeviceOptions Device() => new()

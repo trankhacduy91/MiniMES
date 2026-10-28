@@ -17,7 +17,12 @@
       "opcua": { "host": "localhost", "port": 4840, "peakTempC": 245, "noiseC": 0.8 } },
     { "code": "L1-TEST-01", "line": "L1", "cycleTimeSec": 8, "initialCounter": 0,
       "downProbPerCycle": 0.001, "downDurationSec": [20, 90], "ngProb": 0.03, "clockSkewSec": 0, "alarmCodes": ["F404"],
-      "station": { "code": "L1-TEST-01", "mode": "AutoTest", "defectCodes": ["FUN-NOPWR", "SLD-BRG", "CMP-MIS"] } }
+      "station": { "code": "L1-TEST-01", "mode": "AutoTest", "defectCodes": ["FUN-NOPWR", "SLD-BRG", "CMP-MIS"] } },
+    // M4b: an old glue dispenser without MQTT, only a Modbus TCP slave (counter CDAB in HR0-1, state HR2, alarm HR3).
+    // The MES hears it only through the edge gateway (from M4b step 4). Alarm codes carry a number for the register.
+    { "code": "L1-GLUE-01", "line": "L1", "cycleTimeSec": 10, "initialCounter": 100000, "mqtt": false,
+      "downProbPerCycle": 0.002, "downDurationSec": [30, 120], "ngProb": 0.0, "alarmCodes": ["G301", "G302"],
+      "modbus": { "port": 5020, "unitId": 1 } }
   ],
   // Manual stations scanned by the simulator only when started with --auto-operator.
   "autoOperators": [

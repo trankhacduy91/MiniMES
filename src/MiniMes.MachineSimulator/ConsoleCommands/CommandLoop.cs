@@ -26,6 +26,7 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
         ("drift", "drift <m> <c/min|off> oven peak temperature drifts by c °C per minute (off = back to set point)"),
         ("sensor", "sensor <m> bad|good  thermocouple broken: PeakTemp quality BadSensorFailure on OPC UA"),
         ("opcua", "opcua stop|start     stop/start the OPC UA servers (the PLC is switched off / on)"),
+        ("modbus", "modbus stop|start    stop/start the Modbus slaves (glue dispenser: down <m> 60, reset <m> as usual)"),
         ("help", "help"),
     ];
 
@@ -56,6 +57,7 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
         if (verb == "list") return List();
         if (!Commands.Any(c => c.Verb == verb)) return "Unknown command. Type 'help'.";
         if (verb == "opcua") return await OpcUaAsync(p, ct);
+        if (verb == "modbus") return Modbus(p);
 
         if (p.Length < 2) return Usage(verb);
         var machine = fleet.Find(p[1]);
@@ -98,15 +100,30 @@ public sealed class CommandLoop(MachineFleet fleet) : BackgroundService
         return string.Join(Environment.NewLine, fleet.OpcUaServers.Select(s => $"{s.Machine} {s.EndpointUrl} {(s.IsRunning ? "running" : "stopped")}"));
     }
 
+    private string Modbus(string[] p)
+    {
+        if (fleet.ModbusSlaves.Count == 0) return "No machine has a Modbus slave (modbus in machines.json).";
+        switch (p.ElementAtOrDefault(1)?.ToLowerInvariant())
+        {
+            case "stop": foreach (var s in fleet.ModbusSlaves) s.Stop(); break;
+            case "start": foreach (var s in fleet.ModbusSlaves) s.Start(); break;
+            default: return Usage("modbus");
+        }
+        return string.Join(Environment.NewLine, fleet.ModbusSlaves.Select(s => $"{s.Machine} {s.Endpoint} {(s.IsRunning ? "running" : "stopped")}"));
+    }
+
     private string List()
     {
         var rows = fleet.Machines.Select(m => m.Snapshot).Select(s =>
             $"{s.Code,-14} {s.State,-11} counter {s.Counter,8}  good {s.Good,6}  ng {s.Ng,4}  " +
-            $"{(s.Connected ? "connected" : "NO BROKER")}{(s.Muted ? " muted" : "")}{(s.SkewSec != 0 ? $" skew {s.SkewSec}s" : "")}" +
+            $"{(!s.Mqtt ? "no MQTT" : s.Connected ? "connected" : "NO BROKER")}{(s.Muted ? " muted" : "")}{(s.SkewSec != 0 ? $" skew {s.SkewSec}s" : "")}" +
             (s.DownUntil is { } until ? $" down until {until.ToLocalTime():HH:mm:ss}" : "") +
             (s.OpcUa is { } ua
                 ? $"{Environment.NewLine}{"",15}OPC UA {ua.Endpoint} {(ua.Running ? "running" : "STOPPED")}  peak {ua.PeakTemp:F2} °C" +
                   $"{(ua.SensorOk ? "" : " SENSOR BAD")}{(ua.DriftPerMin != 0 ? $" drift {ua.DriftPerMin:+0.0#;-0.0#} °C/min" : "")}"
+                : "") +
+            (s.Modbus is { } mb
+                ? $"{Environment.NewLine}{"",15}Modbus {mb.Endpoint} {(mb.Running ? "running" : "STOPPED")}{(mb.AlarmCode is null ? "" : $"  alarm {mb.AlarmCode}")}"
                 : ""));
         return string.Join(Environment.NewLine, rows);
     }

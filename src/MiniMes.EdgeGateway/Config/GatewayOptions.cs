@@ -1,3 +1,5 @@
+using MiniMes.EdgeGateway.Drivers.Modbus;
+
 namespace MiniMes.EdgeGateway.Config;
 
 // Spec M4b 2.6: gateway.tags.json. The tag configuration lives in the gateway, not in the MES database (rule G2):
@@ -31,7 +33,8 @@ public sealed class OpcUaClientOptions
 public static class Protocols
 {
     public const string OpcUa = "opcua";
-    public static readonly string[] Supported = [OpcUa];   // modbus: step 3
+    public const string Modbus = "modbus";
+    public static readonly string[] Supported = [OpcUa, Modbus];
 }
 
 // One machine read by the gateway. Machine = Machine.MqttTopicKey of the MES (rule G3): a wrong code is data lost
@@ -44,6 +47,15 @@ public sealed class DeviceOptions
     // OPC UA
     public string Endpoint { get; set; } = "";
     public int PublishingMs { get; set; } = 1000;   // the server sends the gathered changes this often
+
+    // Modbus TCP: one block of holding registers (FC03) read every PollMs; tags are offsets inside the block.
+    public string Host { get; set; } = "";
+    public int Port { get; set; } = 502;
+    public byte UnitId { get; set; } = 1;
+    public int PollMs { get; set; } = 1000;          // 500-1000 ms is plenty for a MES; faster only loads the PLC
+    public ushort StartAddress { get; set; }         // 0-based wire address: "40001" in the manual = 0
+    public ushort Count { get; set; }                // registers in the block (one request, at most 125)
+    public int TimeoutMs { get; set; } = 2000;       // a dead slave must not freeze the poll loop
 
     public List<TagOptions> Tags { get; set; } = [];
 }
@@ -67,6 +79,12 @@ public sealed class TagOptions
     public string NodeId { get; set; } = "";
     public int SamplingMs { get; set; } = 1000;     // how often the server samples the source (<= publishing interval)
     public double? Deadband { get; set; }           // absolute; the server drops smaller changes (rule G10)
+
+    // Modbus: where the tag sits in the block and how its registers make a number.
+    public int Offset { get; set; }
+    public string Type { get; set; } = RegisterTypes.UInt16;
+    public WordOrder WordOrder { get; set; } = WordOrder.ABCD;   // 32-bit types only; the manual rarely says which
+    public bool ZeroMeansNone { get; set; }                      // alarm: register 0 = no alarm
 
     // state: the PLC's code -> MachineState name of the M4 contract ("1": "Running").
     public Dictionary<string, string> Map { get; set; } = [];

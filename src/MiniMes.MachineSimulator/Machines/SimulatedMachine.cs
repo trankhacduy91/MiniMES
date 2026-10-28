@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using MiniMes.Contracts.Machines;
 using MiniMes.MachineSimulator.Config;
+using MiniMes.MachineSimulator.Modbus;
 using MiniMes.MachineSimulator.Mqtt;
 using MiniMes.MachineSimulator.OpcUa;
 using MiniMes.MachineSimulator.Stations;
@@ -16,6 +17,8 @@ namespace MiniMes.MachineSimulator.Machines;
 // waiting = nothing to make: the machine goes Idle (starved) and looks again every few seconds.
 // M4b step 1: a machine with an OPC UA side (the reflow oven) also shows PeakTemp, Counter and State on its own
 // OPC UA server, updated from this loop. Until the gateway reads it (M4b step 4) it keeps talking MQTT as well.
+// M4b step 3: a machine with a Modbus side (the glue dispenser) keeps counter, state and alarm in holding registers.
+// "mqtt": false = an old machine that speaks no MQTT at all: only the edge gateway can hear it.
 public sealed class SimulatedMachine
 {
     private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(100);
@@ -51,10 +54,13 @@ public sealed class SimulatedMachine
     private DateTimeOffset _retryAt;
     private readonly ReflowServer? _opcUa;
     private readonly OvenTemperature? _oven;
+    private readonly GlueMachineSlave? _modbus;
+    private string? _alarmCode;                      // the active alarm while Down, shown in the Modbus alarm register
 
     public SimulatedMachine(SimulatorOptions sim, MachineOptions cfg, Random rng, MachinePublisher publisher, TimeProvider clock, ILogger log,
-        AutoStationClient? station = null, (ReflowServer Server, OvenTemperature Oven)? opcUa = null)
+        AutoStationClient? station = null, (ReflowServer Server, OvenTemperature Oven)? opcUa = null, GlueMachineSlave? modbus = null)
     {
+        _modbus = modbus;
         _station = station;
         (_opcUa, _oven) = (opcUa?.Server, opcUa?.Oven);
         _cfg = cfg;
@@ -74,6 +80,8 @@ public sealed class SimulatedMachine
     public string Code => _cfg.Code;
     public MachinePublisher Publisher { get; }
     public ReflowServer? OpcUaServer => _opcUa;
+    public GlueMachineSlave? ModbusSlave => _modbus;
+    public bool SpeaksMqtt => _cfg.Mqtt;
     public MachineSnapshot Snapshot => _snapshot;
 
     public bool Post(MachineCommand command) => _commands.Writer.TryWrite(command);
@@ -93,7 +101,7 @@ public sealed class SimulatedMachine
                 else if (_state == MachineState.Idle && _starved && now >= _retryAt) await RetryStarvedAsync(now, ct);
 
                 await FlushCountAsync(force: false, ct);
-                PublishOpcUa(now);
+                PublishPlc(now);
                 _snapshot = TakeSnapshot();
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -108,6 +116,7 @@ public sealed class SimulatedMachine
     // It carries the state, so the MES can bring a machine back from Offline at once (spec 2.5).
     public async Task HeartbeatAsync(CancellationToken ct)
     {
+        if (!_cfg.Mqtt) return;
         using var timer = new PeriodicTimer(_heartbeat, _clock);
         while (await timer.WaitForNextTickAsync(ct))
             if (!_muted)
@@ -226,6 +235,7 @@ public sealed class SimulatedMachine
         _downUntil = seconds is null ? null : _clock.GetUtcNow().AddSeconds(seconds.Value);
         if (_state == MachineState.Down) return;               // already down: only the end changes
         await ChangeStateAsync(MachineState.Down, ct);
+        _alarmCode = alarmCode;
         await SendAsync(MachineKinds.Alarm, NewMessage() with { AlarmCode = alarmCode }, ct);
     }
 
@@ -235,6 +245,7 @@ public sealed class SimulatedMachine
         if (_state == MachineState.Down)
         {
             _downUntil = null;
+            _alarmCode = null;
             await SendAsync(MachineKinds.Alarm, NewMessage() with { AlarmCode = null }, ct);   // null = alarm cleared
         }
         _log.LogInformation("{Machine} {From} -> {To}", Code, _state, state);
@@ -262,6 +273,7 @@ public sealed class SimulatedMachine
 
     private async Task<bool> SendAsync(string kind, MachineMessage message, CancellationToken ct, bool retain = false, string? topicOverride = null)
     {
+        if (!_cfg.Mqtt) return true;                           // no MQTT on this machine: its registers are all there is
         if (_muted) return false;
         var topic = topicOverride ?? Topic(kind);
         var sent = await Publisher.PublishAsync(topic, message, MqttQualityOfServiceLevel.AtLeastOnce, retain, ct);
@@ -275,18 +287,24 @@ public sealed class SimulatedMachine
         return sent;
     }
 
-    // The PLC side: the server only notifies the clients of the nodes whose value changed.
-    private void PublishOpcUa(DateTimeOffset now)
+    // The PLC side. OPC UA: the server only notifies the clients of the nodes whose value changed. Modbus: the
+    // registers are overwritten every tick, the gateway reads them whenever it polls.
+    private void PublishPlc(DateTimeOffset now)
     {
-        if (_opcUa is null || _oven is null) return;
-        _oven.Update(now);
+        if (_opcUa is null && _modbus is null) return;
         var plcState = _state switch
         {
             MachineState.Running => 1, MachineState.Idle => 2, MachineState.Down => 3, MachineState.Setup => 4, MachineState.PlannedStop => 5,
             _ => 0,
         };
-        // uint: the PLC's 32-bit counter. Ts on the PLC's clock, skew included, like the MQTT messages.
-        _opcUa.Publish(new ReflowValues(_oven.Value, _oven.SensorOk, unchecked((uint)_counter), plcState), now.AddSeconds(_skewSec).UtcDateTime);
+        var counter = unchecked((uint)_counter);   // the PLC's 32-bit counter
+        if (_opcUa is not null && _oven is not null)
+        {
+            _oven.Update(now);
+            // Ts on the PLC's clock, skew included, like the MQTT messages.
+            _opcUa.Publish(new ReflowValues(_oven.Value, _oven.SensorOk, counter, plcState), now.AddSeconds(_skewSec).UtcDateTime);
+        }
+        _modbus?.Publish(counter, (ushort)plcState, _alarmCode is null ? (ushort)0 : GlueMachineSlave.AlarmRegister(_alarmCode) ?? 0);
     }
 
     // After every (re)connect: "online" and the current state (spec 2.3: state is sent right after connecting).
@@ -306,5 +324,7 @@ public sealed class SimulatedMachine
 
     private MachineSnapshot TakeSnapshot()
         => new(Code, _state, _counter, _good, _ng, Publisher.IsConnected, _muted, _skewSec, _state == MachineState.Down ? _downUntil : null,
-            _opcUa is null || _oven is null ? null : new(_opcUa.EndpointUrl, _opcUa.IsRunning, _oven.Value, _oven.SensorOk, _oven.DriftPerMin));
+            _opcUa is null || _oven is null ? null : new(_opcUa.EndpointUrl, _opcUa.IsRunning, _oven.Value, _oven.SensorOk, _oven.DriftPerMin),
+            _modbus is null ? null : new(_modbus.Endpoint, _modbus.IsRunning, _alarmCode),
+            _cfg.Mqtt);
 }

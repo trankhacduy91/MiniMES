@@ -11,6 +11,15 @@
         { "name": "peakTemp", "kind": "process", "nodeId": "nsu=urn:minimes:simulator:reflow;s=Reflow.PeakTemp", "samplingMs": 500, "deadband": 0.5 },
         { "name": "counter",  "kind": "count",   "nodeId": "nsu=urn:minimes:simulator:reflow;s=Reflow.Counter",  "samplingMs": 1000 },
         { "name": "state",    "kind": "state",   "nodeId": "nsu=urn:minimes:simulator:reflow;s=Reflow.State",    "samplingMs": 1000,
-          "map": { "1": "Running", "2": "Idle", "3": "Down", "4": "Setup", "5": "PlannedStop" } } ] }
+          "map": { "1": "Running", "2": "Idle", "3": "Down", "4": "Setup", "5": "PlannedStop" } } ] },
+    // The old glue dispenser (simulator, M4b step 3): manual says 40001-40004 = wire addresses 0-3, one FC03 block.
+    // The counter is stored low word first: wordOrder CDAB. With ABCD the MES would see about 2 billion boards.
+    { "machine": "L1-GLUE-01", "protocol": "modbus", "host": "localhost", "port": 5020, "unitId": 1,
+      "pollMs": 1000, "timeoutMs": 2000, "startAddress": 0, "count": 4,
+      "tags": [
+        { "name": "counter", "kind": "count", "offset": 0, "type": "uint32", "wordOrder": "CDAB" },
+        { "name": "state",   "kind": "state", "offset": 2, "type": "uint16",
+          "map": { "1": "Running", "2": "Idle", "3": "Down", "4": "Setup", "5": "PlannedStop" } },
+        { "name": "alarm",   "kind": "alarm", "offset": 3, "type": "uint16", "zeroMeansNone": true } ] }
   ]
 }

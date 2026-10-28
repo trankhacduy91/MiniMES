@@ -3,10 +3,11 @@ using Microsoft.Extensions.Options;
 using MiniMes.EdgeGateway;
 using MiniMes.EdgeGateway.Config;
 using MiniMes.EdgeGateway.Drivers;
+using MiniMes.EdgeGateway.Drivers.Modbus;
 using MiniMes.EdgeGateway.Drivers.OpcUa;
 using MiniMes.EdgeGateway.Pipeline;
 
-// Edge gateway (spec M4b): reads the PLCs (OPC UA now, Modbus in step 3) and, from step 4, publishes the M4 MQTT
+// Edge gateway (spec M4b): reads the PLCs (OPC UA, Modbus TCP) and, from step 4, publishes the M4 MQTT
 // contract. A program on its own: it shares only MiniMes.Contracts with the MES, never its database.
 //   dotnet run --project src/MiniMes.EdgeGateway [-- --config other.tags.json]
 var builder = Host.CreateApplicationBuilder(args);
@@ -43,6 +44,7 @@ builder.Services.AddSingleton<IEnumerable<IDeviceDriver>>(sp => sp.GetRequiredSe
     .Select(d => d.Protocol switch
     {
         Protocols.OpcUa => (IDeviceDriver)ActivatorUtilities.CreateInstance<OpcUaDriver>(sp, d),
+        Protocols.Modbus => ActivatorUtilities.CreateInstance<ModbusDriver>(sp, d),
         _ => throw new InvalidOperationException($"no driver for protocol {d.Protocol}"),   // the validator refuses it first
     })
     .ToList());
