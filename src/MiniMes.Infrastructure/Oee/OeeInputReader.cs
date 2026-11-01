@@ -66,13 +66,13 @@ public sealed class OeeInputReader(AppDbContext db, TimeProvider time, IOptions<
                 where h.MachineId == machineId && h.StartAt < end && (h.EndAt == null || h.EndAt > start)
                 join r in db.DowntimeReasons on h.DowntimeReasonId equals r.Id into reasons
                 from r in reasons.DefaultIfEmpty()
-                select new { h.State, h.StartAt, h.EndAt, Counts = (bool?)r!.CountsAgainstAvailability })   // SQL LEFT JOIN: null when no reason
+                select new { h.State, h.StartAt, h.EndAt, h.DowntimeReasonId, Counts = (bool?)r!.CountsAgainstAvailability })   // SQL LEFT JOIN: null when no reason
             .ToListAsync(ct);
-        var plannedStops = new List<Interval>();
-        var downtime = new List<Interval>();
+        var plannedStops = new List<StopPiece>();
+        var downtime = new List<StopPiece>();
         foreach (var h in history)
         {
-            var span = new Interval(h.StartAt, h.EndAt ?? now);
+            var span = new StopPiece(new Interval(h.StartAt, h.EndAt ?? now), h.DowntimeReasonId, h.State);
             switch (StopRules.Treat(h.State, h.Counts, hasPlan))
             {
                 case StopTreatment.NotPlanned: plannedStops.Add(span); break;
@@ -81,8 +81,8 @@ public sealed class OeeInputReader(AppDbContext db, TimeProvider time, IOptions<
         }
 
         // (4) Breaks come from the shift definition (M1), already in UTC on the window.
-        var input = OeeInputBuilder.Build(window, shift.Breaks, plannedStops, downtime,
+        var (input, stops) = OeeInputBuilder.BuildDetailed(window, shift.Breaks, plannedStops, downtime,
             TimeSpan.FromSeconds(options.Value.MicroStopThresholdSec), segments, good);
-        return new OeeReading(input, scans.Sum(s => s.Count));
+        return new OeeReading(input, scans.Sum(s => s.Count), stops);
     }
 }

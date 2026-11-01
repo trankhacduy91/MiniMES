@@ -26,6 +26,7 @@ namespace MiniMes.IntegrationTests.Oee;
 public class DowntimeClassificationTests(ApiFixture api)
 {
     private static readonly PlantTimeZone Plant = new(TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"));
+    private readonly RecordingNotifier Notifier = new();
 
     private async Task<T> SendAsync<T>(IRequest<T> request)
     {
@@ -40,7 +41,7 @@ public class DowntimeClassificationTests(ApiFixture api)
     {
         var time = new FakeTimeProvider(new DateTimeOffset(now));
         var options = Options.Create(new OeeOptions());
-        return new OeeSnapshotService(db, new OeeInputReader(db, time, options), Plant, time, options,
+        return new OeeSnapshotService(db, new OeeInputReader(db, time, options), Plant, time, options, Notifier,
             NullLogger<OeeSnapshotService>.Instance).CloseDueBucketsAsync(CancellationToken.None, [plant.MachineId]);
     });
 

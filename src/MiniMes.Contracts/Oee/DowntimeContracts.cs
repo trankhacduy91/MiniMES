@@ -1,6 +1,7 @@
 namespace MiniMes.Contracts.Oee;
 
 // Spec M5 step 6: a stop the supervisor still has to explain. Times in UTC; the client shows plant time.
+// Also pushed over SignalR (DowntimeNeedsClassification) when the machine ends such a stop.
 public sealed record UnclassifiedDowntimeDto(
     long Id, int MachineId, string Machine, string Line, string State, DateTime StartAt, DateTime EndAt, double Minutes);
 

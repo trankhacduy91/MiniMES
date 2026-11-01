@@ -21,12 +21,13 @@ namespace MiniMes.IntegrationTests.Oee;
 public class OeeSnapshotTests(ApiFixture api)
 {
     private static readonly PlantTimeZone Plant = new(TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"));
+    private readonly RecordingNotifier Notifier = new();
 
     private Task<int> CloseAsync(OeeTestData.Plant plant, DateTime now) => api.WithDbAsync(db =>
     {
         var time = new FakeTimeProvider(new DateTimeOffset(now));
         var options = Options.Create(new OeeOptions());
-        return new OeeSnapshotService(db, new OeeInputReader(db, time, options), Plant, time, options,
+        return new OeeSnapshotService(db, new OeeInputReader(db, time, options), Plant, time, options, Notifier,
             NullLogger<OeeSnapshotService>.Instance).CloseDueBucketsAsync(CancellationToken.None, [plant.MachineId]);
     });
 
@@ -39,37 +40,11 @@ public class OeeSnapshotTests(ApiFixture api)
             .OrderBy(x => x.WindowStartUtc).ThenBy(x => x.Hour == null).ToListAsync();
     });
 
-    // The sample shift of 1.2.2 with the seeded break times: 79.84 %.
-    private async Task<OeeTestData.Plant> SampleShiftAsync(Func<int, int, int, DateTime> at)
-    {
-        var plant = await NewMachineAsync(api);
-        var boards = await WorkOrderAsync(api, plant, 20m, 1000, at(5, 0, 0));
-        await api.WithDbAsync(async db =>
-        {
-            Counters(db, plant, [(at(5, 55, 0), 50_000),
-                .. Enumerable.Range(1, 200).Select(i => (at(6, 16, 0).AddSeconds(i * 138), 50_000L + 5 * i))]);
-            await StatesAsync(db, plant, [
-                (at(6, 0, 0), MachineState.PlannedStop, "MEETING"), (at(6, 15, 0), MachineState.Running, null),
-                (at(7, 10, 0), MachineState.Down, "FDR-JAM"), (at(7, 35, 0), MachineState.Running, null),
-                .. Enumerable.Range(0, 6).SelectMany(i => new (DateTime, MachineState, string?)[]
-                    { (at(7, 50 + i, 0), MachineState.Down, null), (at(7, 50 + i, 20), MachineState.Running, null) }),
-                (at(9, 20, 0), MachineState.Down, "MAT-WAIT"), (at(9, 32, 0), MachineState.Running, null),
-                (at(10, 0, 0), MachineState.Idle, null), (at(10, 15, 0), MachineState.Running, null),
-                (at(11, 30, 0), MachineState.Idle, null), (at(12, 15, 0), MachineState.Running, null),
-                (at(12, 40, 0), MachineState.Down, null), (at(12, 48, 0), MachineState.Running, null),
-                (at(14, 0, 0), MachineState.Idle, null)]);
-            Scans(db, plant, boards.Take(970), ScanResult.Ok, at(6, 16, 0), TimeSpan.FromSeconds(27));
-            Scans(db, plant, boards.Skip(970), ScanResult.Ng, at(11, 0, 0), TimeSpan.FromSeconds(60));
-            return await db.SaveChangesAsync();
-        });
-        return plant;
-    }
-
     [Fact]
     public async Task Shift_closes_5_minutes_after_it_ends_and_equals_its_hours_added_up()
     {
         var at = Day(8);   // Tuesday 08/10/2030
-        var plant = await SampleShiftAsync(at);
+        var plant = await SampleShiftAsync(api, at);
 
         await CloseAsync(plant, at(14, 4, 59));                       // grace not over yet
         var early = await S1RowsAsync(plant, at(8, 0, 0));
@@ -99,7 +74,7 @@ public class OeeSnapshotTests(ApiFixture api)
     public async Task Running_the_job_twice_does_not_duplicate_rows()
     {
         var at = Day(9);
-        var plant = await SampleShiftAsync(at);
+        var plant = await SampleShiftAsync(api, at);
 
         var first = await CloseAsync(plant, at(14, 10, 0));
         var before = await S1RowsAsync(plant, at(8, 0, 0));
@@ -134,7 +109,7 @@ public class OeeSnapshotTests(ApiFixture api)
     public async Task Job_off_for_three_hours_catches_up_on_the_next_run()
     {
         var at = Day(10);
-        var plant = await SampleShiftAsync(at);
+        var plant = await SampleShiftAsync(api, at);
 
         await CloseAsync(plant, at(6, 30, 0));
         Assert.Empty(await S1RowsAsync(plant, at(8, 0, 0)));

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using MiniMes.Application.Labels;
+using MiniMes.Application.Oee;
 using MiniMes.Infrastructure.Persistence;
 
 namespace MiniMes.IntegrationTests.Infrastructure;
@@ -31,6 +32,8 @@ public sealed class ApiFactory(SqlServerFixture sql, int? mqttPort = null) : Web
             services.AddSingleton<ILabelPreview>(LabelPreview);
             // Added to the interceptors of the real configuration (EF Core 8+), production wiring unchanged.
             services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(ScanGate));
+            // M5: the MQTT host announces stops of 5 s or more, so its test does not wait a real minute.
+            if (mqttPort is not null) services.Configure<OeeOptions>(o => o.MicroStopThresholdSec = 5);
         });
     }
 

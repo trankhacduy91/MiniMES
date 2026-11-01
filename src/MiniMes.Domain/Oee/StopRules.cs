@@ -13,6 +13,10 @@ public enum StopTreatment
 // Only CountsAgainstAvailability decides the maths; the reason's Category is for reports.
 public static class StopRules
 {
+    // The states a supervisor is asked to explain (step 6): a loss when nobody does. Idle is left out, or every
+    // break would land in the "to classify" list.
+    public static readonly MachineState[] ToClassify = [MachineState.Down, MachineState.Setup, MachineState.Offline];
+
     /// <param name="reasonCountsAgainstAvailability">The segment's downtime reason; null = no reason yet.</param>
     /// <param name="hasPlan">The machine had work in this shift (its station scanned at least once). An Idle machine
     /// with nothing planned is not judged; one that waits while a WO runs is a loss (MAT-WAIT / upstream).</param>

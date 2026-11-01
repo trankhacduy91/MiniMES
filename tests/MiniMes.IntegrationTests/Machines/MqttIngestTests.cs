@@ -1,10 +1,17 @@
+using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MiniMes.Contracts.Auth;
 using MiniMes.Contracts.Machines;
+using MiniMes.Contracts.Oee;
+using MiniMes.Contracts.Realtime;
 using MiniMes.Domain.Machines;
 using MiniMes.Infrastructure.Machines;
 using MiniMes.Infrastructure.Persistence;
+using MiniMes.IntegrationTests.Infrastructure;
 using MQTTnet;
 using MQTTnet.Protocol;
 using MachineState = MiniMes.Domain.Machines.MachineState;
@@ -107,6 +114,53 @@ public class MqttIngestTests(MqttApiFixture mqtt)
     }
 
     // ---------- helpers ----------
+
+    // [M5 step 7] A stop longer than the micro-stop threshold ends without a reason (no Andon resolved it): the line's
+    // dashboards are told at once. This host's threshold is 5 s (ApiFactory). Not backdated: a Down stamped before the
+    // open segment (Offline, from the watchdog) would start when that segment started, by the M4 rule.
+    [Fact]
+    public async Task Stop_ending_without_a_reason_is_pushed_to_the_line()
+    {
+        var login = await mqtt.Factory.CreateClient().PostAsJsonAsync("/api/auth/login", new LoginRequest("sup01", ApiFixture.DemoPassword));
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
+        var server = mqtt.Factory.Server;
+        await using var hub = new HubConnectionBuilder()
+            .WithUrl(new Uri(server.BaseAddress, RealtimeHub.Path.TrimStart('/')), o =>
+            {
+                o.Transports = HttpTransportType.WebSockets;
+                o.HttpMessageHandlerFactory = _ => server.CreateHandler();
+                o.WebSocketFactory = async (ctx, ct) =>
+                {
+                    var ws = server.CreateWebSocketClient();
+                    ws.ConfigureRequest = r => r.Headers.Authorization = "Bearer " + token;
+                    return await ws.ConnectAsync(ctx.Uri, ct);
+                };
+                o.AccessTokenProvider = () => Task.FromResult<string?>(token);   // the negotiate request
+            })
+            .Build();
+        var pushed = new TaskCompletionSource<UnclassifiedDowntimeDto>(TaskCreationOptions.RunContinuationsAsynchronously);
+        hub.On<UnclassifiedDowntimeDto>(nameof(IMachineClient.DowntimeNeedsClassification), d => { if (d.Machine == "L1-SMT-01") pushed.TrySetResult(d); });
+        await hub.StartAsync();
+        await hub.InvokeAsync(RealtimeHub.JoinLine, "L1");
+
+        var down = DateTimeOffset.UtcNow;
+        await PublishAsync("L1-SMT-01", MachineKinds.State, Message("L1-SMT-01", down) with { State = WireState.Down });
+        await Task.Delay(TimeSpan.FromSeconds(6));
+        await PublishAsync("L1-SMT-01", MachineKinds.State, Message("L1-SMT-01", DateTimeOffset.UtcNow) with { State = WireState.Running });
+
+        UnclassifiedDowntimeDto dto;
+        try { dto = await pushed.Task.WaitAsync(Wait); }
+        catch (TimeoutException)
+        {
+            var id = await MachineIdAsync("L1-SMT-01");
+            var rows = await WithDbAsync(db => db.MachineStateHistory.AsNoTracking().Where(h => h.MachineId == id)
+                .OrderBy(h => h.StartAt).Select(h => h.State + " " + h.StartAt.ToString("O") + " -> " + h.EndAt).ToListAsync());
+            throw new Xunit.Sdk.XunitException("no push; segments: " + string.Join(" | ", rows) + " ; down sent " + down.ToString("O"));
+        }
+        Assert.Equal(("Down", "L1"), (dto.State, dto.Line));
+        Assert.InRange(dto.Minutes, 0.1, 0.2);   // ~6 s
+        Assert.Null(await WithDbAsync(db => db.MachineStateHistory.Where(h => h.Id == dto.Id).Select(h => h.DowntimeReasonId).SingleAsync()));
+    }
 
     private async Task PublishRawAsync(string topic, string payload)
     {

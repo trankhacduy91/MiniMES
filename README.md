@@ -271,6 +271,17 @@ OEE = Availability × Performance × Quality, tính ở **một** hàm thuần (
 
 Job **bắt kịp**: mỗi lượt hỏi "bucket nào đến hạn mà chưa chốt" (không "đúng phút 0 thì chốt"), nên API tắt 3 giờ thì lượt kế tiếp chốt bù 3 giờ (tối đa `Oee:CatchUpDays` = 2 ngày); chạy lại không sinh dòng trùng (upsert theo unique index `(MachineId, ShiftDate, ShiftId, Hour)`, `Hour = NULL` là tổng ca). Tổng nhiều giờ/ngày = cộng thời gian và số đếm rồi chia, không lấy trung bình các %.
 
+**API** (mọi role đã đăng nhập đọc; đổi lý do: Supervisor/Admin):
+
+| Endpoint | Nội dung |
+| --- | --- |
+| `GET /api/oee/current?machine=` \| `?line=` | Ca đang chạy, tính đến bây giờ; `Total` = cộng các máy |
+| `GET /api/oee/history?from&to&machine\|line&hourly` | Snapshot đã chốt (ngày sản xuất, `hourly=false` = chỉ tổng ca) |
+| `GET /api/downtime/pareto?from&to&machine\|line&shift&by=minutes\|count&includePlanned` | Pareto lý do dừng, tối đa 31 ngày; tổng phút = phút mất Availability |
+| `GET /api/downtime/unclassified?machineId&from&to` / `PUT /api/downtime/{id}/reason` | Danh sách cần phân loại / gán lý do (audit theo cột) |
+| `GET /api/reports/oee.xlsx` / `downtime-pareto.xlsx?from&to&line` | Excel: số thật định dạng %, giờ nhà máy, sheet `Definitions` |
+| SignalR `DowntimeNeedsClassification`, `OeeSnapshotClosed` | Đoạn dừng vừa kết thúc chưa có lý do; job vừa chốt giờ/ca của một máy |
+
 **Quy ước đã chọn** (spec M5 1.2.4–1.2.8): Total từ bộ đếm máy, Good từ scan theo serial; ngày sản xuất = ngày bắt đầu ca (giờ nhà máy); dừng < 60 s (`Oee:MicroStopThresholdSec`) là micro stop; Down/Setup/Offline chưa có lý do vẫn phạt A; Idle phạt A khi trạm của máy có scan trong ca; P > 100 % giữ số thô + cờ.
 
 ## Edge Gateway (M4b)

@@ -23,7 +23,8 @@ public sealed class OeeOptions
 /// <param name="Input">Totals for OeeCalculator.</param>
 /// <param name="ScanCount">Scan rows at the machine's station(s) in the window: the cross-check with the machine
 /// counter (step 9) compares it with Input's total count.</param>
-public sealed record OeeReading(OeeInput Input, long ScanCount);
+/// <param name="Stops">What each stop cost in the window (the Pareto, step 7).</param>
+public sealed record OeeReading(OeeInput Input, long ScanCount, IReadOnlyList<StopLoss> Stops);
 
 // Spec M5 step 4: the I/O half of OEE. Reads M3/M4 data for one machine and window and hands back totals;
 // the maths stays in the pure OeeCalculator.

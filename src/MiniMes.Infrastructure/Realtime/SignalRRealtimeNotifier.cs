@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using MiniMes.Application.Realtime;
 using MiniMes.Contracts.Andon;
+using MiniMes.Contracts.Oee;
 using MiniMes.Contracts.Realtime;
 
 namespace MiniMes.Infrastructure.Realtime;
@@ -36,6 +37,12 @@ public sealed class SignalRRealtimeNotifier(IHubContext<MachineHub, IMachineClie
         try { await hub.Clients.All.GatewayStatusChanged(dto); }
         catch (Exception ex) { log.LogWarning(ex, "SignalR push for gateway {Gateway} failed", dto.Gateway); }
     }
+
+    public Task DowntimeNeedsClassificationAsync(UnclassifiedDowntimeDto dto, CancellationToken ct = default)
+        => SafeAsync(dto.Line, c => c.DowntimeNeedsClassification(dto), dto.Machine);
+
+    public Task OeeSnapshotClosedAsync(OeeSnapshotClosedDto dto, CancellationToken ct = default)
+        => SafeAsync(dto.Line, c => c.OeeSnapshotClosed(dto), dto.Machine);
 
     private async Task SafeAsync(string line, Func<IMachineClient, Task> push, string machine)
     {

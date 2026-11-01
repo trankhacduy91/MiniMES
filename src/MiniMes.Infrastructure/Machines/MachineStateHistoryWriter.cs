@@ -9,14 +9,15 @@ namespace MiniMes.Infrastructure.Machines;
 // Idempotent, because a batch may be written again after a failure: same state already open = nothing to do.
 public static class MachineStateHistoryWriter
 {
-    public static async Task CloseAndOpenAsync(AppDbContext db, StateChange change, CancellationToken ct)
+    /// <returns>The segment it closed, if any (M5: a stop that ended without a reason is announced).</returns>
+    public static async Task<MachineStateHistory?> CloseAndOpenAsync(AppDbContext db, StateChange change, CancellationToken ct)
     {
         var open = await db.MachineStateHistory
             .SingleOrDefaultAsync(h => h.MachineId == change.MachineId && h.EndAt == null, ct);
         if (open is not null)
         {
-            if (open.State == change.State) return;
-            if (change.At < open.StartAt) return;     // older than the open segment: history is not rewritten
+            if (open.State == change.State) return null;
+            if (change.At < open.StartAt) return null;   // older than the open segment: history is not rewritten
             open.Close(change.At);
             // Saved before the insert: in one SaveChanges EF may send the INSERT first, and the filtered unique index
             // (one open segment per machine) would refuse it.
@@ -24,5 +25,6 @@ public static class MachineStateHistoryWriter
         }
         db.MachineStateHistory.Add(new MachineStateHistory(change.MachineId, change.State, change.At));
         await db.SaveChangesAsync(ct);
+        return open;
     }
 }

@@ -1,5 +1,6 @@
 using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Machines;
+using MiniMes.Contracts.Oee;
 
 namespace MiniMes.Contracts.Realtime;
 
@@ -13,6 +14,8 @@ public interface IMachineClient
     Task AndonChanged(AndonDto dto);                         // pushed at once: raise, acknowledge, resolve, cancel
     Task AndonEscalated(AndonDto dto);                       // [v2] to role groups: nobody acknowledged in time
     Task GatewayStatusChanged(GatewayStatusDto dto);         // [M4b] to every dashboard: a handful of gateways
+    Task DowntimeNeedsClassification(UnclassifiedDowntimeDto dto);   // [M5] a stop ended without a reason, to the line
+    Task OeeSnapshotClosed(OeeSnapshotClosedDto dto);        // [M5] the job closed hours of a machine: once a minute at most
 }
 
 public static class RealtimeHub

@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MiniMes.Application.Common;
 using MiniMes.Application.Oee;
+using MiniMes.Application.Realtime;
+using MiniMes.Contracts.Oee;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.Oee;
 using MiniMes.Domain.Time;
@@ -14,7 +16,7 @@ namespace MiniMes.Infrastructure.Oee;
 // closed yet?" and closes them all. A server off for 3 hours closes the 3 missing hours on its next run; a second
 // run finds nothing to do (rule 13). A bucket = (machine, shift, hour) or (machine, shift) for the total.
 public sealed class OeeSnapshotService(AppDbContext db, IOeeInputReader reader, PlantTimeZone plant, TimeProvider time,
-    IOptions<OeeOptions> options, ILogger<OeeSnapshotService> log)
+    IOptions<OeeOptions> options, IRealtimeNotifier notifier, ILogger<OeeSnapshotService> log)
 {
     private sealed record Bucket(ShiftWindow Shift, int ShiftId, byte? Hour, Interval Window);
 
@@ -28,19 +30,18 @@ public sealed class OeeSnapshotService(AppDbContext db, IOeeInputReader reader, 
         var today = plant.DateOf(now);
         var first = today.AddDays(-options.Value.CatchUpDays);
 
-        var machines = await db.Machines.Where(m => m.IsActive && (machineIds == null || machineIds.Contains(m.Id)))
-            .Select(m => m.Id).ToListAsync(ct);
+        var machines = (await OeeScope.MachinesAsync(db, null, null, ct))
+            .Where(m => machineIds == null || machineIds.Contains(m.Id)).ToList();
+        var ids = machines.Select(m => m.Id).ToList();
         var snapshots = await db.OeeSnapshots
-            .Where(s => machines.Contains(s.MachineId) && ((s.ShiftDate >= first && s.ShiftDate <= today) || !s.IsFinal))
+            .Where(s => ids.Contains(s.MachineId) && ((s.ShiftDate >= first && s.ShiftDate <= today) || !s.IsFinal))
             .ToListAsync(ct);
         // Dates to look at: the catch-up range, plus any older shift marked for recalculation (rule 8).
         var dates = Enumerable.Range(0, today.DayNumber - first.DayNumber + 1).Select(first.AddDays)
             .Concat(snapshots.Where(s => !s.IsFinal).Select(s => s.ShiftDate))
             .Distinct().Order().ToList();
 
-        var shifts = await db.Shifts.Where(s => s.IsActive).ToListAsync(ct);   // breaks are owned: loaded with them
-        var calendarDays = await db.PlantCalendar.Where(d => dates.Contains(d.Date)).ToListAsync(ct);
-        var calendar = new ShiftCalendar(plant.Zone, shifts, calendarDays);
+        var (calendar, shifts) = await OeeScope.CalendarAsync(db, plant, dates, ct);
         var buckets = dates.SelectMany(calendar.WindowsOn)
             .SelectMany(w => BucketsOf(w, shifts.Single(s => s.Code == w.ShiftCode)))
             .Where(b => b.Window.EndUtc <= dueBefore)
@@ -48,8 +49,10 @@ public sealed class OeeSnapshotService(AppDbContext db, IOeeInputReader reader, 
 
         var byKey = snapshots.ToDictionary(s => (s.MachineId, s.ShiftDate, s.ShiftId, s.Hour));
         var written = 0;
-        foreach (var machineId in machines)
+        foreach (var machine in machines)
         {
+            var machineId = machine.Id;
+            var closed = new List<Bucket>();
             foreach (var b in buckets)
             {
                 var key = (machineId, b.Shift.ShiftDate, b.ShiftId, b.Hour);
@@ -66,9 +69,14 @@ public sealed class OeeSnapshotService(AppDbContext db, IOeeInputReader reader, 
                     byKey[key] = row;
                 }
                 row.Apply(result, reading.ScanCount, now, isFinal: true);
-                written++;
+                closed.Add(b);
             }
             await db.SaveChangesAsync(ct);   // per machine: a failure loses one machine's run, the next tick retries
+            written += closed.Count;
+            // One push per machine and shift per run: at most once a minute, the job's own pace (no extra throttle).
+            foreach (var shift in closed.GroupBy(b => (b.Shift.ShiftDate, b.Shift.ShiftCode)))
+                await notifier.OeeSnapshotClosedAsync(new OeeSnapshotClosedDto(machineId, machine.Code, machine.Line,
+                    shift.Key.ShiftDate, shift.Key.ShiftCode, shift.Select(b => (int?)b.Hour).ToList()), ct);
         }
         if (written > 0)
             log.LogInformation("OEE snapshots: {Written} written for {Machines} machine(s)", written, machines.Count);

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Time.Testing;
+using MiniMes.Domain.Machines;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.Oee;
 using MiniMes.Domain.Time;
@@ -106,5 +107,34 @@ public class OeeInputBuilderTests
         var later = OeeInputBuilder.Build(window.Until(clock.GetUtcNow().UtcDateTime), window.Breaks, [R(6, 0, 6, 15)],
             [], MicroStop, [], 0);
         Assert.Equal(TimeSpan.FromMinutes(15), later.BreakTime);
+    }
+}
+
+// Step 7: each stop's share, for the Pareto. The losses must add up to exactly the Availability loss.
+public class OeeStopLossTests
+{
+    private static DateTime L(int hour, int minute = 0, int second = 0)
+        => new DateTime(2026, 10, 1, hour, minute, second, DateTimeKind.Utc).AddHours(-7);
+
+    private static Interval R(int h1, int m1, int h2, int m2) => new(L(h1, m1), L(h2, m2));
+
+    [Fact]
+    public void Stop_losses_add_up_to_the_unplanned_downtime()
+    {
+        StopPiece[] down =
+        [
+            new(R(7, 10, 7, 35), 1, MachineState.Down),        // 25
+            new(R(7, 50, 8, 10), null, MachineState.Down),     // 20, but 08:00-08:15 is a break -> 10
+            new(new Interval(L(9, 0), L(9, 0, 20)), 2, MachineState.Down),   // micro stop: not a loss
+        ];
+        StopPiece[] planned = [new(R(6, 0, 6, 15), 3, MachineState.PlannedStop)];
+
+        var (input, stops) = OeeInputBuilder.BuildDetailed(R(6, 0, 14, 0), [R(8, 0, 8, 15)], planned, down,
+            TimeSpan.FromSeconds(60), [new(20, 100)], 100);
+
+        Assert.Equal(TimeSpan.FromMinutes(35), input.UnplannedDowntime);
+        Assert.Equal(input.UnplannedDowntime, stops.Where(s => s.CountsAgainstAvailability).Aggregate(TimeSpan.Zero, (t, s) => t + s.Length));
+        Assert.Equal([(1, 25.0), ((int?)null, 10.0)], stops.Where(s => s.CountsAgainstAvailability).Select(s => (s.ReasonId, s.Length.TotalMinutes)));
+        Assert.Equal((3, false, 15.0), stops.Where(s => !s.CountsAgainstAvailability).Select(s => (s.ReasonId, s.CountsAgainstAvailability, s.Length.TotalMinutes)).Single());
     }
 }

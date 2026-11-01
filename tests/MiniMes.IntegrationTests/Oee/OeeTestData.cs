@@ -19,6 +19,39 @@ public static class OeeTestData
     public static Func<int, int, int, DateTime> Day(int day)
         => (h, m, s) => new DateTime(2030, 10, day, h, m, s, DateTimeKind.Utc).AddHours(-7);
 
+    // A day of September 2026, already past: for the API, which runs on the real clock and skips future shifts.
+    public static Func<int, int, int, DateTime> PastDay(int day)
+        => (h, m, s) => new DateTime(2026, 9, day, h, m, s, DateTimeKind.Utc).AddHours(-7);
+
+    // The sample shift of 1.2.2 with the seeded S1 break times (10:00-10:15, 11:30-12:15): 79.84 %. Stops: MEETING
+    // 06:00-06:15 (planned), FDR-JAM 25 min, MAT-WAIT 12 min, an unclassified Down of 8 min, six 20 s jams.
+    // Shared by the snapshot, downtime and API tests. Ends with an open Idle from 14:00.
+    public static async Task<Plant> SampleShiftAsync(ApiFixture api, Func<int, int, int, DateTime> at)
+    {
+        var plant = await NewMachineAsync(api);
+        var boards = await WorkOrderAsync(api, plant, 20m, 1000, at(5, 0, 0));
+        await api.WithDbAsync(async db =>
+        {
+            Counters(db, plant, [(at(5, 55, 0), 50_000),
+                .. Enumerable.Range(1, 200).Select(i => (at(6, 16, 0).AddSeconds(i * 138), 50_000L + 5 * i))]);
+            await StatesAsync(db, plant, [
+                (at(6, 0, 0), MachineState.PlannedStop, "MEETING"), (at(6, 15, 0), MachineState.Running, null),
+                (at(7, 10, 0), MachineState.Down, "FDR-JAM"), (at(7, 35, 0), MachineState.Running, null),
+                .. Enumerable.Range(0, 6).SelectMany(i => new (DateTime, MachineState, string?)[]
+                    { (at(7, 50 + i, 0), MachineState.Down, null), (at(7, 50 + i, 20), MachineState.Running, null) }),
+                (at(9, 20, 0), MachineState.Down, "MAT-WAIT"), (at(9, 32, 0), MachineState.Running, null),
+                (at(10, 0, 0), MachineState.Idle, null), (at(10, 15, 0), MachineState.Running, null),
+                (at(11, 30, 0), MachineState.Idle, null), (at(12, 15, 0), MachineState.Running, null),
+                (at(12, 40, 0), MachineState.Down, null), (at(12, 48, 0), MachineState.Running, null),
+                (at(14, 0, 0), MachineState.Idle, null)]);
+            Scans(db, plant, boards.Take(970), ScanResult.Ok, at(6, 16, 0), TimeSpan.FromSeconds(27));
+            Scans(db, plant, boards.Skip(970), ScanResult.Ng, at(11, 0, 0), TimeSpan.FromSeconds(60));
+            return await db.SaveChangesAsync();
+        });
+        return plant;
+    }
+
+
     public static async Task<Plant> NewMachineAsync(ApiFixture api) => await api.WithDbAsync(async db =>
     {
         var wc = await db.WorkCenters.SingleAsync(w => w.Code == "WC-SMT");
@@ -80,5 +113,26 @@ public static class OeeTestData
             if (i < segments.Length - 1) h.Close(segments[i + 1].Start);
             db.MachineStateHistory.Add(h);
         }
+    }
+}
+
+// Records what the OEE code pushes over SignalR (step 7) instead of sending it.
+public sealed class RecordingNotifier : MiniMes.Application.Realtime.IRealtimeNotifier
+{
+    public System.Collections.Concurrent.ConcurrentQueue<object> Pushed { get; } = new();
+
+    public Task MachineStateChangedAsync(MiniMes.Contracts.Realtime.MachineStateChangedDto dto, CancellationToken ct = default) => Record(dto);
+    public Task MachineCounterUpdatedAsync(MiniMes.Contracts.Realtime.MachineCounterDto dto, CancellationToken ct = default) => Record(dto);
+    public Task MachineProcessUpdatedAsync(MiniMes.Contracts.Realtime.MachineProcessDto dto, CancellationToken ct = default) => Record(dto);
+    public Task AndonChangedAsync(MiniMes.Contracts.Andon.AndonDto dto, CancellationToken ct = default) => Record(dto);
+    public Task AndonEscalatedAsync(MiniMes.Contracts.Andon.AndonDto dto, IReadOnlyList<string> roles, CancellationToken ct = default) => Record(dto);
+    public Task GatewayStatusChangedAsync(MiniMes.Contracts.Realtime.GatewayStatusDto dto, CancellationToken ct = default) => Record(dto);
+    public Task DowntimeNeedsClassificationAsync(MiniMes.Contracts.Oee.UnclassifiedDowntimeDto dto, CancellationToken ct = default) => Record(dto);
+    public Task OeeSnapshotClosedAsync(MiniMes.Contracts.Oee.OeeSnapshotClosedDto dto, CancellationToken ct = default) => Record(dto);
+
+    private Task Record(object dto)
+    {
+        Pushed.Enqueue(dto);
+        return Task.CompletedTask;
     }
 }

@@ -8,6 +8,7 @@ using MiniMes.Contracts.Oee;
 using MiniMes.Domain.Andon;
 using MiniMes.Domain.Common;
 using MiniMes.Domain.Machines;
+using MiniMes.Domain.Oee;
 
 namespace MiniMes.Application.Oee.Downtime;
 
@@ -17,9 +18,6 @@ namespace MiniMes.Application.Oee.Downtime;
 internal static class DowntimeClassification
 {
     public const string OtherCode = "OTHER";
-
-    // The states that are a loss when nobody explains them (StopRules); Idle is left out: every break would land here.
-    public static readonly MachineState[] ToClassify = [MachineState.Down, MachineState.Setup, MachineState.Offline];
 
     public static async Task MarkSnapshotsForRecalculationAsync(IAppDbContext db, MachineStateHistory segment, CancellationToken ct)
     {
@@ -72,7 +70,7 @@ public sealed class GetUnclassifiedDowntimeHandler(IAppDbContext db, TimeProvide
                 join m in db.Machines on h.MachineId equals m.Id
                 join w in db.WorkCenters on m.WorkCenterId equals w.Id
                 join l in db.Lines on w.LineId equals l.Id
-                where h.DowntimeReasonId == null && DowntimeClassification.ToClassify.Contains(h.State)
+                where h.DowntimeReasonId == null && StopRules.ToClassify.Contains(h.State)
                       && h.EndAt != null && h.StartAt < end && h.EndAt > start
                       && (q.MachineId == null || h.MachineId == q.MachineId)
                       && h.EndAt >= h.StartAt.AddSeconds(minSeconds)

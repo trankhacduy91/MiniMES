@@ -2,8 +2,14 @@ using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MiniMes.Application.Machines;
+using MiniMes.Application.Oee;
+using MiniMes.Application.Realtime;
+using MiniMes.Contracts.Oee;
 using MiniMes.Domain.Common;
+using MiniMes.Domain.Machines;
+using MiniMes.Domain.Oee;
 using MiniMes.Infrastructure.Persistence;
 
 namespace MiniMes.Infrastructure.Machines;
@@ -142,9 +148,30 @@ public sealed class MachineEventBatchWriter(
             db.ProcessValues.Add(value);
         }
         await db.SaveChangesAsync(ct);
+        var closed = new List<MachineStateHistory>();
         foreach (var change in items.Where(i => i.StateChange is not null).Select(i => i.StateChange!))
-            await MachineStateHistoryWriter.CloseAndOpenAsync(db, change, ct);   // in arrival order
+            if (await MachineStateHistoryWriter.CloseAndOpenAsync(db, change, ct) is { } segment)   // in arrival order
+                closed.Add(segment);
 
         await tx.CommitAsync(ct);
+        await AnnounceUnclassifiedAsync(scope.ServiceProvider, closed, ct);
+    }
+
+    // M5 step 7: a stop that just ended, long enough to need a reason and without one (no Andon resolved it), goes to
+    // the line's dashboards at once (SignalR DowntimeNeedsClassification). After the commit: never for a rolled-back
+    // row. A retried batch may announce twice; the client keeps one row per segment id.
+    private static async Task AnnounceUnclassifiedAsync(IServiceProvider services, List<MachineStateHistory> closed, CancellationToken ct)
+    {
+        var threshold = TimeSpan.FromSeconds(services.GetRequiredService<IOptions<OeeOptions>>().Value.MicroStopThresholdSec);
+        var directory = services.GetRequiredService<MachineDirectory>();
+        var notifier = services.GetRequiredService<IRealtimeNotifier>();
+        foreach (var s in closed.Where(s => s.DowntimeReasonId is null && StopRules.ToClassify.Contains(s.State)
+                                            && s.EndAt - s.StartAt >= threshold))
+        {
+            if (directory.Get(s.MachineId) is not { } machine) continue;
+            var minutes = Math.Round((s.EndAt!.Value - s.StartAt).TotalMinutes, 1);
+            await notifier.DowntimeNeedsClassificationAsync(new UnclassifiedDowntimeDto(s.Id, s.MachineId, machine.Code,
+                machine.Line, s.State.ToString(), s.StartAt, s.EndAt.Value, minutes), ct);
+        }
     }
 }
