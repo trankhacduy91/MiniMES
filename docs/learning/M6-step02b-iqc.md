@@ -1,7 +1,7 @@
 # M6 · Bước 2b — [v2] IQC, kiểm tra vật tư đầu vào: kiến thức cần nắm
 
 > Tài liệu học cho bước 2b của [module-06](../../spec/module-06-material-traceability.md) (spec mục **1.2b**, **2.4b**, R15–R17).
-> Bước trước: [M6-step02](M6-step02-receiving.md).
+> Bước trước: [M6-step02](M6-step02-receiving.md). Bước sau: [M6-step03](M6-step03-material-verifier.md).
 > Code: `src/MiniMes.Application/Material/Iqc.cs`, `src/MiniMes.Api/Controllers/IqcController.cs`,
 > BackOffice `Views/Material/IqcView.xaml`. Ảnh: [m6-iqc.png](../images/m6-iqc.png).
 
