@@ -35,3 +35,13 @@ public static class ParetoBy
 // SignalR (OeeSnapshotClosed): the job closed hours or a shift of this machine; dashboards reload the history.
 public sealed record OeeSnapshotClosedDto(int MachineId, string Machine, string Line, DateOnly ShiftDate, string Shift,
     IReadOnlyList<int?> Hours);
+
+// GET /api/oee/shift?date&shift&machine|line (step 8, the dashboard): one shift of a machine or a whole line, added
+// up on the server (one OEE formula). Date and shift empty = the running shift. Total and Machines are computed
+// from the raw data up to now (a running shift) or to the shift end; Hours come from the closed hourly snapshots.
+public sealed record ShiftOeeDto(
+    DateOnly? ShiftDate, string? Shift, DateTime? FromUtc, DateTime? ToUtc, bool IsRunning,
+    OeeFiguresDto? Total, IReadOnlyList<MachineOeeDto> Machines, IReadOnlyList<HourOeeDto> Hours);
+
+// Hour = plant clock hour; Figures of all machines in scope added up for that hour.
+public sealed record HourOeeDto(int Hour, DateTime WindowStartUtc, DateTime WindowEndUtc, OeeFiguresDto Figures);

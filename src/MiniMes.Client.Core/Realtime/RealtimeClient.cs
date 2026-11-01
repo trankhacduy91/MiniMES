@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Options;
 using MiniMes.Client.Core.Auth;
 using MiniMes.Contracts.Andon;
+using MiniMes.Contracts.Oee;
 using MiniMes.Contracts.Realtime;
 
 namespace MiniMes.Client.Core.Realtime;
@@ -16,6 +17,8 @@ public interface IRealtimeClient : IAsyncDisposable
     event Action<AndonDto>? AndonChanged;
     event Action<AndonDto>? AndonEscalated;
     event Action<GatewayStatusDto>? GatewayStatusChanged;   // [M4b]
+    event Action<UnclassifiedDowntimeDto>? DowntimeNeedsClassification;   // [M5]
+    event Action<OeeSnapshotClosedDto>? OeeSnapshotClosed;                // [M5]
 
     // false = "Reconnecting..." banner; true = live again.
     event Action<bool>? ConnectionChanged;
@@ -58,6 +61,8 @@ public sealed class RealtimeClient : IRealtimeClient
     public event Action<AndonDto>? AndonChanged;
     public event Action<AndonDto>? AndonEscalated;
     public event Action<GatewayStatusDto>? GatewayStatusChanged;
+    public event Action<UnclassifiedDowntimeDto>? DowntimeNeedsClassification;
+    public event Action<OeeSnapshotClosedDto>? OeeSnapshotClosed;
     public event Action<bool>? ConnectionChanged;
     public event Func<Task>? Resync;
 
@@ -78,6 +83,8 @@ public sealed class RealtimeClient : IRealtimeClient
         _conn.On<AndonDto>(nameof(IMachineClient.AndonChanged), d => AndonChanged?.Invoke(d));
         _conn.On<AndonDto>(nameof(IMachineClient.AndonEscalated), d => AndonEscalated?.Invoke(d));
         _conn.On<GatewayStatusDto>(nameof(IMachineClient.GatewayStatusChanged), d => GatewayStatusChanged?.Invoke(d));
+        _conn.On<UnclassifiedDowntimeDto>(nameof(IMachineClient.DowntimeNeedsClassification), d => DowntimeNeedsClassification?.Invoke(d));
+        _conn.On<OeeSnapshotClosedDto>(nameof(IMachineClient.OeeSnapshotClosed), d => OeeSnapshotClosed?.Invoke(d));
 
         _conn.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
         // New ConnectionId: the server forgot our groups (role groups it re-adds itself, line groups we must join).

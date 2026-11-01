@@ -26,6 +26,8 @@ internal sealed class FakeRealtimeClient : IRealtimeClient
     public event Action<AndonDto>? AndonChanged;
     public event Action<AndonDto>? AndonEscalated;
     public event Action<GatewayStatusDto>? GatewayStatusChanged;
+    public event Action<MiniMes.Contracts.Oee.UnclassifiedDowntimeDto>? DowntimeNeedsClassification;
+    public event Action<MiniMes.Contracts.Oee.OeeSnapshotClosedDto>? OeeSnapshotClosed;
     public event Action<bool>? ConnectionChanged;
     public event Func<Task>? Resync;
 
@@ -46,6 +48,8 @@ internal sealed class FakeRealtimeClient : IRealtimeClient
     public void Push(AndonDto d) => AndonChanged?.Invoke(d);
     public void Escalate(AndonDto d) => AndonEscalated?.Invoke(d);
     public void Push(GatewayStatusDto d) => GatewayStatusChanged?.Invoke(d);
+    public void Push(MiniMes.Contracts.Oee.UnclassifiedDowntimeDto d) => DowntimeNeedsClassification?.Invoke(d);
+    public void Push(MiniMes.Contracts.Oee.OeeSnapshotClosedDto d) => OeeSnapshotClosed?.Invoke(d);
 
     // Connection lost, then back: like the real client, joined again before Resync.
     public void Drop() { IsConnected = false; ConnectionChanged?.Invoke(false); }

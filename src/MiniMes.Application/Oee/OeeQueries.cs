@@ -55,6 +55,61 @@ public sealed class GetCurrentOeeHandler(IAppDbContext db, IOeeInputReader reade
     }
 }
 
+// ---------- GET /api/oee/shift: one shift for the dashboard ----------
+
+public sealed record GetShiftOeeQuery(DateOnly? Date, string? Shift, string? Machine, string? Line) : IRequest<ShiftOeeDto>;
+
+public sealed class GetShiftOeeValidator : AbstractValidator<GetShiftOeeQuery>
+{
+    public GetShiftOeeValidator()
+    {
+        RuleFor(x => x).Must(x => (x.Machine is null) != (x.Line is null))
+            .WithName("machine").WithMessage("Give either machine or line.");
+        RuleFor(x => x).Must(x => (x.Date is null) == (x.Shift is null))
+            .WithName("date").WithMessage("Give both date and shift, or neither (the running shift).");
+    }
+}
+
+public sealed class GetShiftOeeHandler(IAppDbContext db, IOeeInputReader reader, PlantTimeZone plant, TimeProvider time)
+    : IRequestHandler<GetShiftOeeQuery, ShiftOeeDto>
+{
+    public async Task<ShiftOeeDto> Handle(GetShiftOeeQuery q, CancellationToken ct)
+    {
+        var now = time.GetUtcNow().UtcDateTime;
+        var machines = await OeeScope.MachinesAsync(db, q.Machine, q.Line, ct);
+        var date = q.Date ?? plant.DateOf(now);
+        var (calendar, shifts) = await OeeScope.CalendarAsync(db, plant, [date], ct);
+        var shift = q.Date is null ? calendar.Resolve(now) : calendar.WindowsOn(date).FirstOrDefault(w => w.ShiftCode == q.Shift);
+        if (shift is null || shift.StartUtc >= now)   // between shifts, a holiday, or not started yet
+            return new ShiftOeeDto(q.Date, q.Shift, null, null, false, null, [], []);
+
+        var window = shift.Until(now);
+        var results = new List<(OeeMachine Machine, OeeResult Result, long Scans)>();
+        foreach (var m in machines)
+        {
+            var reading = await reader.ReadAsync(m.Id, shift, window, ct);
+            results.Add((m, OeeCalculator.Calculate(reading.Input), reading.ScanCount));
+        }
+        var total = OeeCalculator.Combine(results.Select(r => r.Result));
+
+        // The closed hours of every machine in scope, added up hour by hour (rule 12).
+        var ids = machines.Select(m => m.Id).ToList();
+        var shiftId = shifts.Single(s => s.Code == shift.ShiftCode).Id;
+        var hourly = await db.OeeSnapshots.AsNoTracking()
+            .Where(s => ids.Contains(s.MachineId) && s.ShiftDate == shift.ShiftDate && s.ShiftId == shiftId && s.Hour != null)
+            .ToListAsync(ct);
+        var hours = hourly.GroupBy(s => s.Hour!.Value)
+            .OrderBy(g => g.Min(s => s.WindowStartUtc))
+            .Select(g => new HourOeeDto(g.Key, g.Min(s => s.WindowStartUtc), g.Max(s => s.WindowEndUtc),
+                OeeCalculator.Combine(g.Select(s => s.ToResult())).ToDto(g.Sum(s => s.ScanCount))))
+            .ToList();
+
+        return new ShiftOeeDto(shift.ShiftDate, shift.ShiftCode, window.StartUtc, window.EndUtc, now < shift.EndUtc,
+            total.ToDto(results.Sum(r => r.Scans)),
+            results.Select(r => new MachineOeeDto(r.Machine.Id, r.Machine.Code, r.Result.ToDto(r.Scans))).ToList(), hours);
+    }
+}
+
 // ---------- GET /api/oee/history: closed snapshots ----------
 
 public sealed record GetOeeHistoryQuery(DateOnly From, DateOnly To, string? Machine, string? Line, bool Hourly)

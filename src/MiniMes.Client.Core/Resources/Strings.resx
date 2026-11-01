@@ -1051,4 +1051,115 @@
   <data name="Andon_Reconnecting" xml:space="preserve">
     <value>Live machine status unavailable. Reconnecting...</value>
   </data>
+  <data name="Menu_OeeDashboard" xml:space="preserve">
+    <value>OEE dashboard</value>
+  </data>
+  <data name="Oee_Title" xml:space="preserve">
+    <value>OEE</value>
+  </data>
+  <data name="Oee_Line" xml:space="preserve">
+    <value>Line</value>
+  </data>
+  <data name="Oee_Machine" xml:space="preserve">
+    <value>Machine</value>
+  </data>
+  <data name="Oee_AllMachines" xml:space="preserve">
+    <value>All machines (line)</value>
+  </data>
+  <data name="Oee_CurrentShift" xml:space="preserve">
+    <value>Current shift</value>
+  </data>
+  <data name="Oee_Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Oee_Shift" xml:space="preserve">
+    <value>Shift</value>
+  </data>
+  <data name="Oee_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Oee_Availability" xml:space="preserve">
+    <value>Availability</value>
+  </data>
+  <data name="Oee_Performance" xml:space="preserve">
+    <value>Performance</value>
+  </data>
+  <data name="Oee_Quality" xml:space="preserve">
+    <value>Quality</value>
+  </data>
+  <data name="Oee_Oee" xml:space="preserve">
+    <value>OEE</value>
+  </data>
+  <data name="Oee_ShiftText" xml:space="preserve">
+    <value>Shift {0} · {1} · {2}–{3} {4}</value>
+  </data>
+  <data name="Oee_Running" xml:space="preserve">
+    <value>(running, up to now)</value>
+  </data>
+  <data name="Oee_NoShift" xml:space="preserve">
+    <value>Outside every shift: nothing planned, no OEE.</value>
+  </data>
+  <data name="Oee_Counts" xml:space="preserve">
+    <value>Total {0:N0} · Good {1:N0} · Scans {2:N0} · Planned {3:0} min · Run {4:0} min</value>
+  </data>
+  <data name="Oee_WarningPerformanceOver100" xml:space="preserve">
+    <value>Performance above 100 %: check master data (ideal cycle time, counter unit)</value>
+  </data>
+  <data name="Oee_WarningGoodExceedsTotal" xml:space="preserve">
+    <value>More OK scans than machine counts: check the counter</value>
+  </data>
+  <data name="Oee_WarningDowntimeExceedsPlanned" xml:space="preserve">
+    <value>Downtime longer than planned time: check the state data</value>
+  </data>
+  <data name="Oee_WarningCounterMismatch" xml:space="preserve">
+    <value>Counter mismatch: machine count and scans differ by more than 2 %</value>
+  </data>
+  <data name="Oee_ParetoTitle" xml:space="preserve">
+    <value>Downtime Pareto (top 5)</value>
+  </data>
+  <data name="Oee_ByCount" xml:space="preserve">
+    <value>By number of stops</value>
+  </data>
+  <data name="Oee_Minutes" xml:space="preserve">
+    <value>Minutes</value>
+  </data>
+  <data name="Oee_Stops" xml:space="preserve">
+    <value>Stops</value>
+  </data>
+  <data name="Oee_CumulativePercent" xml:space="preserve">
+    <value>Cumulative %</value>
+  </data>
+  <data name="Oee_HourlyTitle" xml:space="preserve">
+    <value>Good boards per hour vs target</value>
+  </data>
+  <data name="Oee_Boards" xml:space="preserve">
+    <value>Boards</value>
+  </data>
+  <data name="Oee_Good" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="Oee_Target" xml:space="preserve">
+    <value>Target (ideal cycle time)</value>
+  </data>
+  <data name="Oee_Unclassified" xml:space="preserve">
+    <value>Stops to classify</value>
+  </data>
+  <data name="Oee_NoUnclassified" xml:space="preserve">
+    <value>Every stop of this shift has a reason.</value>
+  </data>
+  <data name="Oee_Period" xml:space="preserve">
+    <value>Period</value>
+  </data>
+  <data name="Oee_State" xml:space="preserve">
+    <value>State</value>
+  </data>
+  <data name="Oee_Reason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="Oee_Note" xml:space="preserve">
+    <value>Note (required for OTHER)</value>
+  </data>
+  <data name="Oee_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
 </root>

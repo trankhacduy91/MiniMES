@@ -276,11 +276,16 @@ Job **bắt kịp**: mỗi lượt hỏi "bucket nào đến hạn mà chưa ch�
 | Endpoint | Nội dung |
 | --- | --- |
 | `GET /api/oee/current?machine=` \| `?line=` | Ca đang chạy, tính đến bây giờ; `Total` = cộng các máy |
+| `GET /api/oee/shift?date&shift&machine\|line` | Dashboard: một ca (bỏ trống ngày + ca = ca đang chạy), cộng ở server, kèm các giờ đã chốt |
 | `GET /api/oee/history?from&to&machine\|line&hourly` | Snapshot đã chốt (ngày sản xuất, `hourly=false` = chỉ tổng ca) |
 | `GET /api/downtime/pareto?from&to&machine\|line&shift&by=minutes\|count&includePlanned` | Pareto lý do dừng, tối đa 31 ngày; tổng phút = phút mất Availability |
 | `GET /api/downtime/unclassified?machineId&from&to` / `PUT /api/downtime/{id}/reason` | Danh sách cần phân loại / gán lý do (audit theo cột) |
 | `GET /api/reports/oee.xlsx` / `downtime-pareto.xlsx?from&to&line` | Excel: số thật định dạng %, giờ nhà máy, sheet `Definitions` |
 | SignalR `DowntimeNeedsClassification`, `OeeSnapshotClosed` | Đoạn dừng vừa kết thúc chưa có lý do; job vừa chốt giờ/ca của một máy |
+
+**Dashboard WPF** (BackOffice, menu **OEE dashboard**): thẻ A/P/Q/OEE + huy hiệu cảnh báo, sản lượng tốt theo giờ so với mục tiêu theo cycle time, Pareto top 5 (theo phút hoặc số lần, rê chuột xem số), danh sách cần phân loại (Supervisor chọn lý do và lưu). Ca đang chạy tự làm mới mỗi 15 giây và ngay khi có SignalR. Biểu đồ: OxyPlot 2.2 (`PlotModel` ở ViewModel, `PlotView` ở WPF). DB Development có sẵn **ca mẫu** của spec (`L1-SMT-01`, S1 ngày 01/10/2026, `OeeDemoSeeder`): bỏ chọn *Current shift*, chọn ngày 01/10/2026, ca S1, máy `L1-SMT-01` → 79,8 %.
+
+![OEE dashboard: ca mẫu 79,8 %, Pareto, sản lượng theo giờ](docs/images/m5-oee-dashboard.png)
 
 **Quy ước đã chọn** (spec M5 1.2.4–1.2.8): Total từ bộ đếm máy, Good từ scan theo serial; ngày sản xuất = ngày bắt đầu ca (giờ nhà máy); dừng < 60 s (`Oee:MicroStopThresholdSec`) là micro stop; Down/Setup/Offline chưa có lý do vẫn phạt A; Idle phạt A khi trạm của máy có scan trong ca; P > 100 % giữ số thô + cờ.
 

@@ -72,6 +72,27 @@ public class OeeApiTests(ApiFixture api)
         Assert.Contains(withPlanned!.Rows, r => r is { Reason: "MEETING", Minutes: 15.0, CountsAgainstAvailability: false });
     }
 
+    // Step 8: the dashboard call. One shift of the machine, computed on the server, with its closed hours.
+    [Fact]
+    public async Task Shift_view_adds_up_on_the_server_with_its_hours()
+    {
+        var at = PastDay(18);   // Friday
+        var plant = await SampleShiftAsync(api, at);
+        var code = await CodeAsync(plant);
+        await CloseAsync(plant, at(14, 5, 0));
+        var client = await api.LoginOperatorAsync();
+
+        var dto = (await client.GetFromJsonAsync<ShiftOeeDto>($"/api/oee/shift?date={D(at)}&shift=S1&machine={code}"))!;
+
+        Assert.Equal(("S1", false), (dto.Shift, dto.IsRunning));
+        Assert.Equal(0.7984, dto.Total!.Oee!.Value, 4);
+        Assert.Equal([6, 7, 8, 9, 10, 11, 12, 13], dto.Hours.Select(h => h.Hour));
+        Assert.Equal(970, dto.Hours.Sum(h => h.Figures.GoodCount));
+        Assert.Equal((45 * 60, 30 * 60), (dto.Hours.Single(h => h.Hour == 10).Figures.PlannedSeconds,   // break 10:00-10:15
+            dto.Hours.Single(h => h.Hour == 11).Figures.PlannedSeconds));                                // break from 11:30
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync($"/api/oee/shift?date={D(at)}&machine={code}")).StatusCode);
+    }
+
     [Fact]
     public async Task Excel_files_hold_numbers_with_formats_in_plant_time()
     {

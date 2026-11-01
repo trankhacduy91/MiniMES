@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.13" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
+    <PackageReference Include="OxyPlot.Core" Version="2.2.0" />
   </ItemGroup>
 
   <!-- Generate a public Strings class at build time (dotnet build / CI), instead of relying on

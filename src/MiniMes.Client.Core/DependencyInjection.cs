@@ -12,6 +12,7 @@ using MiniMes.Client.Core.ViewModels;
 using MiniMes.Client.Core.ViewModels.Execution;
 using MiniMes.Client.Core.ViewModels.Kiosk;
 using MiniMes.Client.Core.ViewModels.Machines;
+using MiniMes.Client.Core.ViewModels.Oee;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
 
@@ -84,6 +85,10 @@ public static class DependencyInjection
 
         // M4: line dashboard
         services.AddTransient<LineDashboardViewModel>();
+
+        // M5: OEE dashboard
+        services.AddTransient<IOeeApi, OeeApi>();
+        services.AddTransient<OeeDashboardViewModel>();
         return services;
     }
 

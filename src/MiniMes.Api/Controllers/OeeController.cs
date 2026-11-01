@@ -16,6 +16,13 @@ public class OeeController(ISender sender) : ControllerBase
     public Task<CurrentOeeDto> Current([FromQuery] string? machine, [FromQuery] string? line, CancellationToken ct)
         => sender.Send(new GetCurrentOeeQuery(machine, line), ct);
 
+    // The dashboard (step 8): one shift (date + shift code, or neither = the running one) of a machine or a line,
+    // added up on the server, with its closed hours.
+    [HttpGet("shift")]
+    public Task<ShiftOeeDto> Shift([FromQuery] DateOnly? date, [FromQuery] string? shift, [FromQuery] string? machine,
+        [FromQuery] string? line, CancellationToken ct)
+        => sender.Send(new GetShiftOeeQuery(date, shift, machine, line), ct);
+
     // Production dates (plant time), both included; hourly=false = only the shift totals.
     [HttpGet("history")]
     public Task<IReadOnlyList<OeeSnapshotDto>> History([FromQuery] DateOnly from, [FromQuery] DateOnly to,
