@@ -8,6 +8,7 @@ using MiniMes.Domain.Common;
 using MiniMes.Domain.Execution;
 using MiniMes.Domain.Factory;
 using MiniMes.Domain.Machines;
+using MiniMes.Domain.Material;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.MasterData.DefectCodes;
@@ -62,6 +63,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AndonCall> AndonCalls => Set<AndonCall>();
     public DbSet<AndonEscalationRule> AndonEscalationRules => Set<AndonEscalationRule>();
     public DbSet<OeeSnapshot> OeeSnapshots => Set<OeeSnapshot>();
+    public DbSet<MaterialLot> MaterialLots => Set<MaterialLot>();
+    public DbSet<MaterialLoad> MaterialLoads => Set<MaterialLoad>();
+    public DbSet<SerialComponent> SerialComponents => Set<SerialComponent>();
+    public DbSet<LotGenealogy> LotGenealogy => Set<LotGenealogy>();
+    public DbSet<MaterialVerificationLog> MaterialVerificationLogs => Set<MaterialVerificationLog>();
+    public DbSet<IqcRecord> IqcRecords => Set<IqcRecord>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
         => Database.BeginTransactionAsync(ct);

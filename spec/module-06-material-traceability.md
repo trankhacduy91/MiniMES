@@ -284,6 +284,8 @@ CREATE TABLE LotGenealogy (
 );
 ```
 
+> **[Đã đổi khi làm, user duyệt 01/11/2026]** `MaterialLot` có khóa `Id int` + `LotNo` unique; `SerialComponent`, `MaterialLoad`, `LotGenealogy` tham chiếu `LotId int`, và `SerialComponent` dùng `SerialId bigint` thay cho chuỗi `SerialNo` (cùng kiểu Item/Serial/ScanLog của dự án; bảng lớn nhẹ hơn). Các CTE ở 2.2 giữ nguyên cách đi, chỉ đổi cột nối (`LotId`, `ParentLotId`/`ChildLotId`) và join `MaterialLots`/`Serials` ở cuối để lấy mã. Chi tiết: [`docs/erd-material.md`](../docs/erd-material.md).
+
 **[v2] Bảng IQC** (insert-only, mỗi lần kiểm một dòng):
 
 ```sql
@@ -775,12 +777,13 @@ Tổng khoảng 28 giờ (2,5–3 tuần với 1,5–2 giờ/ngày; **[v2]** +3 
 
 Kết quả mong đợi (đây chính là test oracle): xuôi từ `L-CAP-A` = 120 serial (**[v2]** gồm Shipped 100, InCarton 20); xuôi từ `L-CAP-B` = 80; xuôi từ `L-CAP-P` = 80 (đi qua genealogy, cấp 1); xuôi từ supplier lot `SUP-S1` + `CAP-100NF` = 200; xuôi từ `L-RES-A` = 200; ngược từ serial 150 = {`L-CAP-B` (cấp 0), `L-CAP-P` (cấp 1), `L-RES-A` (cấp 0)}; ngược từ serial 50 = {`L-CAP-A`, `L-RES-A`}.
 
-- [ ] **Bước 1 — Mô hình dữ liệu, migration, index**
+- [x] **Bước 1 — Mô hình dữ liệu, migration, index**
   Mục tiêu: 5 bảng có đủ ràng buộc và index của mục 2.3.
   Việc cần làm: (1) vẽ ERD Mermaid trong `docs/` nối `Item`, `WorkOrderMaterial`, `Serial` với các bảng mới; (2) viết entity `MaterialLot` (**[v2]** enum có `PendingIqc`, `IqcRejected`), `MaterialLoad`, `SerialComponent`, `LotGenealogy`, `MaterialVerificationLog`, **[v2]** `IqcRecord`; (3) bổ sung `OperationSeq`, `QtyPer` vào `WorkOrderMaterial` nếu Module 2 chưa có (snapshot phải mang thông tin tiêu thụ ở công đoạn nào); (4) configuration: unique `LotNo`, unique `(SerialNo, StationId, ItemId, LotNo)`, filtered unique index của `MaterialLoad`, các index INCLUDE; (5) constraint `CHECK (RemainingQty >= 0 AND RemainingQty <= Qty)`; (6) migration.
   File: `src/MiniMes.Domain/Material/*.cs`, `src/MiniMes.Infrastructure/Persistence/Configurations/Material*Configuration.cs`, `docs/erd-material.md`.
   Kiểm tra: `dotnet ef database update` chạy sạch; trong SSMS thử chèn hai `MaterialLoad` đang mở cùng `(StationId, ItemId)` → bị unique index từ chối; thử `RemainingQty = -1` → bị CHECK từ chối.
   Ước lượng: 3 giờ.
+  Đã làm (01/11/2026): `Domain/Material/` gồm `MaterialLot` (+ enum `MaterialLotStatus` lưu `tinyint`: 0 Available, 1 Hold, 2 Consumed, 3 PendingIqc, 4 IqcRejected; `IAudited`, `RowVersion`; lot mới `PendingIqc` trừ item `SkipIqc`), `MaterialLoad` (`Unload`, override FIFO phải có cả người duyệt lẫn lý do), `SerialComponent`, `LotGenealogy` (chặn cạnh tự trỏ), `MaterialVerificationLog` (+ enum `VerifyOutcome`, `VerifyCode` của mục 2.4; lưu cả mã đã scan khi không có lot đó; cột `SuggestedLotNo`), `IqcRecord` (+ `IqcResult`). `Persistence/Configurations/MaterialConfigurations.cs`, migration `M6_MaterialTraceability`. **Khóa (user duyệt):** `Id` + `LotNo` unique, bảng cạnh dùng `LotId`/`SerialId` (ghi ở mục 2.1); `SerialComponent` không lưu thêm `SerialNo`: truy xuất ngược tra `Serials` theo mã (unique) trước rồi seek theo `SerialId`. Mã dạng varchar (như `ScanLogs`). Ràng buộc DB: unique `LotNo`; filtered unique `UX_MaterialLoads_ActivePerStationItem (StationId, ItemId) WHERE UnloadedAt IS NULL INCLUDE (LotId)` (R6, cũng là seek của mỗi scan OK); unique `(SerialId, StationId, ItemId, LotId)` (R9); `CK_MaterialLots_Qty` (`Qty > 0`, `0 ≤ RemainingQty ≤ Qty`); `CK_LotGenealogy_NotSelf`; trigger insert-only cho `SerialComponents`, `LotGenealogy`, `MaterialVerificationLogs`, `IqcRecords` (cùng mẫu `ScanLogs`). Index theo bảng 2.3 (INCLUDE đúng cột; đọc migration: EF không tự thêm filter nào). `SerialComponents` không có FK tới `Serials`/`Stations`/`ScanLogs` (giống `ScanLogs`: INSERT nóng nhất), giữ FK tới `MaterialLots`. Việc (3) không cần: `WorkOrderMaterial` đã có `OperationSeq`, `QtyPerUnit` từ M2. ERD: `docs/erd-material.md`. Kiểm tra thay cho thao tác tay trong SSMS: integration `Material/MaterialSchemaTests.cs` (7: hai load đang mở cùng trạm + item → 409, unload rồi nạp lại được; `RemainingQty` −1 và > Qty bị CHECK chặn; `SerialComponent` trùng → 409, UPDATE/DELETE bị trigger chặn; cạnh tự trỏ bị CHECK chặn, DELETE genealogy bị chặn; `LotNo` trùng → 409); unit `Material/MaterialEntityTests.cs` (10). `dotnet ef database update` trên DB dev chạy sạch.
 
 - [ ] **Bước 2 — Nhập lot và in nhãn lot**
   Mục tiêu: kho tạo lot và in nhãn.
