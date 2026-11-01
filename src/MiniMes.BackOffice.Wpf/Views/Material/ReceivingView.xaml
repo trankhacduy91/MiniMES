@@ -1,0 +1,99 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.Material.ReceivingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+    <!-- DataContext = ReceivingViewModel (spec M6 step 2). One delivery on the left; the newest lots and a label preview on the right. -->
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Receiving_Title}" Style="{StaticResource PageTitle}" />
+        <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
+                   Style="{StaticResource PageError}" />
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,0,16,0">
+                    <TextBlock Text="{x:Static res:Strings.Receiving_Item}" Style="{StaticResource FieldLabel}" />
+                    <ComboBox AutomationProperties.AutomationId="Item" ItemsSource="{Binding ItemOptions}" SelectedItem="{Binding Item}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock><Run Text="{Binding Code, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Name, Mode=OneWay}" Foreground="Gray" /></TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Text="{Binding FieldErrors[ItemId]}" Style="{StaticResource FieldError}" />
+
+                    <TextBlock Text="{x:Static res:Strings.Receiving_SupplierLot}" Style="{StaticResource FieldLabel}" />
+                    <TextBox AutomationProperties.AutomationId="SupplierLot" Padding="3"
+                             Text="{Binding SupplierLot, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Text="{Binding FieldErrors[SupplierLot]}" Style="{StaticResource FieldError}" />
+
+                    <TextBlock Text="{x:Static res:Strings.Receiving_QtyPerReel}" Style="{StaticResource FieldLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox AutomationProperties.AutomationId="QtyPerReel" Width="120" Padding="3"
+                                 Text="{Binding QtyPerReelText, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="{Binding Item.Uom}" VerticalAlignment="Center" Margin="6,0,0,0" Foreground="Gray" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding FieldErrors[QtyPerReel]}" Style="{StaticResource FieldError}" />
+
+                    <TextBlock Text="{x:Static res:Strings.Receiving_ReelCount}" Style="{StaticResource FieldLabel}" />
+                    <TextBox AutomationProperties.AutomationId="ReelCount" Width="60" HorizontalAlignment="Left" Padding="3"
+                             Text="{Binding ReelCountText, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Text="{Binding FieldErrors[ReelCount]}" Style="{StaticResource FieldError}" />
+
+                    <TextBlock Text="{x:Static res:Strings.Receiving_Expiry}" Style="{StaticResource FieldLabel}" />
+                    <DatePicker AutomationProperties.AutomationId="ExpiryDate" SelectedDate="{Binding ExpiryDate}" Width="240"
+                                HorizontalAlignment="Left" SelectedDateFormat="Long" />
+                    <TextBlock Text="{Binding FieldErrors[ExpiryDate]}" Style="{StaticResource FieldError}" />
+                    <TextBlock Text="{x:Static res:Strings.Receiving_ExpiryHint}" Style="{StaticResource FieldHint}" TextWrapping="Wrap" />
+
+                    <Button AutomationProperties.AutomationId="Receive" Content="{x:Static res:Strings.Receiving_Receive}"
+                            Command="{Binding ReceiveCommand}" Padding="10,4" Margin="0,14,0,0" HorizontalAlignment="Left" />
+                    <TextBlock AutomationProperties.AutomationId="ReceiveResult" Text="{Binding ResultMessage}" TextWrapping="Wrap"
+                               Foreground="#FF2E7D32" FontWeight="SemiBold" Margin="0,8,0,0" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <DockPanel Grid.Column="1">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                    <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Refresh" Content="{x:Static res:Strings.Receiving_Refresh}"
+                            Command="{Binding RefreshCommand}" Padding="10,2" Margin="6,0,0,0" />
+                    <TextBox DockPanel.Dock="Right" AutomationProperties.AutomationId="Search" Width="160" Padding="3"
+                             Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" ToolTip="{x:Static res:Strings.Receiving_Search}" />
+                    <TextBlock Text="{x:Static res:Strings.Receiving_Lots}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+
+                <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Button AutomationProperties.AutomationId="PreviewLabel" Content="{x:Static res:Strings.Receiving_PreviewLabel}"
+                                Command="{Binding PreviewLabelCommand}" Padding="10,2" Margin="0,0,6,0" />
+                        <Button AutomationProperties.AutomationId="PrintLabel" Content="{x:Static res:Strings.Receiving_PrintLabel}"
+                                Command="{Binding PrintLabelCommand}" Padding="10,2" />
+                    </StackPanel>
+                    <Border BorderBrush="#D0D5DD" BorderThickness="1" HorizontalAlignment="Left" Margin="0,6,0,0"
+                            Visibility="{Binding HasLabelImage, Converter={StaticResource BoolToVisibility}}">
+                        <Image AutomationProperties.AutomationId="LabelImage" Source="{Binding LabelImage, Converter={StaticResource BytesToImage}}"
+                               Width="360" Stretch="Uniform" />
+                    </Border>
+                </StackPanel>
+
+                <DataGrid AutomationProperties.AutomationId="Lots" ItemsSource="{Binding Lots}" SelectedItem="{Binding SelectedLot}"
+                          AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" SelectionMode="Single">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{x:Static res:Strings.Receiving_LotNo}" Binding="{Binding Lot.LotNo}" Width="115" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Receiving_Item}" Binding="{Binding Lot.ItemCode}" Width="105" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Receiving_SupplierLot}" Binding="{Binding Lot.SupplierLot}" Width="100" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Receiving_Qty}" Binding="{Binding Lot.Qty, StringFormat=N0}" Width="60" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Receiving_Remaining}" Binding="{Binding Lot.RemainingQty, StringFormat=N0}" Width="70" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Receiving_ReceivedAt}" Binding="{Binding ReceivedText}" Width="115" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Receiving_Expiry}" Binding="{Binding ExpiryText}" Width="85" />
+                        <DataGridTextColumn Header="{x:Static res:Strings.Receiving_Status}" Binding="{Binding Lot.Status}" Width="*" MinWidth="80" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>

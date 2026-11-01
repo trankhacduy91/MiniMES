@@ -77,6 +77,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         WorkOrderConfiguration.AddSequences(modelBuilder);
+        MaterialLotConfiguration.AddSequences(modelBuilder);
     }
 
     // The one place that turns save conflicts into 409: a stale RowVersion (lost update), or a unique-index

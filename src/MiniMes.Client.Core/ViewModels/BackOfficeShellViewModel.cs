@@ -5,6 +5,7 @@ using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.Resources;
 using MiniMes.Client.Core.ViewModels.Execution;
 using MiniMes.Client.Core.ViewModels.Machines;
+using MiniMes.Client.Core.ViewModels.Material;
 using MiniMes.Client.Core.ViewModels.Oee;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
@@ -35,6 +36,9 @@ public partial class BackOfficeShellViewModel(ITokenStore tokens, IAuthClient au
 
     [RelayCommand]
     private Task ShowOeeDashboardAsync() => pages.ShowAsync<OeeDashboardViewModel>();
+
+    [RelayCommand]
+    private Task ShowReceivingAsync() => pages.ShowAsync<ReceivingViewModel>();
 
     [RelayCommand]
     private Task ShowItemsAsync() => pages.ShowAsync<ItemListViewModel>();

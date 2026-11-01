@@ -32,7 +32,7 @@ public static class ZplLabelBuilder
 
     // '^' and '~' start ZPL commands: data containing them would be executed, not printed. The built-in font
     // has no Vietnamese glyphs either, so labels stay printable ASCII.
-    private static void RequireSafe(string value)
+    internal static void RequireSafe(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         if (value.Any(c => c is '^' or '~' || c < ' ' || c > '~'))

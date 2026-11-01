@@ -8,4 +8,7 @@ public interface ISequenceNumbers
 
     // count numbers in one round trip (a 200 pcs WO = 1 query, not 200).
     Task<IReadOnlyList<long>> NextSerialNumbersAsync(int count, CancellationToken ct);
+
+    // M6: one number per received reel.
+    Task<IReadOnlyList<long>> NextLotNumbersAsync(int count, CancellationToken ct);
 }

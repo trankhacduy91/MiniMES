@@ -1207,4 +1207,76 @@
   <data name="LineTv_Level" xml:space="preserve">
     <value>level</value>
   </data>
+  <data name="Menu_Receiving" xml:space="preserve">
+    <value>Receiving</value>
+  </data>
+  <data name="Receiving_Title" xml:space="preserve">
+    <value>Receiving</value>
+  </data>
+  <data name="Receiving_Item" xml:space="preserve">
+    <value>Item</value>
+  </data>
+  <data name="Receiving_SupplierLot" xml:space="preserve">
+    <value>Supplier lot</value>
+  </data>
+  <data name="Receiving_QtyPerReel" xml:space="preserve">
+    <value>Qty per reel</value>
+  </data>
+  <data name="Receiving_ReelCount" xml:space="preserve">
+    <value>Reels</value>
+  </data>
+  <data name="Receiving_Expiry" xml:space="preserve">
+    <value>Expiry</value>
+  </data>
+  <data name="Receiving_ExpiryHint" xml:space="preserve">
+    <value>Blocked from the first minute of this date. Empty = does not expire.</value>
+  </data>
+  <data name="Receiving_Receive" xml:space="preserve">
+    <value>Receive and print labels</value>
+  </data>
+  <data name="Receiving_Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Receiving_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Receiving_PreviewLabel" xml:space="preserve">
+    <value>Preview label</value>
+  </data>
+  <data name="Receiving_PrintLabel" xml:space="preserve">
+    <value>Print label again</value>
+  </data>
+  <data name="Receiving_Lots" xml:space="preserve">
+    <value>Received lots (newest first)</value>
+  </data>
+  <data name="Receiving_LotNo" xml:space="preserve">
+    <value>Lot</value>
+  </data>
+  <data name="Receiving_Qty" xml:space="preserve">
+    <value>Qty</value>
+  </data>
+  <data name="Receiving_Remaining" xml:space="preserve">
+    <value>Remaining</value>
+  </data>
+  <data name="Receiving_ReceivedAt" xml:space="preserve">
+    <value>Received</value>
+  </data>
+  <data name="Receiving_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Receiving_Received" xml:space="preserve">
+    <value>{0} lot(s) received: {1} … {2}{3}</value>
+  </data>
+  <data name="Receiving_PendingIqc" xml:space="preserve">
+    <value> (pending IQC)</value>
+  </data>
+  <data name="Receiving_QtyPositive" xml:space="preserve">
+    <value>Enter a quantity greater than 0.</value>
+  </data>
+  <data name="Receiving_ReelsWholeNumber" xml:space="preserve">
+    <value>Enter a whole number of reels.</value>
+  </data>
+  <data name="Receiving_ExpiryFuture" xml:space="preserve">
+    <value>Expiry must be after today.</value>
+  </data>
 </root>

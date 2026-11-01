@@ -123,6 +123,7 @@ dotnet run --project src/MiniMes.Kiosk.Wpf        # trạm: gõ EMP00123 + Enter
 | `sup01` | `Demo@12345` | Supervisor | BackOffice |
 | `qc01` | `Demo@12345` | QC | BackOffice |
 | `mt01` | `Demo@12345` | Maintenance | BackOffice |
+| `wh01` | `Demo@12345` | Warehouse | BackOffice: nhập lot NVL, in nhãn lot (M6) |
 | `EMP00123` | (không có, quẹt thẻ) | Operator | Kiosk |
 | `SIM-STATION` | (không có, quẹt thẻ) | Operator | Machine simulator (vai trạm tự động, scan ghi `Source = Machine`) |
 
@@ -307,6 +308,20 @@ Nút **Export OEE / Export Pareto** trên dashboard tải file Excel của ngày
 ![Cờ CounterMismatch trên dashboard](docs/images/m5-oee-counter-mismatch.png)
 
 Demo trực tiếp trên ca đang chạy: `docker stop mes-simulator` (hai simulator cùng đóng `L1-SMT-01` sẽ đá nhau) → `dotnet run --project src/MiniMes.MachineSimulator -- --config src/MiniMes.MachineSimulator/sim-oee-demo.json` (chỉ `L1-SMT-01`, cycle 30 s = cycle time của routing, không tự Down, không NG) → gõ `down L1-SMT-01 300` → sau 5 phút, đoạn Down nằm trong *Stops to classify*: chọn `PM` thì Planned giảm đúng 300 s và A tăng; chọn `FDR-JAM` thì A giữ nguyên mức đã mất. Cần một WO có bo đang chờ ở SMT và đã qua FAI (simulator bỏ qua WO đang chờ FAI).
+
+## Material & traceability (M6, đang làm)
+
+Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md). 1 reel = 1 lot; `SerialComponents` ghi "serial dùng lot nào" lúc scan OK (bước 5).
+
+**Nhập lot** (BackOffice, menu **Receiving**, role `Warehouse`/`Admin`): chọn NVL quản lý theo lot, nhập supplier lot, số lượng mỗi reel, số reel và hạn dùng → N lot `L-yyMMdd-######` (SQL `SEQUENCE`), một nhãn ZPL mỗi reel (Code128 của mã lot, mã hàng, supplier lot, số lượng, hạn dùng dạng `03 SEP 2028`). Lot mới ở trạng thái `PendingIqc` (chưa qua kiểm tra đầu vào thì không nạp lên máy được); NVL có `SkipIqc` (túi đóng gói) vào thẳng `Available`. Hạn dùng là ngày theo giờ nhà máy: lot bị chặn từ phút đầu của ngày đó.
+
+| Endpoint | Nội dung |
+| --- | --- |
+| `POST /api/material/lots` | Nhập N reel một lần giao (Warehouse, Admin); trả các lot + ZPL |
+| `GET /api/material/lots?itemId&status&search&page` | Danh sách lot, mới nhất trước (mọi role) |
+| `GET /api/material/lots/{id}/label` / `label/preview` | In lại nhãn (ZPL) / xem trước PNG qua Labelary |
+
+![Receiving](docs/images/m6-receiving.png)
 
 ## Edge Gateway (M4b)
 

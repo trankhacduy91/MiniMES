@@ -12,6 +12,7 @@ using MiniMes.Client.Core.ViewModels;
 using MiniMes.Client.Core.ViewModels.Execution;
 using MiniMes.Client.Core.ViewModels.Kiosk;
 using MiniMes.Client.Core.ViewModels.Machines;
+using MiniMes.Client.Core.ViewModels.Material;
 using MiniMes.Client.Core.ViewModels.Oee;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
@@ -44,7 +45,8 @@ public static class DependencyInjection
         // M4: live machine data. Each app registers its IUiDispatcher (WPF Dispatcher).
         services.AddSingleton<IRealtimeClientFactory, RealtimeClientFactory>();
         services.AddTransient<IMachineApi, MachineApi>();
-        services.AddTransient<IOeeApi, OeeApi>();   // M5: BackOffice dashboard and the kiosk's Line TV
+        services.AddTransient<IOeeApi, OeeApi>();
+        services.AddTransient<IMaterialApi, MaterialApi>();   // M6   // M5: BackOffice dashboard and the kiosk's Line TV
 
         // Transient: a fresh ViewModel each time a screen opens, no stale state from the last user.
         services.AddTransient<UserLoginViewModel>();
@@ -89,6 +91,7 @@ public static class DependencyInjection
 
         // M5: OEE dashboard
         services.AddTransient<OeeDashboardViewModel>();
+        services.AddTransient<ReceivingViewModel>();   // M6
         return services;
     }
 

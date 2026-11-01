@@ -1,6 +1,7 @@
 # M6 · Bước 1 — Mô hình dữ liệu lot, nạp vật tư, genealogy: kiến thức cần nắm
 
 > Tài liệu học cho bước 1 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **1.2**, **2.1**, **2.3**, quy tắc R1–R16).
+> Bước sau: [M6-step02](M6-step02-receiving.md).
 > Code: `src/MiniMes.Domain/Material/*.cs`, `src/MiniMes.Infrastructure/Persistence/Configurations/MaterialConfigurations.cs`,
 > migration `M6_MaterialTraceability`. ERD: [docs/erd-material.md](../erd-material.md).
 

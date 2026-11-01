@@ -9,4 +9,5 @@ public enum Role
     QC,
     Maintenance,
     Admin,
+    Warehouse,   // M6: receives material lots and prints their labels
 }

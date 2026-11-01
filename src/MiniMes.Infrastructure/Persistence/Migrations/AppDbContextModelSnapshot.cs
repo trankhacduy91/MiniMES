@@ -22,6 +22,8 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("LotSeq");
+
             modelBuilder.HasSequence("SerialSeq");
 
             modelBuilder.HasSequence("WoNoSeq");

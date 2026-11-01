@@ -12,6 +12,12 @@ namespace MiniMes.Infrastructure.Persistence.Configurations;
 // parameter against a varchar column would force CONVERT_IMPLICIT and a scan (same rule as ScanLogs).
 public class MaterialLotConfiguration : IEntityTypeConfiguration<MaterialLot>
 {
+    // Step 2: LotNo numbers (LotNumberFormat). A sequence, not MAX + 1: two receivings at once get different numbers.
+    public const string LotSequence = "LotSeq";
+
+    public static void AddSequences(ModelBuilder modelBuilder)
+        => modelBuilder.HasSequence<long>(LotSequence).StartsAt(1).IncrementsBy(1);
+
     public void Configure(EntityTypeBuilder<MaterialLot> b)
     {
         b.ToTable("MaterialLots", t =>

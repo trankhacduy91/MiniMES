@@ -27,6 +27,15 @@ public class DevSeeder(AppDbContext db, IPasswordHasher<AppUser> hasher)
         await SeedUsersAsync(ct);
         await SeedBadgeUserAsync(SimulatorBadge, "Machine simulator", ct);
         await SeedBadgeUserAsync(LineTvBadge, "Line TV", ct);
+        await SeedPasswordUserAsync("wh01", "Warehouse One", Role.Warehouse, ct);   // M6 step 2
+    }
+
+    // Like SeedBadgeUserAsync, for roles added after the first seed.
+    private async Task SeedPasswordUserAsync(string code, string name, Role role, CancellationToken ct)
+    {
+        if (await db.Users.AnyAsync(u => u.EmployeeCode == code, ct)) return;
+        db.Users.Add(WithPassword(new AppUser(code, name), role));
+        await db.SaveChangesAsync(ct);
     }
 
     // Separate from SeedUsersAsync, which stops when any user exists: databases seeded earlier get them too.

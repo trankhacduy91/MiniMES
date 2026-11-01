@@ -18,11 +18,19 @@ public sealed class SequenceNumbers(AppDbContext db) : ISequenceNumbers
 
     // NEXT VALUE FOR ... OVER (ORDER BY): one number per row of a generated 1..count list, in that order.
     // Allowed here because NEXT VALUE FOR is in the outer SELECT (the derived table only supplies row numbers).
-    public async Task<IReadOnlyList<long>> NextSerialNumbersAsync(int count, CancellationToken ct)
+    public Task<IReadOnlyList<long>> NextSerialNumbersAsync(int count, CancellationToken ct)
+        => NextNumbersAsync(WorkOrderConfiguration.SerialSequence, count, ct);
+
+    public Task<IReadOnlyList<long>> NextLotNumbersAsync(int count, CancellationToken ct)
+        => NextNumbersAsync(MaterialLotConfiguration.LotSequence, count, ct);
+
+    // NEXT VALUE FOR ... OVER (ORDER BY): one number per row of a generated 1..count list, in that order.
+    // Allowed here because NEXT VALUE FOR is in the outer SELECT (the derived table only supplies row numbers).
+    private async Task<IReadOnlyList<long>> NextNumbersAsync(string sequence, int count, CancellationToken ct)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
         var sql = $"""
-            SELECT NEXT VALUE FOR dbo.{WorkOrderConfiguration.SerialSequence} OVER (ORDER BY n.rn) AS [Value]
+            SELECT NEXT VALUE FOR dbo.{sequence} OVER (ORDER BY n.rn) AS [Value]
             FROM (SELECT TOP (@count) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS rn
                   FROM sys.all_objects a CROSS JOIN sys.all_objects b) n
             """;
