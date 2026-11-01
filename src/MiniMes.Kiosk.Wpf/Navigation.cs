@@ -4,6 +4,7 @@ using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.ViewModels;
 using MiniMes.Client.Core.ViewModels.Kiosk;
+using MiniMes.Client.Core.ViewModels.Oee;
 
 namespace MiniMes.Kiosk.Wpf;
 
@@ -15,6 +16,9 @@ public sealed partial class Navigation(IServiceProvider services) : ObservableOb
     private object? _currentViewModel;
 
     public void ShowLogin() => Show(services.GetRequiredService<OperatorLoginViewModel>());
+
+    // [v2] M5 step 8b: started with --mode=linetv, the kiosk is the line's big screen (it logs in by itself).
+    public void ShowLineTv() => Show(services.GetRequiredService<LineTvViewModel>());
 
     public void ShowHome() => Show(services.GetRequiredService<StationSelectViewModel>());
 

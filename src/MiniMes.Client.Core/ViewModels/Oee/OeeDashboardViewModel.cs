@@ -49,14 +49,17 @@ public partial class OeeDashboardViewModel : ObservableObject, ILoadable, IClosa
     private readonly IMasterDataApi _master;
     private readonly IRealtimeClient _realtime;
     private readonly IUiDispatcher _ui;
+    private readonly IDialogService _dialogs;
     private readonly TimeProvider _time;
     private readonly CancellationTokenSource _stop = new();
     private string? _line;
+    private DateOnly? _shownDate;   // the production date on screen: what Export writes
     private bool _loaded;
 
     public OeeDashboardViewModel(IOeeApi oee, IMachineApi machines, IMasterDataApi master, IRealtimeClientFactory realtime,
-        IUiDispatcher ui, ITokenStore tokens, TimeProvider time)
+        IUiDispatcher ui, ITokenStore tokens, IDialogService dialogs, TimeProvider time)
     {
+        _dialogs = dialogs;
         _oee = oee;
         _machines = machines;
         _master = master;
@@ -99,6 +102,7 @@ public partial class OeeDashboardViewModel : ObservableObject, ILoadable, IClosa
     [ObservableProperty] private string _shiftText = string.Empty;
     [ObservableProperty] private string _countsText = string.Empty;
     [ObservableProperty] private string _errorMessage = string.Empty;
+    [ObservableProperty] private string _exportMessage = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsReconnecting))]
@@ -189,6 +193,7 @@ public partial class OeeDashboardViewModel : ObservableObject, ILoadable, IClosa
     {
         if (line != _line || machine != SelectedMachine?.Code) return;   // the user moved on meanwhile
         ErrorMessage = string.Empty;
+        _shownDate = shift.ShiftDate;
         var f = shift.Total;
         Availability = Availability.With(f?.Availability);
         Performance = Performance.With(f?.Performance);
@@ -241,6 +246,32 @@ public partial class OeeDashboardViewModel : ObservableObject, ILoadable, IClosa
             ErrorMessage = ex.Message;   // OTHER without a note, stop still going on...
         }
     }
+
+    // [v2] Step 8b: the Excel files of the day on screen and its line (spec 2.7). The server builds them from the same
+    // queries as this screen, so the numbers match.
+    [RelayCommand]
+    private Task ExportOeeAsync() => ExportAsync("oee", (d, line) => _oee.GetOeeExcelAsync(d, d, line));
+
+    [RelayCommand]
+    private Task ExportParetoAsync()
+        => ExportAsync("downtime-pareto", (d, line) => _oee.GetParetoExcelAsync(d, d, line, ParetoByCount ? ParetoBy.Count : ParetoBy.Minutes));
+
+    private async Task ExportAsync(string name, Func<DateOnly, string?, Task<byte[]>> download)
+    {
+        var day = _shownDate ?? DateOnly.FromDateTime(SelectedDate);
+        if (_dialogs.PickFileToSave($"{name}_{_line}_{day:yyyyMMdd}.xlsx", ExcelFilter) is not { } path) return;
+        try
+        {
+            await File.WriteAllBytesAsync(path, await download(day, _line));
+            ExportMessage = string.Format(Strings.Oee_Exported, path);
+        }
+        catch (ApiException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    private const string ExcelFilter = "Excel workbook (*.xlsx)|*.xlsx";
 
     public static string WarningText(string warning) => warning switch
     {

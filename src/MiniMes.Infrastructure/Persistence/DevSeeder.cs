@@ -17,20 +17,25 @@ public class DevSeeder(AppDbContext db, IPasswordHasher<AppUser> hasher)
     // code with Source = Machine, never under a real worker's name.
     public const string SimulatorBadge = "SIM-STATION";
 
+    // [v2] M5 step 8b: the big screen at the line logs in by itself with this badge (Operator role, read only in
+    // practice: the Line TV view has no buttons). Nobody types on a TV.
+    public const string LineTvBadge = "LINE-TV";
+
     public async Task SeedAsync(CancellationToken ct = default)
     {
         await SeedFactoryAsync(ct);
         await SeedUsersAsync(ct);
-        await SeedSimulatorUserAsync(ct);
+        await SeedBadgeUserAsync(SimulatorBadge, "Machine simulator", ct);
+        await SeedBadgeUserAsync(LineTvBadge, "Line TV", ct);
     }
 
-    // Separate from SeedUsersAsync, which stops when any user exists: databases seeded before M4 get it too.
-    private async Task SeedSimulatorUserAsync(CancellationToken ct)
+    // Separate from SeedUsersAsync, which stops when any user exists: databases seeded earlier get them too.
+    private async Task SeedBadgeUserAsync(string badge, string name, CancellationToken ct)
     {
-        if (await db.Users.AnyAsync(u => u.EmployeeCode == SimulatorBadge, ct)) return;
-        var simulator = new AppUser(SimulatorBadge, "Machine simulator");
-        simulator.AddRole(Role.Operator);
-        db.Users.Add(simulator);
+        if (await db.Users.AnyAsync(u => u.EmployeeCode == badge, ct)) return;
+        var user = new AppUser(badge, name);
+        user.AddRole(Role.Operator);
+        db.Users.Add(user);
         await db.SaveChangesAsync(ct);
     }
 

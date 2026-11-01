@@ -287,6 +287,12 @@ Job **bắt kịp**: mỗi lượt hỏi "bucket nào đến hạn mà chưa ch�
 
 ![OEE dashboard: ca mẫu 79,8 %, Pareto, sản lượng theo giờ](docs/images/m5-oee-dashboard.png)
 
+Nút **Export OEE / Export Pareto** trên dashboard tải file Excel của ngày đang xem (cùng query với màn hình).
+
+**Line TV** (màn hình lớn ở line, app Kiosk): `MiniMes.Kiosk.Wpf.exe --mode=linetv --line=L1,L2`. Tự đăng nhập bằng badge `LINE-TV` (role Operator, seed sẵn; `LineTvBadge` trong appsettings), không cần chuột/bàn phím, tự đăng nhập lại khi token hết hạn. Hiện OEE ca đang chạy, tốt/kế hoạch, bảng giờ (▲/▼ + màu), Andon đang mở kèm cấp leo thang (đẩy ngay qua SignalR), trạng thái từng máy; nhiều line thì xoay vòng 20 giây (`LineTvRotateSeconds`, 0 = không xoay); mất API/SignalR thì hiện dải **OFFLINE — data at hh:mm**. Bố cục 1920×1080 cố định trong `Viewbox`: co giãn theo mọi độ phân giải. Triển khai: tắt chế độ ngủ/tắt màn hình của PC gắn TV (Power plan → *Turn off the display: Never*, *Sleep: Never*), để app trong Startup.
+
+![Line TV](docs/images/m5-line-tv.png)
+
 **Quy ước đã chọn** (spec M5 1.2.4–1.2.8): Total từ bộ đếm máy, Good từ scan theo serial; ngày sản xuất = ngày bắt đầu ca (giờ nhà máy); dừng < 60 s (`Oee:MicroStopThresholdSec`) là micro stop; Down/Setup/Offline chưa có lý do vẫn phạt A; Idle phạt A khi trạm của máy có scan trong ca; P > 100 % giữ số thô + cờ.
 
 ## Edge Gateway (M4b)

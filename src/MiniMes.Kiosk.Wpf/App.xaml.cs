@@ -52,7 +52,8 @@ public partial class App : Application
         var navigation = _host.Services.GetRequiredService<Navigation>();
         var window = _host.Services.GetRequiredService<MainWindow>();
         window.DataContext = navigation;
-        navigation.ShowLogin();
+        if (_host.Services.GetRequiredService<IOptions<ClientOptions>>().Value.IsLineTv) navigation.ShowLineTv();
+        else navigation.ShowLogin();
         window.Show();
     }
 

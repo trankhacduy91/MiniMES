@@ -44,7 +44,11 @@
                           SelectedItem="{Binding SelectedShift}" IsEnabled="{Binding IsCurrentShift, Converter={StaticResource Not}}"
                           Margin="0,0,10,0" />
                 <Button AutomationProperties.AutomationId="OeeRefresh" Content="{x:Static res:Strings.Oee_Refresh}"
-                        Command="{Binding RefreshCommand}" Padding="10,2" />
+                        Command="{Binding RefreshCommand}" Padding="10,2" Margin="0,0,6,0" />
+                <Button AutomationProperties.AutomationId="OeeExport" Content="{x:Static res:Strings.Oee_ExportOee}"
+                        Command="{Binding ExportOeeCommand}" Padding="10,2" Margin="0,0,6,0" />
+                <Button AutomationProperties.AutomationId="ParetoExport" Content="{x:Static res:Strings.Oee_ExportPareto}"
+                        Command="{Binding ExportParetoCommand}" Padding="10,2" />
             </WrapPanel>
             <TextBlock Text="{x:Static res:Strings.Oee_Title}" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
         </DockPanel>
@@ -54,6 +58,7 @@
             <TextBlock Text="{x:Static res:Strings.Dashboard_Reconnecting}" FontWeight="SemiBold" />
         </Border>
         <TextBlock DockPanel.Dock="Top" Style="{StaticResource PageError}" Text="{Binding ErrorMessage}" />
+        <TextBlock DockPanel.Dock="Top" Style="{StaticResource CollapsedWhenEmpty}" Text="{Binding ExportMessage}" Foreground="#FF2E7D32" />
 
         <!-- A / P / Q / OEE, the shift and its counts, warning badges (a data problem, not a good or bad result). -->
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">

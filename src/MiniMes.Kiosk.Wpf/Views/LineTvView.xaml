@@ -1,0 +1,184 @@
+<UserControl x:Class="MiniMes.Kiosk.Wpf.Views.LineTvView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             Background="#FF101418">
+    <!-- [v2] Spec M5 2.8: DataContext = LineTvViewModel. Drawn on a fixed 1920x1080 canvas inside a Viewbox: the same
+         layout fills a Full HD or a 4K TV. Read from 5-10 m: main numbers >= 48 px, no buttons. Colour never alone:
+         arrows on the hour gaps, the state written on every machine tile. -->
+    <UserControl.Resources>
+        <Style x:Key="BigCard" TargetType="Border">
+            <Setter Property="Background" Value="#FF1E262E" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="28,16" />
+            <Setter Property="Margin" Value="0,0,24,0" />
+        </Style>
+        <Style x:Key="CardLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="34" />
+            <Setter Property="Foreground" Value="#FFB0BEC5" />
+        </Style>
+        <Style x:Key="BigNumber" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="120" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style x:Key="Cell" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="44" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Margin" Value="0,2" />
+        </Style>
+        <Style x:Key="Tile" TargetType="Border">
+            <Setter Property="Width" Value="290" />
+            <Setter Property="Height" Value="130" />
+            <Setter Property="Margin" Value="0,0,18,0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Background" Value="#FF607D8B" />
+            <Setter Property="TextElement.Foreground" Value="White" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Running"><Setter Property="Background" Value="#FF2E7D32" /></DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Idle"><Setter Property="Background" Value="#FFF9A825" /><Setter Property="TextElement.Foreground" Value="Black" /></DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Down"><Setter Property="Background" Value="#FFC62828" /></DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Setup"><Setter Property="Background" Value="#FF1565C0" /></DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="PlannedStop"><Setter Property="Background" Value="#FF424242" /></DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Offline"><Setter Property="Background" Value="#FF9E9E9E" /><Setter Property="TextElement.Foreground" Value="Black" /></DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Viewbox Stretch="Uniform">
+        <Grid Width="1920" Height="1080" Margin="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Offline: the numbers below are old. -->
+            <Border Grid.Row="0" Background="#FFFF6F00" Padding="24,10"
+                    Visibility="{Binding IsOffline, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock AutomationProperties.AutomationId="LineTvOffline" Text="{Binding OfflineText}" FontSize="48"
+                           FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center" />
+            </Border>
+
+            <TextBlock Grid.Row="1" AutomationProperties.AutomationId="LineTvTitle" Text="{Binding ShiftText}"
+                       FontSize="56" FontWeight="SemiBold" Foreground="White" Margin="40,20,40,16" />
+
+            <!-- Three big numbers: OEE, good vs plan, open Andon calls. -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="40,0,40,24">
+                <Border Style="{StaticResource BigCard}" Width="460">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardLabel}" Text="{x:Static res:Strings.LineTv_Oee}" />
+                        <TextBlock Style="{StaticResource BigNumber}" AutomationProperties.AutomationId="LineTvOee" Text="{Binding OeeText}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource BigCard}" Width="560">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardLabel}" Text="{x:Static res:Strings.LineTv_Good}" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock AutomationProperties.AutomationId="LineTvGood" Text="{Binding GoodText}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource BigNumber}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsBehind}" Value="True">
+                                                <Setter Property="Foreground" Value="#FFFF5252" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding PlanText}" FontSize="48" Foreground="#FFB0BEC5" VerticalAlignment="Bottom" Margin="20,0,0,22" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Width="772" CornerRadius="8" Padding="28,16">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#FF7F1D1D" /><!-- calls open: the card turns red -->
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding AndonCount}" Value="0"><Setter Property="Background" Value="#FF1E262E" /></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardLabel}" Text="{x:Static res:Strings.LineTv_OpenAndons}" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource BigNumber}" AutomationProperties.AutomationId="LineTvAndons" Text="{Binding AndonCount}" />
+                            <ItemsControl ItemsSource="{Binding Andons}" Margin="24,12,0,0" VerticalAlignment="Center">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FFC62828" CornerRadius="4" Padding="10,2" Margin="0,0,0,6">
+                                            <TextBlock FontSize="28" Foreground="White" TextTrimming="CharacterEllipsis" MaxWidth="560">
+                                                <Run Text="⚠ " /><Run Text="{Binding Machine, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Type, Mode=OneWay}" /><Run Text=" · " /><Run Text="{x:Static res:Strings.LineTv_Level}" /><Run Text=" " /><Run Text="{Binding Level, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Hours: plan, actual, gap (red and an arrow down when behind). -->
+            <Border Grid.Row="3" Background="#FF1E262E" CornerRadius="8" Margin="40,0,40,24" Padding="28,12">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="300" /><ColumnDefinition Width="300" /><ColumnDefinition Width="300" /><ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource CardLabel}" Text="{x:Static res:Strings.LineTv_Hour}" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource CardLabel}" Text="{x:Static res:Strings.LineTv_PlanColumn}" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource CardLabel}" Text="{x:Static res:Strings.LineTv_Actual}" />
+                        <TextBlock Grid.Column="3" Style="{StaticResource CardLabel}" Text="{x:Static res:Strings.LineTv_Gap}" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Hours}" AutomationProperties.AutomationId="LineTvHours">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="300" /><ColumnDefinition Width="300" /><ColumnDefinition Width="300" /><ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource Cell}" Text="{Binding Hour}" />
+                                    <TextBlock Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding Plan, StringFormat=N0}" />
+                                    <TextBlock Grid.Column="2" Style="{StaticResource Cell}" Text="{Binding Actual, StringFormat=N0}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding GapText}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                                                <Setter Property="Foreground" Value="#FF69F0AE" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsBehind}" Value="True">
+                                                        <Setter Property="Foreground" Value="#FFFF5252" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </Border>
+
+            <!-- Machines: the state written out, not only coloured. -->
+            <ItemsControl Grid.Row="4" ItemsSource="{Binding Tiles}" Margin="40,0,40,32" AutomationProperties.AutomationId="LineTvMachines">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Tile}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Code}" FontSize="34" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding State}" FontSize="44" FontWeight="Bold" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </Viewbox>
+</UserControl>

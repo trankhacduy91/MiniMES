@@ -1162,4 +1162,49 @@
   <data name="Oee_Save" xml:space="preserve">
     <value>Save</value>
   </data>
+  <data name="Oee_ExportOee" xml:space="preserve">
+    <value>Export OEE to Excel</value>
+  </data>
+  <data name="Oee_ExportPareto" xml:space="preserve">
+    <value>Export Pareto to Excel</value>
+  </data>
+  <data name="Oee_Exported" xml:space="preserve">
+    <value>Saved: {0}</value>
+  </data>
+  <data name="LineTv_Shift" xml:space="preserve">
+    <value>Line {0} · Shift {1}</value>
+  </data>
+  <data name="LineTv_NoShift" xml:space="preserve">
+    <value>Line {0} · no shift running</value>
+  </data>
+  <data name="LineTv_Oee" xml:space="preserve">
+    <value>OEE</value>
+  </data>
+  <data name="LineTv_Good" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="LineTv_Plan" xml:space="preserve">
+    <value>plan {0:N0}</value>
+  </data>
+  <data name="LineTv_OpenAndons" xml:space="preserve">
+    <value>Open Andon</value>
+  </data>
+  <data name="LineTv_Hour" xml:space="preserve">
+    <value>Hour</value>
+  </data>
+  <data name="LineTv_PlanColumn" xml:space="preserve">
+    <value>Plan</value>
+  </data>
+  <data name="LineTv_Actual" xml:space="preserve">
+    <value>Actual</value>
+  </data>
+  <data name="LineTv_Gap" xml:space="preserve">
+    <value>Gap</value>
+  </data>
+  <data name="LineTv_Offline" xml:space="preserve">
+    <value>OFFLINE — data at {0}</value>
+  </data>
+  <data name="LineTv_Level" xml:space="preserve">
+    <value>level</value>
+  </data>
 </root>

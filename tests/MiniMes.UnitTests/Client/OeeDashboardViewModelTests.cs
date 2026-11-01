@@ -40,6 +40,20 @@ internal sealed class FakeOeeApi : IOeeApi
     public Task<IReadOnlyList<UnclassifiedDowntimeDto>> GetUnclassifiedAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<UnclassifiedDowntimeDto>>(Stops.ToList());
 
+    public List<(string File, DateOnly From, DateOnly To, string? Line)> Exports { get; } = [];
+
+    public Task<byte[]> GetOeeExcelAsync(DateOnly from, DateOnly to, string? line, CancellationToken ct = default)
+    {
+        Exports.Add(("oee", from, to, line));
+        return Task.FromResult(new byte[] { 1, 2, 3 });
+    }
+
+    public Task<byte[]> GetParetoExcelAsync(DateOnly from, DateOnly to, string? line, string by, CancellationToken ct = default)
+    {
+        Exports.Add(("pareto", from, to, line));
+        return Task.FromResult(new byte[] { 4, 5 });
+    }
+
     public Task<DowntimeSegmentDto> AssignReasonAsync(long segmentId, int downtimeReasonId, string? note, CancellationToken ct = default)
     {
         if (AssignFails is { } ex) return Task.FromException<DowntimeSegmentDto>(ex);
@@ -58,6 +72,17 @@ internal sealed class ShiftsMasterDataApi : FakeMasterDataApi
             new(1, "S1", "Morning", new(6, 0), new(14, 0), ["Mon"], false, 480, 420, [], true),
             new(9, "SX", "Old", new(6, 0), new(7, 0), ["Mon"], false, 60, 60, [], false),
         ]);
+}
+
+internal sealed class SaveDialogs : MiniMes.Client.Core.Navigation.IDialogService
+{
+    public string? SavePath { get; set; }
+    public string? AskedName { get; private set; }
+
+    public bool Confirm(string message) => true;
+    public string? PickFileToOpen(string filter) => null;
+    public string? PickFileToSave(string defaultFileName, string filter) { AskedName = defaultFileName; return SavePath; }
+    public string? AskText(string title, string prompt) => null;
 }
 
 // Spec M5 step 8: the dashboard without a server. Numbers come computed from the (fake) API; the tests check what
@@ -98,7 +123,9 @@ public class OeeDashboardViewModelTests
         new("(Down)", "Down", true, 6, 3, 6, 96), new("OTHER", "Other", true, 4, 1, 4, 100),
     ]);
 
-    private OeeDashboardViewModel Vm() => new(_oee, _machines, new ShiftsMasterDataApi(), _rt, new ImmediateDispatcher(), _tokens, _time);
+    private readonly SaveDialogs _dialogs = new();
+
+    private OeeDashboardViewModel Vm() => new(_oee, _machines, new ShiftsMasterDataApi(), _rt, new ImmediateDispatcher(), _tokens, _dialogs, _time);
 
     private async Task<OeeDashboardViewModel> LoadedAsync()
     {
@@ -268,6 +295,27 @@ public class OeeDashboardViewModelTests
     [Fact]
     public void Hour_without_counts_uses_the_shift_cycle_time()
         => Assert.Equal(180.0, HourlyOutputViewModel.Target(Figures(3600, 3600, 0, 0, 0, 1, 0, null, 0), shiftCycleSec: 20));
+
+    // [v2] Step 8b: Export writes the server's file for the day on screen and its line; Cancel writes nothing.
+    [Fact]
+    public async Task Export_saves_the_excel_file_of_the_shown_day()
+    {
+        var vm = await LoadedAsync();
+        var path = Path.Combine(Path.GetTempPath(), $"oee-export-{Guid.NewGuid():N}.xlsx");
+
+        await vm.ExportOeeCommand.ExecuteAsync(null);                  // the user cancels the dialog
+        Assert.Empty(_oee.Exports);
+
+        _dialogs.SavePath = path;
+        await vm.ExportOeeCommand.ExecuteAsync(null);
+        await vm.ExportParetoCommand.ExecuteAsync(null);
+
+        Assert.Equal([("oee", Day, Day, "L1"), ("pareto", Day, Day, "L1")], _oee.Exports);
+        Assert.Equal("downtime-pareto_L1_20261027.xlsx", _dialogs.AskedName);
+        Assert.Equal(new byte[] { 4, 5 }, await File.ReadAllBytesAsync(path));
+        Assert.Contains(path, vm.ExportMessage);
+        File.Delete(path);
+    }
 
     private static async Task WaitUntilAsync(Func<bool> condition)
     {

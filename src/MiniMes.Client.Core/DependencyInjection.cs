@@ -44,6 +44,7 @@ public static class DependencyInjection
         // M4: live machine data. Each app registers its IUiDispatcher (WPF Dispatcher).
         services.AddSingleton<IRealtimeClientFactory, RealtimeClientFactory>();
         services.AddTransient<IMachineApi, MachineApi>();
+        services.AddTransient<IOeeApi, OeeApi>();   // M5: BackOffice dashboard and the kiosk's Line TV
 
         // Transient: a fresh ViewModel each time a screen opens, no stale state from the last user.
         services.AddTransient<UserLoginViewModel>();
@@ -87,7 +88,6 @@ public static class DependencyInjection
         services.AddTransient<LineDashboardViewModel>();
 
         // M5: OEE dashboard
-        services.AddTransient<IOeeApi, OeeApi>();
         services.AddTransient<OeeDashboardViewModel>();
         return services;
     }
@@ -104,6 +104,7 @@ public static class DependencyInjection
         services.AddTransient<ScanViewModel>();
         services.AddTransient<RepairViewModel>();
         services.AddTransient<AndonPanelViewModel>();   // M4: part of the scan screen
+        services.AddTransient<LineTvViewModel>();       // [v2] M5: --mode=linetv
         return services;
     }
 }
