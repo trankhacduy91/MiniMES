@@ -44,6 +44,9 @@ public class ReceivingViewModelTests
 
         public Task<string> GetLabelAsync(int lotId, CancellationToken ct = default) => Task.FromResult($"^XA lot {lotId} ^XZ");
         public Task<byte[]> PreviewLabelAsync(int lotId, CancellationToken ct = default) => Task.FromResult(new byte[] { 1, 2, 3 });
+        public Task<IReadOnlyList<PendingIqcDto>> GetPendingIqcAsync(CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<IqcRecordDto>> GetIqcRecordsAsync(int take, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IqcRecordDto> RecordIqcAsync(RecordIqcRequest request, CancellationToken ct = default) => throw new NotImplementedException();
     }
 
     private static MaterialLotDto Lot(int id, string lotNo, string status)

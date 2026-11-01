@@ -36,6 +36,9 @@
         <DataTemplate DataType="{x:Type mat:ReceivingViewModel}">
             <matviews:ReceivingView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type mat:IqcViewModel}">
+            <matviews:IqcView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:BackOfficeShellViewModel}">
             <views:ShellView />
         </DataTemplate>

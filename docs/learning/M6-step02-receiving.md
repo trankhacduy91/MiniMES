@@ -1,7 +1,7 @@
 # M6 · Bước 2 — Nhập lot NVL và in nhãn lot: kiến thức cần nắm
 
 > Tài liệu học cho bước 2 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **1.2**, **1.3 A**, **1.5**, R1, R15).
-> Bước trước: [M6-step01](M6-step01-data-model.md).
+> Bước trước: [M6-step01](M6-step01-data-model.md). Bước sau: [M6-step02b](M6-step02b-iqc.md).
 > Code: `src/MiniMes.Application/Material/MaterialLots.cs`, `src/MiniMes.Application/Labels/LotLabelBuilder.cs`,
 > `src/MiniMes.Domain/Material/LotNumberFormat.cs`, BackOffice `Views/Material/ReceivingView.xaml`. Ảnh: [m6-receiving.png](../images/m6-receiving.png).
 

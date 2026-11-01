@@ -117,7 +117,7 @@ public class MaterialSchemaTests(ApiFixture api)
 
         await Assert.ThrowsAsync<ConflictException>(() => api.WithDbAsync(db =>
         {
-            db.MaterialLots.Add(new MaterialLot(lotNo, s.ItemId, 1, null, T0, null, needsIqc: true));
+            db.MaterialLots.Add(new MaterialLot(lotNo, s.ItemId, 1, "SUP-T", T0, null, needsIqc: true));
             return db.SaveChangesAsync();
         }));
     }

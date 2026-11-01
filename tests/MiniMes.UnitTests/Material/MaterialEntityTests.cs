@@ -21,9 +21,11 @@ public class MaterialEntityTests
     [Fact]
     public void Lot_refuses_bad_quantity_and_expiry()
     {
-        Assert.Throws<DomainException>(() => new MaterialLot("L-1", 7, 0, null, T0, null, true));
-        Assert.Throws<DomainException>(() => new MaterialLot("L-1", 7, 10, null, T0, T0, true));          // expires on receipt
-        Assert.Throws<DomainException>(() => new MaterialLot(new string('L', 31), 7, 10, null, T0, null, true));
+        Assert.Throws<DomainException>(() => new MaterialLot("L-1", 7, 0, "S1", T0, null, true));
+        Assert.Throws<DomainException>(() => new MaterialLot("L-1", 7, 10, "S1", T0, T0, true));          // expires on receipt
+        Assert.Throws<DomainException>(() => new MaterialLot(new string('L', 31), 7, 10, "S1", T0, null, true));
+        Assert.Throws<DomainException>(() => new MaterialLot("L-1", 7, 10, " ", T0, null, true));         // [v2] IQC needs a supplier lot
+        Assert.Equal(MaterialLotStatus.Available, new MaterialLot("L-1", 7, 10, null, T0, null, false).Status);   // exempt: none needed
     }
 
     [Fact]

@@ -92,6 +92,7 @@ public static class DependencyInjection
         // M5: OEE dashboard
         services.AddTransient<OeeDashboardViewModel>();
         services.AddTransient<ReceivingViewModel>();   // M6
+        services.AddTransient<IqcViewModel>();
         return services;
     }
 

@@ -242,6 +242,10 @@ public class MasterDataSeeder(AppDbContext db, TimeProvider time)
         ("CMP-WRG", "Wrong component", "Component"),
         ("FUN-NOPWR", "No power on test", "Functional"),
         ("COS-SCR", "Scratch on board", "Cosmetic"),
+        // [v2] M6 IQC: why a supplier delivery was rejected (category IqcRecord.DefectCategory).
+        ("INC-WRONG-VALUE", "Wrong component value", "Incoming"),
+        ("INC-DAMAGED-REEL", "Damaged reel or packaging", "Incoming"),
+        ("INC-WRONG-LABEL", "Supplier label does not match", "Incoming"),
     ];
 
     // CountsAgainstAvailability false = excluded from planned production time; true = an Availability loss (M5).

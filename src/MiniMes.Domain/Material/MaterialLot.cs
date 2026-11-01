@@ -42,6 +42,9 @@ public class MaterialLot : IAudited
         if (supplierLot?.Trim().Length > SupplierLotMaxLength)
             throw new DomainException($"Supplier lot must be at most {SupplierLotMaxLength} characters.");
         if (expiryAt <= receivedAt) throw new DomainException("Expiry must be after the receiving date.");
+        // [v2] IQC inspects a supplier lot (R16): a lot without one could never leave PendingIqc.
+        if (needsIqc && string.IsNullOrWhiteSpace(supplierLot))
+            throw new DomainException("A lot that waits for IQC needs its supplier lot.");
 
         LotNo = lotNo;
         ItemId = itemId;

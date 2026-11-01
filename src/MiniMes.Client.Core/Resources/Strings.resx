@@ -1279,4 +1279,88 @@
   <data name="Receiving_ExpiryFuture" xml:space="preserve">
     <value>Expiry must be after today.</value>
   </data>
+  <data name="Menu_Iqc" xml:space="preserve">
+    <value>IQC</value>
+  </data>
+  <data name="Iqc_Title" xml:space="preserve">
+    <value>Incoming inspection (IQC)</value>
+  </data>
+  <data name="Iqc_Pending" xml:space="preserve">
+    <value>Waiting for inspection (oldest first)</value>
+  </data>
+  <data name="Iqc_Item" xml:space="preserve">
+    <value>Item</value>
+  </data>
+  <data name="Iqc_SupplierLot" xml:space="preserve">
+    <value>Supplier lot</value>
+  </data>
+  <data name="Iqc_Reels" xml:space="preserve">
+    <value>Reels</value>
+  </data>
+  <data name="Iqc_TotalQty" xml:space="preserve">
+    <value>Total qty</value>
+  </data>
+  <data name="Iqc_Received" xml:space="preserve">
+    <value>Received</value>
+  </data>
+  <data name="Iqc_Expiry" xml:space="preserve">
+    <value>Earliest expiry</value>
+  </data>
+  <data name="Iqc_SampleQty" xml:space="preserve">
+    <value>Samples inspected</value>
+  </data>
+  <data name="Iqc_DefectQty" xml:space="preserve">
+    <value>Defects found</value>
+  </data>
+  <data name="Iqc_DefectCode" xml:space="preserve">
+    <value>Defect code (required to fail)</value>
+  </data>
+  <data name="Iqc_Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="Iqc_Pass" xml:space="preserve">
+    <value>Pass</value>
+  </data>
+  <data name="Iqc_Fail" xml:space="preserve">
+    <value>Fail</value>
+  </data>
+  <data name="Iqc_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Iqc_Records" xml:space="preserve">
+    <value>Latest results</value>
+  </data>
+  <data name="Iqc_Result" xml:space="preserve">
+    <value>Result</value>
+  </data>
+  <data name="Iqc_InspectedBy" xml:space="preserve">
+    <value>By</value>
+  </data>
+  <data name="Iqc_InspectedAt" xml:space="preserve">
+    <value>At</value>
+  </data>
+  <data name="Iqc_Hint" xml:space="preserve">
+    <value>One result applies to every reel of this supplier lot that is still waiting.</value>
+  </data>
+  <data name="Iqc_Passed" xml:space="preserve">
+    <value>Passed: {0} reel(s) of {1} / {2} are now available.</value>
+  </data>
+  <data name="Iqc_Failed" xml:space="preserve">
+    <value>Failed: {0} reel(s) of {1} / {2} are rejected.</value>
+  </data>
+  <data name="Iqc_ConfirmFail" xml:space="preserve">
+    <value>Reject all {0} reel(s) of {1} / {2}? Only an NCR decision can release them afterwards.</value>
+  </data>
+  <data name="Iqc_SamplesPositive" xml:space="preserve">
+    <value>Enter the number of samples (greater than 0).</value>
+  </data>
+  <data name="Iqc_DefectsRange" xml:space="preserve">
+    <value>Enter defects between 0 and the number of samples.</value>
+  </data>
+  <data name="Iqc_DefectCodeRequired" xml:space="preserve">
+    <value>Choose why the delivery fails.</value>
+  </data>
+  <data name="Iqc_NoteRequired" xml:space="preserve">
+    <value>Passing with defects needs a note (e.g. within AQL).</value>
+  </data>
 </root>

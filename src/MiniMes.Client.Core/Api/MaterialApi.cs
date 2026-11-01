@@ -13,11 +13,17 @@ public interface IMaterialApi
     Task<PagedResult<MaterialLotDto>> GetLotsAsync(string? search, string? status, int page, int pageSize, CancellationToken ct = default);
     Task<string> GetLabelAsync(int lotId, CancellationToken ct = default);
     Task<byte[]> PreviewLabelAsync(int lotId, CancellationToken ct = default);
+
+    // [v2] IQC
+    Task<IReadOnlyList<PendingIqcDto>> GetPendingIqcAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<IqcRecordDto>> GetIqcRecordsAsync(int take, CancellationToken ct = default);
+    Task<IqcRecordDto> RecordIqcAsync(RecordIqcRequest request, CancellationToken ct = default);
 }
 
 public sealed class MaterialApi(ApiClient api) : IMaterialApi
 {
     private const string Lots = "api/material/lots";
+    private const string Iqc = "api/material/iqc";
 
     public Task<ReceiveLotsResultDto> ReceiveAsync(ReceiveLotsRequest request, CancellationToken ct = default)
         => api.PostAsync<ReceiveLotsRequest, ReceiveLotsResultDto>(Lots, request, ct);
@@ -35,4 +41,13 @@ public sealed class MaterialApi(ApiClient api) : IMaterialApi
 
     public Task<byte[]> PreviewLabelAsync(int lotId, CancellationToken ct = default)
         => api.GetBytesAsync($"{Lots}/{lotId}/label/preview", ct);
+
+    public Task<IReadOnlyList<PendingIqcDto>> GetPendingIqcAsync(CancellationToken ct = default)
+        => api.GetAsync<IReadOnlyList<PendingIqcDto>>($"{Iqc}/pending", ct);
+
+    public Task<IReadOnlyList<IqcRecordDto>> GetIqcRecordsAsync(int take, CancellationToken ct = default)
+        => api.GetAsync<IReadOnlyList<IqcRecordDto>>($"{Iqc}/records?take={take}", ct);
+
+    public Task<IqcRecordDto> RecordIqcAsync(RecordIqcRequest request, CancellationToken ct = default)
+        => api.PostAsync<RecordIqcRequest, IqcRecordDto>(Iqc, request, ct);
 }

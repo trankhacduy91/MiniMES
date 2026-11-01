@@ -13,6 +13,7 @@ public enum IqcResult
 public class IqcRecord
 {
     public const int NoteMaxLength = 500;
+    public const string DefectCategory = "Incoming";   // M1 defect codes of this category are the IQC reasons
 
     public long Id { get; private set; }
     public int ItemId { get; private set; }

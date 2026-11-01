@@ -323,6 +323,16 @@ Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md
 
 ![Receiving](docs/images/m6-receiving.png)
 
+**IQC** (BackOffice, menu **IQC**, role `QC`/`Admin`): danh sách giao hàng đang chờ kiểm, gom theo (mã hàng, supplier lot). Chọn một dòng, nhập số mẫu, số lỗi, **Pass** hoặc **Fail** (Fail cần mã lỗi nhóm `Incoming`, có hỏi xác nhận vì chỉ NCR ở M7 mới đảo lại được). Một kết quả đổi trạng thái **mọi reel** đang chờ của supplier lot đó trong một transaction và ghi một `IqcRecord`; hai người bấm cùng lúc thì một người nhận 422. Reel nhận thêm sau lần kiểm là lần giao mới, chờ kiểm riêng.
+
+| Endpoint | Nội dung |
+| --- | --- |
+| `GET /api/material/iqc/pending` | Supplier lot đang chờ IQC (mọi role) |
+| `POST /api/material/iqc` | Ghi kết quả (QC, Admin); 404 supplier lot không có, 422 không còn reel chờ |
+| `GET /api/material/iqc/records?take=` | Kết quả gần nhất |
+
+![IQC](docs/images/m6-iqc.png)
+
 ## Edge Gateway (M4b)
 
 Máy không nói MQTT thì đi qua **edge gateway** (`MiniMes.EdgeGateway`, .NET Worker): đọc PLC, chuẩn hóa sang đúng hợp đồng MQTT của M4, đệm vào SQLite khi mất mạng. MES không biết máy nói giao thức gì ([ADR-009](ARCHITECTURE.md#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật)).

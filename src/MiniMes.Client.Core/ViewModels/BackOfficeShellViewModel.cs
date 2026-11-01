@@ -41,6 +41,9 @@ public partial class BackOfficeShellViewModel(ITokenStore tokens, IAuthClient au
     private Task ShowReceivingAsync() => pages.ShowAsync<ReceivingViewModel>();
 
     [RelayCommand]
+    private Task ShowIqcAsync() => pages.ShowAsync<IqcViewModel>();
+
+    [RelayCommand]
     private Task ShowItemsAsync() => pages.ShowAsync<ItemListViewModel>();
 
     [RelayCommand]
