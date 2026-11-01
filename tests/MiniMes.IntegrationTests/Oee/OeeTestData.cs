@@ -25,11 +25,13 @@ public static class OeeTestData
 
     // The sample shift of 1.2.2 with the seeded S1 break times (10:00-10:15, 11:30-12:15): 79.84 %. Stops: MEETING
     // 06:00-06:15 (planned), FDR-JAM 25 min, MAT-WAIT 12 min, an unclassified Down of 8 min, six 20 s jams.
-    // Shared by the snapshot, downtime and API tests. Ends with an open Idle from 14:00.
-    public static async Task<Plant> SampleShiftAsync(ApiFixture api, Func<int, int, int, DateTime> at)
+    // Shared by the snapshot, downtime and API tests. Ends with an open Idle from 14:00. Step 9: a wrong ideal cycle
+    // time, or fewer OK scans (boards never scanned), for the warning flags.
+    public static async Task<Plant> SampleShiftAsync(ApiFixture api, Func<int, int, int, DateTime> at,
+        decimal idealCycleSec = 20m, int okScans = 970)
     {
         var plant = await NewMachineAsync(api);
-        var boards = await WorkOrderAsync(api, plant, 20m, 1000, at(5, 0, 0));
+        var boards = await WorkOrderAsync(api, plant, idealCycleSec, 1000, at(5, 0, 0));
         await api.WithDbAsync(async db =>
         {
             Counters(db, plant, [(at(5, 55, 0), 50_000),
@@ -44,7 +46,7 @@ public static class OeeTestData
                 (at(11, 30, 0), MachineState.Idle, null), (at(12, 15, 0), MachineState.Running, null),
                 (at(12, 40, 0), MachineState.Down, null), (at(12, 48, 0), MachineState.Running, null),
                 (at(14, 0, 0), MachineState.Idle, null)]);
-            Scans(db, plant, boards.Take(970), ScanResult.Ok, at(6, 16, 0), TimeSpan.FromSeconds(27));
+            Scans(db, plant, boards.Take(okScans), ScanResult.Ok, at(6, 16, 0), TimeSpan.FromSeconds(27));
             Scans(db, plant, boards.Skip(970), ScanResult.Ng, at(11, 0, 0), TimeSpan.FromSeconds(60));
             return await db.SaveChangesAsync();
         });

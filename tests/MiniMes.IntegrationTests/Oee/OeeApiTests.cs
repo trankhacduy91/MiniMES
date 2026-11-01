@@ -72,6 +72,35 @@ public class OeeApiTests(ApiFixture api)
         Assert.Contains(withPlanned!.Rows, r => r is { Reason: "MEETING", Minutes: 15.0, CountsAgainstAvailability: false });
     }
 
+    // Step 9 / DoD: the two warning badges, on the closed snapshot and on the dashboard call. Numbers stay raw.
+    [Fact]
+    public async Task Missing_scans_and_a_wrong_cycle_time_are_flagged()
+    {
+        var client = await api.LoginOperatorAsync();
+
+        // 1,000 counted, 940 scanned (910 OK + 30 NG): 6 % > 2 %, and Q = 91 % although only 3 % were NG (spec 1.2.10).
+        var at = PastDay(21);
+        var missing = await SampleShiftAsync(api, at, okScans: 910);
+        await CloseAsync(missing, at(14, 5, 0));
+        var code = await CodeAsync(missing);
+        var snapshot = Assert.Single((await client.GetFromJsonAsync<List<OeeSnapshotDto>>(
+            $"/api/oee/history?from={D(at)}&to={D(at)}&machine={code}"))!, h => h.Shift == "S1");
+        Assert.Equal(["CounterMismatch"], snapshot.Figures.Warnings);
+        Assert.Equal((1000L, 940L, 0.91), (snapshot.Figures.TotalCount, snapshot.Figures.ScanCount, snapshot.Figures.Quality!.Value));
+        var shift = (await client.GetFromJsonAsync<ShiftOeeDto>($"/api/oee/shift?date={D(at)}&shift=S1&machine={code}"))!;
+        Assert.Equal(["CounterMismatch"], shift.Total!.Warnings);
+
+        // The WO says 30 s a board where the machine makes one every 21.6 s of run time: P = 30,000 / 21,600 = 139 %.
+        at = PastDay(22);
+        var slowCycle = await SampleShiftAsync(api, at, idealCycleSec: 30m);
+        await CloseAsync(slowCycle, at(14, 5, 0));
+        code = await CodeAsync(slowCycle);
+        shift = (await client.GetFromJsonAsync<ShiftOeeDto>($"/api/oee/shift?date={D(at)}&shift=S1&machine={code}"))!;
+        Assert.Equal(["PerformanceOver100"], shift.Total!.Warnings);
+        Assert.Equal(30_000.0 / 21_600, shift.Total.Performance!.Value, 6);   // kept raw, not cut to 100 %
+        Assert.Equal(360.0 / 405 * (30_000.0 / 21_600) * 0.97, shift.Total.Oee!.Value, 6);   // A x P x Q
+    }
+
     // Step 8: the dashboard call. One shift of the machine, computed on the server, with its closed hours.
     [Fact]
     public async Task Shift_view_adds_up_on_the_server_with_its_hours()

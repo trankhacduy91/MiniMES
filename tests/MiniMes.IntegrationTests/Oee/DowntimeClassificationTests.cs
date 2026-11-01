@@ -113,6 +113,31 @@ public class DowntimeClassificationTests(ApiFixture api)
         Assert.Equal(0, await api.WithDbAsync(db => db.AuditLogs.CountAsync(a => a.TableName == "MachineStateHistory" && a.RecordKey == jamId.ToString())));
     }
 
+    // Found in the step 9 demo: a reason given a week later, for a shift older than CatchUpDays. Only the rows over the
+    // stop are marked; the job must still see the other (final) rows of that shift and not insert them again.
+    [Fact]
+    public async Task Reason_given_after_the_catch_up_range_recomputes_without_duplicates()
+    {
+        var at = Day(15);
+        var (plant, downId, _) = await ShiftWithOneStopAsync(at);
+        await CloseAsync(plant, at(14, 5, 0));
+        var date = Plant.DateOf(at(8, 0, 0));
+        // S1 only: once the day is looked at again, its S2 and S3 (due by then, never closed) are closed too.
+        Task<int> RowsOfTheDay() => api.WithDbAsync(async db =>
+        {
+            var s1 = await db.Shifts.Where(s => s.Code == "S1").Select(s => s.Id).SingleAsync();
+            return await db.OeeSnapshots.CountAsync(s => s.MachineId == plant.MachineId && s.ShiftDate == date && s.ShiftId == s1);
+        });
+        var rows = await RowsOfTheDay();
+
+        await SendAsync(new AssignDowntimeReasonCommand(downId, await ReasonIdAsync("PM"), null));
+        Assert.True(await CloseAsync(plant, at(14, 5, 0).AddDays(7)) > 0);   // was: duplicate key on hour 06
+
+        Assert.Equal(rows, await RowsOfTheDay());
+        var after = await ShiftTotalAsync(plant, at(8, 0, 0));
+        Assert.Equal((390 * 60, 1.0, true), (after.PlannedSeconds, after.Availability, after.IsFinal));
+    }
+
     [Fact]
     public async Task Reason_that_counts_against_availability_leaves_it_unchanged()
     {

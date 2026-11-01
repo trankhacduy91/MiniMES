@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <None Update="machines.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="sim-oee-demo.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

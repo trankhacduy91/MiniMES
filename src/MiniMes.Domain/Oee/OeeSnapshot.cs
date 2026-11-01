@@ -18,7 +18,7 @@ public class OeeSnapshot
     public long TotalCount { get; private set; }         // machine counter
     public long GoodCount { get; private set; }          // OK scans
     public double IdealSeconds { get; private set; }     // Σ count × ideal cycle time: lets P be recomputed exactly
-    public long ScanCount { get; private set; }          // scan rows, for the counter cross-check (step 9)
+    public long ScanCount { get; private set; }          // scan rows: the counter cross-check (CounterCrossCheck)
     public double? Availability { get; private set; }
     public double? Performance { get; private set; }
     public double? Quality { get; private set; }
@@ -56,7 +56,7 @@ public class OeeSnapshot
         Performance = r.Performance;
         Quality = r.Quality;
         Oee = r.Oee;
-        Warnings = r.Warnings;
+        Warnings = CounterCrossCheck.Apply(r, scanCount).Warnings;
         IsFinal = isFinal;
         CalculatedAt = calculatedAt;
     }

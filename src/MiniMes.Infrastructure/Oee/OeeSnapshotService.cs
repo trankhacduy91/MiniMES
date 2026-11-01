@@ -33,13 +33,17 @@ public sealed class OeeSnapshotService(AppDbContext db, IOeeInputReader reader, 
         var machines = (await OeeScope.MachinesAsync(db, null, null, ct))
             .Where(m => machineIds == null || machineIds.Contains(m.Id)).ToList();
         var ids = machines.Select(m => m.Id).ToList();
-        var snapshots = await db.OeeSnapshots
-            .Where(s => ids.Contains(s.MachineId) && ((s.ShiftDate >= first && s.ShiftDate <= today) || !s.IsFinal))
-            .ToListAsync(ct);
         // Dates to look at: the catch-up range, plus any older shift marked for recalculation (rule 8).
+        var recalculate = await db.OeeSnapshots
+            .Where(s => ids.Contains(s.MachineId) && !s.IsFinal && s.ShiftDate < first)
+            .Select(s => s.ShiftDate).Distinct().ToListAsync(ct);
         var dates = Enumerable.Range(0, today.DayNumber - first.DayNumber + 1).Select(first.AddDays)
-            .Concat(snapshots.Where(s => !s.IsFinal).Select(s => s.ShiftDate))
-            .Distinct().Order().ToList();
+            .Concat(recalculate).Distinct().Order().ToList();
+        // Every row of those dates, final or not: a reason change marks only the rows over the stop, and a final row
+        // left out here would look missing and be inserted a second time (docs/incidents.md).
+        var snapshots = await db.OeeSnapshots
+            .Where(s => ids.Contains(s.MachineId) && dates.Contains(s.ShiftDate))
+            .ToListAsync(ct);
 
         var (calendar, shifts) = await OeeScope.CalendarAsync(db, plant, dates, ct);
         var buckets = dates.SelectMany(calendar.WindowsOn)

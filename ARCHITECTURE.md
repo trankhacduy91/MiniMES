@@ -163,7 +163,9 @@ Integration test (Testcontainers SQL Server) so CTE với bảng của spec (202
 - *Tất cả từ scan:* trạm thủ công scan trễ hoặc gom, Performance theo phút sai; máy không có trạm scan (lò reflow) thì không có số.
 - *Lấy trung bình/ưu tiên tùy báo cáo:* mỗi màn hình một con số, mất niềm tin vào hệ thống.
 
-**Đánh đổi / giới hạn.** Quality của OEE và Performance tính từ hai nguồn khác nhau, nên Good có thể > Total trong một khoảng ngắn (scan đến trước count) → M5 phải tính trên khoảng thời gian đủ dài (ca) và kẹp tỉ lệ ≤ 100 %. Máy không có trạm scan chỉ có Total Count; Quality lấy theo serial ở trạm kiểm tra cuối của line.
+**Đánh đổi / giới hạn.** Quality của OEE và Performance tính từ hai nguồn khác nhau, nên Good có thể > Total trong một khoảng ngắn (scan đến trước count). Máy không có trạm scan chỉ có Total Count; Quality lấy theo serial ở trạm kiểm tra cuối của line.
+
+**Thực hiện ở M5 (cập nhật 11/2026).** Không kẹp tỷ lệ về 100 % (spec M5 quy tắc 9): giữ số thô và gắn cờ `GoodExceedsTotal` / `PerformanceOver100`, vì cắt số sẽ che lỗi master data hoặc bộ đếm. Phần đối chiếu ở điểm 3 làm theo spec M5 1.2.10: so **Total Count của máy** với **số dòng scan** ở trạm của máy (không dùng `COUNT(DISTINCT SerialNo)`, vì bo test lại là một lượt xử lý thứ hai ở cả hai nguồn). Chênh > 2 % thì gắn cờ `CounterMismatch` (`Domain/Oee/CounterCrossCheck`) lên snapshot và lên mọi số API trả về; cờ của một line hay một ca được tính lại trên tổng của chính nó. Cửa sổ ngắn ít bo (vài phút đầu ca, 5 bo so với 7 scan) dễ vượt 2 %; cờ có nghĩa khi xem ở mức ca.
 
 ---
 

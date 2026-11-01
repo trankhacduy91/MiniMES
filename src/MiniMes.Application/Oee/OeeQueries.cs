@@ -9,9 +9,14 @@ namespace MiniMes.Application.Oee;
 
 internal static class OeeMapping
 {
-    public static OeeFiguresDto ToDto(this OeeResult r, long scanCount) => new(
-        (int)r.PlannedTime.TotalSeconds, (int)r.RunTime.TotalSeconds, r.TotalCount, r.GoodCount, scanCount, r.IdealSeconds,
-        r.Availability, r.Performance, r.Quality, r.Oee, Warnings(r.Warnings));
+    // Every figure the API sends goes through here with its own scan total, so the cross-check of a line or a shift
+    // is decided on the sums, not carried over from one machine or one hour (rule 10).
+    public static OeeFiguresDto ToDto(this OeeResult result, long scanCount)
+    {
+        var r = CounterCrossCheck.Apply(result, scanCount);
+        return new((int)r.PlannedTime.TotalSeconds, (int)r.RunTime.TotalSeconds, r.TotalCount, r.GoodCount, scanCount,
+            r.IdealSeconds, r.Availability, r.Performance, r.Quality, r.Oee, Warnings(r.Warnings));
+    }
 
     public static IReadOnlyList<string> Warnings(OeeWarning w)
         => Enum.GetValues<OeeWarning>().Where(f => f != OeeWarning.None && w.HasFlag(f)).Select(f => f.ToString()).ToList();

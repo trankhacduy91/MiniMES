@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MiniMes.Application.Common;
 using MiniMes.Application.Oee.Downtime;
 using MiniMes.Contracts.Oee;
+using MiniMes.Domain.Oee;
 
 namespace MiniMes.Application.Oee;
 
@@ -146,6 +147,7 @@ public static class OeeWorkbook
             "A stop without a reason counts against Availability until a supervisor classifies it.",
             "Idle counts against Availability only in a shift where the machine's station scanned something.",
             "Performance above 100 % is kept as is and flagged: the ideal cycle time or the counter is wrong.",
+            $"CounterMismatch: machine count and scan rows differ by more than {CounterCrossCheck.Tolerance * 100} % of the machine count; Quality and OEE are then not reliable.",
             "Several hours, shifts or machines: times and counts are added, then divided (never an average of %).",
             $"Shift date = the plant-time date the shift starts (a night shift belongs to the day it starts). Times: {plant.Zone.Id}.",
             "Percent columns are numbers formatted as %, usable in formulas and pivot tables.",

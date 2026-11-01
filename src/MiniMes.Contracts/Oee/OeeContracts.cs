@@ -1,7 +1,8 @@
 namespace MiniMes.Contracts.Oee;
 
 // Spec M5 step 7. Ratios are 0..1 (null = undefined, e.g. a lunch hour), times in seconds, instants in UTC.
-// Warnings: PerformanceOver100, GoodExceedsTotal, DowntimeExceedsPlanned (spec 1.2.7): a badge on the dashboard.
+// Warnings: PerformanceOver100, GoodExceedsTotal, DowntimeExceedsPlanned (spec 1.2.7), CounterMismatch (1.2.10): a
+// badge on the dashboard.
 public sealed record OeeFiguresDto(
     int PlannedSeconds, int RunSeconds, long TotalCount, long GoodCount, long ScanCount, double IdealSeconds,
     double? Availability, double? Performance, double? Quality, double? Oee, IReadOnlyList<string> Warnings);

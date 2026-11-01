@@ -1,7 +1,7 @@
 # M5 · Bước 8b — [v2] Line TV và nút Export Excel: kiến thức cần nắm
 
 > Tài liệu học cho bước 8b của [module-05](../../spec/module-05-oee-downtime.md) (spec mục **2.8**, 2.7).
-> Bước trước: [M5-step08](M5-step08-wpf-oee-dashboard.md).
+> Bước trước: [M5-step08](M5-step08-wpf-oee-dashboard.md). Bước sau: [M5-step09](M5-step09-cross-check-demo.md).
 > Code: `src/MiniMes.Client.Core/ViewModels/Oee/LineTvViewModel.cs`, `src/MiniMes.Kiosk.Wpf/Views/LineTvView.xaml`,
 > ảnh: [m5-line-tv.png](../images/m5-line-tv.png), [m5-line-tv-offline.png](../images/m5-line-tv-offline.png).
 

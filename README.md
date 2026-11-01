@@ -14,7 +14,8 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 - **M2 (work order) xong:** tạo WO có preview NVL, Release (chụp BOM/routing + sinh serial trong một transaction, không trùng khi release đồng thời), state machine Hold/Resume/Complete/Close/Cancel, Priority + dispatch list theo line, nhãn ZPL (Code128 + DataMatrix) xem trước qua Labelary và log in lại. Xem [mục Work order](#work-order-m2).
 - **M3 (shop floor) xong:** scan serial tại trạm với route check (chặn nhảy bước, bo NG, bo Hold), chống scan lặp và scan đồng thời, cổng FAI, phiên trạm, Repair/Rework/Scrap; Kiosk WPF toàn màn hình cho máy quét mã vạch (NG + mã lỗi, form sửa chữa, SOP, offline); báo cáo FPY/RTY/WIP; đo hiệu năng trên 10 triệu dòng log (p95 24,8 ms). Xem [mục Shop floor](#shop-floor-m3) và [Performance](#performance).
 - **M4 (kết nối máy) xong:** MQTT (Mosquitto, topic UNS ISA-95) → ingest chống trùng, bộ đếm tích lũy, batch writer; Offline tách khỏi Down (heartbeat + LWT); SignalR realtime có throttle; Andon raise/ack/resolve + tự raise + leo thang; dashboard line WPF và nút Andon trên Kiosk; simulator vai máy + vai trạm tự động. Xem [mục Machine connectivity](#machine-connectivity-m4).
-- Các module tiếp theo (M4b → M7) làm theo [lộ trình](spec/spec-v2.md).
+- **M5 (OEE & downtime) xong:** A×P×Q ở một hàm thuần, khớp tính tay ca mẫu 79,8 %; snapshot theo giờ/ca có job bắt kịp và unique index; phân loại dừng (audit theo cột, đổi lý do thì tính lại ca); Pareto; cờ P > 100 % và `CounterMismatch`; dashboard OxyPlot, Excel, Line TV. Xem [mục OEE](#oee-m5).
+- Các module tiếp theo (M6 → M3b → M7) làm theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
 
@@ -293,7 +294,19 @@ Nút **Export OEE / Export Pareto** trên dashboard tải file Excel của ngày
 
 ![Line TV](docs/images/m5-line-tv.png)
 
-**Quy ước đã chọn** (spec M5 1.2.4–1.2.8): Total từ bộ đếm máy, Good từ scan theo serial; ngày sản xuất = ngày bắt đầu ca (giờ nhà máy); dừng < 60 s (`Oee:MicroStopThresholdSec`) là micro stop; Down/Setup/Offline chưa có lý do vẫn phạt A; Idle phạt A khi trạm của máy có scan trong ca; P > 100 % giữ số thô + cờ.
+**Quy ước đã chọn** (spec M5 1.2.4–1.2.10): Total từ bộ đếm máy, Good từ scan theo serial; ngày sản xuất = ngày bắt đầu ca (giờ nhà máy); dừng < 60 s (`Oee:MicroStopThresholdSec`) là micro stop; Down/Setup/Offline chưa có lý do vẫn phạt A; Idle phạt A khi trạm của máy có scan trong ca; P > 100 % giữ số thô + cờ; bộ đếm máy và số dòng scan lệch > 2 % → cờ `CounterMismatch` (không sửa số).
+
+**Demo** (spec M5 bước 9). DB Development có ba ca S1 trên `L1-SMT-01` (`OeeDemoSeeder`, WO đã đóng, chỉ là lịch sử):
+
+| Ngày | Dữ liệu | Dashboard |
+| --- | --- | --- |
+| 01/10/2026 | Ca mẫu của spec | 88,9 / 92,6 / 97,0 / **79,8 %**, không cờ |
+| 02/10/2026 | Máy thật ra 1 bo mỗi ~15 s, WO ghi 20 s | P **133,3 %** + cờ *Performance above 100 %* |
+| 05/10/2026 | Máy scan hỏng từ ~13:38: 1.000 đếm, 940 scan | Q 91,0 % + cờ *Counter mismatch* |
+
+![Cờ CounterMismatch trên dashboard](docs/images/m5-oee-counter-mismatch.png)
+
+Demo trực tiếp trên ca đang chạy: `docker stop mes-simulator` (hai simulator cùng đóng `L1-SMT-01` sẽ đá nhau) → `dotnet run --project src/MiniMes.MachineSimulator -- --config src/MiniMes.MachineSimulator/sim-oee-demo.json` (chỉ `L1-SMT-01`, cycle 30 s = cycle time của routing, không tự Down, không NG) → gõ `down L1-SMT-01 300` → sau 5 phút, đoạn Down nằm trong *Stops to classify*: chọn `PM` thì Planned giảm đúng 300 s và A tăng; chọn `FDR-JAM` thì A giữ nguyên mức đã mất. Cần một WO có bo đang chờ ở SMT và đã qua FAI (simulator bỏ qua WO đang chờ FAI).
 
 ## Edge Gateway (M4b)
 

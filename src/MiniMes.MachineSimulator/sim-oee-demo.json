@@ -1,0 +1,17 @@
+{
+  // Spec M5 step 9: the OEE demo. Only L1-SMT-01 (MQTT + its station), nothing random: no Down by itself, no NG, so
+  // every stop on the dashboard is one you forced ("down L1-SMT-01 300") and the numbers can be checked by hand.
+  // The cycle equals the routing's ideal cycle time of SMT (30 s): P stays near 100 % while it runs.
+  //   dotnet run --project src/MiniMes.MachineSimulator -- --config src/MiniMes.MachineSimulator/sim-oee-demo.json
+  // Stop the Docker simulator first (docker stop mes-simulator): two simulators would both play L1-SMT-01.
+  "site": "VN-BN01",
+  "area": "SMT-ASSY",
+  "seed": 42,
+  "mqtt": { "host": "localhost", "port": 1883, "heartbeatSec": 5 },
+  "api": { "baseUrl": "http://localhost:5157", "badge": "SIM-STATION" },
+  "machines": [
+    { "code": "L1-SMT-01", "line": "L1", "cycleTimeSec": 30, "initialCounter": 15000,
+      "downProbPerCycle": 0, "downDurationSec": [60, 60], "ngProb": 0, "alarmCodes": ["E205"],
+      "station": { "code": "L1-SMT-01", "mode": "Auto" } }
+  ]
+}

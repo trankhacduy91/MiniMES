@@ -16,6 +16,7 @@ public enum OeeWarning
     PerformanceOver100 = 1,       // ideal cycle time too slow, wrong unit, or a bad counter (spec 1.2.7)
     GoodExceedsTotal = 2,         // more OK scans than machine counts
     DowntimeExceedsPlanned = 4,
+    CounterMismatch = 8,          // machine counter and scan rows differ > 2 % (CounterCrossCheck, rule 10)
 }
 
 // Ratios are null when undefined (denominator 0), which is not the same as 0 % (rule 14).
