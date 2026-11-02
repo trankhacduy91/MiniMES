@@ -333,6 +333,16 @@ Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md
 
 ![IQC](docs/images/m6-iqc.png)
 
+**Nạp vật tư** (Kiosk, nút **Material** trên màn scan): checklist vật tư mà WO đang mở cần ở trạm và reel đang nạp. Scan nhãn reel → **xanh** (nạp, reel cũ cùng item tự tháo), **vàng** (còn reel cũ hơn có hàng: nạp reel đó, hoặc chọn lý do rồi supervisor quẹt thẻ), **đỏ** (sai item, item của bước khác, Hold, chưa qua IQC, hết hàng, hết hạn: không có nút cho qua). Mọi lần thử nạp được ghi `MaterialVerificationLogs`. Tháo reel: nhập số còn lại thực tế (0 = hết, lot thành `Consumed`).
+
+| Endpoint | Nội dung |
+| --- | --- |
+| `GET /api/stations/{id}/material-loads` | Checklist của trạm |
+| `POST /api/stations/{id}/material-loads` `{ lotNo, slotNo?, supervisorBadge?, overrideReason? }` | Nạp; 200 + `outcome` (Accepted/Warning/Rejected) + `code`; 422 trạm chưa mở WO; 409 hai kiosk nạp cùng item cùng lúc |
+| `POST /api/stations/{id}/material-loads/{loadId}/unload` `{ remainingQty? }` | Tháo reel |
+
+![Nạp vật tư: cảnh báo FIFO](docs/images/m6-load-material-fifo.png)
+
 ## Edge Gateway (M4b)
 
 Máy không nói MQTT thì đi qua **edge gateway** (`MiniMes.EdgeGateway`, .NET Worker): đọc PLC, chuẩn hóa sang đúng hợp đồng MQTT của M4, đệm vào SQLite khi mất mạng. MES không biết máy nói giao thức gì ([ADR-009](ARCHITECTURE.md#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật)).

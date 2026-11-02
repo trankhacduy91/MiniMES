@@ -18,6 +18,11 @@ public interface IMaterialApi
     Task<IReadOnlyList<PendingIqcDto>> GetPendingIqcAsync(CancellationToken ct = default);
     Task<IReadOnlyList<IqcRecordDto>> GetIqcRecordsAsync(int take, CancellationToken ct = default);
     Task<IqcRecordDto> RecordIqcAsync(RecordIqcRequest request, CancellationToken ct = default);
+
+    // Step 4: reels on a station (kiosk)
+    Task<IReadOnlyList<StationMaterialDto>> GetStationMaterialsAsync(int stationId, CancellationToken ct = default);
+    Task<LoadMaterialResponse> LoadAsync(int stationId, LoadMaterialRequest request, CancellationToken ct = default);
+    Task<IReadOnlyList<StationMaterialDto>> UnloadAsync(int stationId, int loadId, UnloadMaterialRequest request, CancellationToken ct = default);
 }
 
 public sealed class MaterialApi(ApiClient api) : IMaterialApi
@@ -50,4 +55,13 @@ public sealed class MaterialApi(ApiClient api) : IMaterialApi
 
     public Task<IqcRecordDto> RecordIqcAsync(RecordIqcRequest request, CancellationToken ct = default)
         => api.PostAsync<RecordIqcRequest, IqcRecordDto>(Iqc, request, ct);
+
+    public Task<IReadOnlyList<StationMaterialDto>> GetStationMaterialsAsync(int stationId, CancellationToken ct = default)
+        => api.GetAsync<IReadOnlyList<StationMaterialDto>>($"api/stations/{stationId}/material-loads", ct);
+
+    public Task<LoadMaterialResponse> LoadAsync(int stationId, LoadMaterialRequest request, CancellationToken ct = default)
+        => api.PostAsync<LoadMaterialRequest, LoadMaterialResponse>($"api/stations/{stationId}/material-loads", request, ct);
+
+    public Task<IReadOnlyList<StationMaterialDto>> UnloadAsync(int stationId, int loadId, UnloadMaterialRequest request, CancellationToken ct = default)
+        => api.PostAsync<UnloadMaterialRequest, IReadOnlyList<StationMaterialDto>>($"api/stations/{stationId}/material-loads/{loadId}/unload", request, ct);
 }

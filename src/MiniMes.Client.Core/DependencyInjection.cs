@@ -106,6 +106,7 @@ public static class DependencyInjection
 
         services.AddTransient<StationSelectViewModel>();
         services.AddTransient<ScanViewModel>();
+        services.AddTransient<LoadMaterialViewModel>();   // M6 step 4
         services.AddTransient<RepairViewModel>();
         services.AddTransient<AndonPanelViewModel>();   // M4: part of the scan screen
         services.AddTransient<LineTvViewModel>();       // [v2] M5: --mode=linetv

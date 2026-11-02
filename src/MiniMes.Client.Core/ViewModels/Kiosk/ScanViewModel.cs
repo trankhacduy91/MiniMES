@@ -22,6 +22,8 @@ public partial class ScanViewModel(IExecutionApi execution, IWorkOrderApi workOr
     AndonPanelViewModel andon)
     : StationScreenViewModel(execution, kiosk, navigation, auth, tokens, feedback, time), ILoadable, IClosable
 {
+    private readonly IKioskNavigation _navigation = navigation;
+
     public AndonPanelViewModel Andon { get; } = andon;
 
     public Task CloseAsync() => Andon.CloseAsync();
@@ -164,4 +166,8 @@ public partial class ScanViewModel(IExecutionApi execution, IWorkOrderApi workOr
 
     [RelayCommand]
     private void CloseSop() => IsSopOpen = false;
+
+    // M6 step 4: the reels on this station.
+    [RelayCommand]
+    private void ShowMaterial() => _navigation.ShowMaterial();
 }

@@ -7,9 +7,11 @@ using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.ViewModels.Kiosk;
 using MiniMes.Contracts.Auth;
+using MiniMes.Contracts.Common;
 using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Factory;
 using MiniMes.Contracts.MasterData;
+using MiniMes.Contracts.Material;
 using MiniMes.Contracts.Planning;
 
 namespace MiniMes.UnitTests.Client;
@@ -107,6 +109,7 @@ internal sealed class FakeKioskNavigation : IKioskNavigation
     public void ShowLogin() => Last = "Login";
     public void ShowHome() => Last = "Home";
     public void ShowScan() => Last = "Scan";
+    public void ShowMaterial() => Last = "Material";
 }
 
 internal sealed class FakeKioskAuth(ITokenStore tokens) : IAuthClient
@@ -152,6 +155,11 @@ internal sealed class FakeKiosk
 
     public RepairViewModel Repair() => new(Execution, Dispatch, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time);
 
+    // M6 step 4: the station's reels.
+    public FakeStationMaterial Material { get; } = new();
+
+    public LoadMaterialViewModel LoadMaterial() => new(Execution, Material, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time);
+
     public static readonly StationDto Test = new(3, LineId: 1, "L1-TEST-01", "Test", "Test", true, WorkCenterId: 3);
     public static readonly StationDto RepairStation = new(5, LineId: 1, "L1-REPAIR", "Repair", "Repair", true, WorkCenterId: null);
 
@@ -162,4 +170,36 @@ internal sealed class FakeKiosk
         Context.Start(new StationSessionDto(77, 2, "L1-ASM-01", 5, "WO-2610-00005", "EMP00123", DateTime.UtcNow, null), Wo(5, "WO-2610-00005", 1));
         return this;
     }
+}
+
+// M6 step 4: the material endpoints of a station; the answer of each load is set by the test.
+internal sealed class FakeStationMaterial : IMaterialApi
+{
+    public List<StationMaterialDto> Checklist { get; } = [];
+    public List<LoadMaterialRequest> Loads { get; } = [];
+    public List<(int LoadId, decimal? Remaining)> Unloads { get; } = [];
+    public Func<LoadMaterialRequest, Task<LoadMaterialResponse>> Answer { get; set; } = _ => throw new NotImplementedException();
+
+    public Task<IReadOnlyList<StationMaterialDto>> GetStationMaterialsAsync(int stationId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<StationMaterialDto>>(Checklist.ToList());
+
+    public Task<LoadMaterialResponse> LoadAsync(int stationId, LoadMaterialRequest request, CancellationToken ct = default)
+    {
+        Loads.Add(request);
+        return Answer(request);
+    }
+
+    public Task<IReadOnlyList<StationMaterialDto>> UnloadAsync(int stationId, int loadId, UnloadMaterialRequest request, CancellationToken ct = default)
+    {
+        Unloads.Add((loadId, request.RemainingQty));
+        return Task.FromResult<IReadOnlyList<StationMaterialDto>>(Checklist.ToList());
+    }
+
+    public Task<ReceiveLotsResultDto> ReceiveAsync(ReceiveLotsRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<PagedResult<MaterialLotDto>> GetLotsAsync(string? search, string? status, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<string> GetLabelAsync(int lotId, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<byte[]> PreviewLabelAsync(int lotId, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<IReadOnlyList<PendingIqcDto>> GetPendingIqcAsync(CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<IReadOnlyList<IqcRecordDto>> GetIqcRecordsAsync(int take, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<IqcRecordDto> RecordIqcAsync(RecordIqcRequest request, CancellationToken ct = default) => throw new NotImplementedException();
 }

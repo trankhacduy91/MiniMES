@@ -1363,4 +1363,121 @@
   <data name="Iqc_NoteRequired" xml:space="preserve">
     <value>Passing with defects needs a note (e.g. within AQL).</value>
   </data>
+  <data name="Material_Button" xml:space="preserve">
+    <value>Material</value>
+  </data>
+  <data name="Material_Title" xml:space="preserve">
+    <value>Material on this station</value>
+  </data>
+  <data name="Material_Back" xml:space="preserve">
+    <value>Back to scanning</value>
+  </data>
+  <data name="Material_Item" xml:space="preserve">
+    <value>Item</value>
+  </data>
+  <data name="Material_QtyPer" xml:space="preserve">
+    <value>Per board</value>
+  </data>
+  <data name="Material_Lot" xml:space="preserve">
+    <value>Reel (lot)</value>
+  </data>
+  <data name="Material_Remaining" xml:space="preserve">
+    <value>Left</value>
+  </data>
+  <data name="Material_LoadedBy" xml:space="preserve">
+    <value>Loaded by</value>
+  </data>
+  <data name="Material_NotLoaded" xml:space="preserve">
+    <value>NOT LOADED</value>
+  </data>
+  <data name="Material_NotRequired" xml:space="preserve">
+    <value>not needed by this WO</value>
+  </data>
+  <data name="Material_Unload" xml:space="preserve">
+    <value>Take off</value>
+  </data>
+  <data name="Material_UnloadEmpty" xml:space="preserve">
+    <value>Empty (0 left)</value>
+  </data>
+  <data name="Material_UnloadKeep" xml:space="preserve">
+    <value>Keep the count</value>
+  </data>
+  <data name="Material_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Material_PromptLot" xml:space="preserve">
+    <value>Scan a reel label</value>
+  </data>
+  <data name="Material_PromptReason" xml:space="preserve">
+    <value>Choose a reason, then the supervisor scans the badge</value>
+  </data>
+  <data name="Material_PromptBadge" xml:space="preserve">
+    <value>Supervisor: scan your badge to approve ({0})</value>
+  </data>
+  <data name="Material_PromptRemaining" xml:space="preserve">
+    <value>Type what is left on {0} ({1}) and press Enter</value>
+  </data>
+  <data name="Material_Loaded" xml:space="preserve">
+    <value>LOADED</value>
+  </data>
+  <data name="Material_LoadedItem" xml:space="preserve">
+    <value>{0} is on this station.</value>
+  </data>
+  <data name="Material_LoadedApproved" xml:space="preserve">
+    <value>{0} is on this station. FIFO exception approved by {1}.</value>
+  </data>
+  <data name="Material_Fifo" xml:space="preserve">
+    <value>OLDER REEL</value>
+  </data>
+  <data name="Material_FifoOlder" xml:space="preserve">
+    <value>Older reel {0} is available: load it first.</value>
+  </data>
+  <data name="Material_FifoPanel" xml:space="preserve">
+    <value>Older reel {0} still has stock. Load it instead, or a supervisor approves {1}:</value>
+  </data>
+  <data name="Material_Rejected" xml:space="preserve">
+    <value>STOP</value>
+  </data>
+  <data name="Material_Unloaded" xml:space="preserve">
+    <value>TAKEN OFF</value>
+  </data>
+  <data name="Material_UnloadedLeft" xml:space="preserve">
+    <value>{0} left on the reel.</value>
+  </data>
+  <data name="Material_RemainingNumber" xml:space="preserve">
+    <value>Enter a number (0 or more).</value>
+  </data>
+  <data name="Material_ResultUnknown" xml:space="preserve">
+    <value>No answer from the server: scan the reel again.</value>
+  </data>
+  <data name="Material_ReasonOlderSuspect" xml:space="preserve">
+    <value>Older reel is suspect</value>
+  </data>
+  <data name="Material_ReasonCustomer" xml:space="preserve">
+    <value>Customer requirement</value>
+  </data>
+  <data name="Material_ReasonOlderUnreachable" xml:space="preserve">
+    <value>Older reel cannot be reached</value>
+  </data>
+  <data name="Load_LotNotFound" xml:space="preserve">
+    <value>No such reel label.</value>
+  </data>
+  <data name="Load_ItemNotInBom" xml:space="preserve">
+    <value>This item is not in the work order's BOM: wrong reel.</value>
+  </data>
+  <data name="Load_ItemNotForStation" xml:space="preserve">
+    <value>This item is used at another step, not here.</value>
+  </data>
+  <data name="Load_LotOnHold" xml:space="preserve">
+    <value>This reel is on hold by quality.</value>
+  </data>
+  <data name="Load_LotNotIqcPassed" xml:space="preserve">
+    <value>This reel has not passed incoming inspection (IQC).</value>
+  </data>
+  <data name="Load_LotEmpty" xml:space="preserve">
+    <value>This reel is empty.</value>
+  </data>
+  <data name="Load_LotExpired" xml:space="preserve">
+    <value>This reel is expired.</value>
+  </data>
 </root>

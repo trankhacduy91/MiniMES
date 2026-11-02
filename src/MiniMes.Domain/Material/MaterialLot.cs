@@ -54,4 +54,14 @@ public class MaterialLot : IAudited
         ExpiryAt = expiryAt;
         Status = needsIqc ? MaterialLotStatus.PendingIqc : MaterialLotStatus.Available;   // [v2] R15
     }
+
+    // R10: RemainingQty is theoretical (scans subtract QtyPer; drops and mis-picks are not seen). At unload the
+    // operator counts or weighs what is left and the number is corrected; nothing left = Consumed (a Hold stays Hold).
+    public void CorrectRemaining(decimal actual)
+    {
+        if (actual < 0 || actual > Qty)
+            throw new DomainException($"Remaining quantity must be between 0 and {Qty:0.###}.");
+        RemainingQty = actual;
+        if (actual == 0 && Status == MaterialLotStatus.Available) Status = MaterialLotStatus.Consumed;
+    }
 }

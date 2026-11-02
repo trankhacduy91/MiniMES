@@ -58,6 +58,9 @@ public class IqcViewModelTests
         public Task<PagedResult<MaterialLotDto>> GetLotsAsync(string? search, string? status, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<string> GetLabelAsync(int lotId, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<byte[]> PreviewLabelAsync(int lotId, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<StationMaterialDto>> GetStationMaterialsAsync(int stationId, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<LoadMaterialResponse> LoadAsync(int stationId, LoadMaterialRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<StationMaterialDto>> UnloadAsync(int stationId, int loadId, UnloadMaterialRequest request, CancellationToken ct = default) => throw new NotImplementedException();
     }
 
     private readonly FakeIqcApi _api = new();

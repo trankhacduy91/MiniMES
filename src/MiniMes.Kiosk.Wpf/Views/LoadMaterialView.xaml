@@ -1,0 +1,161 @@
+<UserControl x:Class="MiniMes.Kiosk.Wpf.Views.LoadMaterialView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             Foreground="White" KeyboardNavigation.TabNavigation="None">
+    <!-- DataContext = LoadMaterialViewModel (spec M6 step 4). Like the scan screen: everything the scanner types lands in
+         ScanBox (no other control takes the focus), the result is a full-screen colour + a big word + a sound.
+         Green = loaded, yellow = an older reel exists (FIFO), red = refused. -->
+    <Grid>
+        <Grid.Style>
+            <Style TargetType="Grid">
+                <Setter Property="Background" Value="#FF2B2B2B" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding State}" Value="Ok"><Setter Property="Background" Value="#FF1B8F3A" /></DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="Warning"><Setter Property="Background" Value="#FFF9A825" /></DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="Blocked"><Setter Property="Background" Value="#FFC62828" /></DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="32,32,32,16">
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Back" Content="{x:Static res:Strings.Material_Back}"
+                    Command="{Binding BackCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
+            <StackPanel>
+                <TextBlock AutomationProperties.AutomationId="Station" FontSize="32" FontWeight="SemiBold">
+                    <Run Text="{Binding StationCode, Mode=OneWay}" /><Run Text=" · " /><Run Text="{x:Static res:Strings.Material_Title}" />
+                </TextBlock>
+                <TextBlock AutomationProperties.AutomationId="WorkOrder" Text="{Binding WorkOrderText}" />
+                <TextBlock Text="{Binding OperatorText}" Foreground="LightGray" />
+            </StackPanel>
+        </DockPanel>
+
+        <Border Grid.Row="1" Background="#FFB71C1C" Padding="16" Visibility="{Binding IsOffline, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{x:Static res:Strings.Scan_Offline}" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center" />
+        </Border>
+
+        <!-- The checklist: one big row per item; a missing reel is red with "NOT LOADED". -->
+        <ScrollViewer Grid.Row="2" Margin="32,0" VerticalScrollBarVisibility="Auto" Focusable="False">
+            <ItemsControl AutomationProperties.AutomationId="Materials" ItemsSource="{Binding Materials}" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="6" Padding="16,10" Margin="0,0,0,8">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#FF37474F" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMissing}" Value="True"><Setter Property="Background" Value="#FF8E2424" /></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Unload" Content="{x:Static res:Strings.Material_Unload}"
+                                        Focusable="False" FontSize="24" Padding="24,8" VerticalAlignment="Center"
+                                        Visibility="{Binding CanUnload, Converter={StaticResource BoolToVisibility}}"
+                                        Command="{Binding DataContext.StartUnloadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="330" />
+                                        <ColumnDefinition Width="160" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Material.ItemCode}" FontSize="30" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding Material.ItemName}" FontSize="18" Foreground="#FFCFD8DC" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{x:Static res:Strings.Material_QtyPer}" FontSize="16" Foreground="#FFCFD8DC" />
+                                        <TextBlock FontSize="26"><Run Text="{Binding Material.QtyPerUnit, Mode=OneWay, StringFormat=0.###}" /><Run Text=" " /><Run Text="{Binding Material.Uom, Mode=OneWay}" /></TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock AutomationProperties.AutomationId="LotNo" FontSize="28" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="{Binding Material.LotNo}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Material.LotNo}" Value="{x:Null}">
+                                                            <Setter Property="Text" Value="{x:Static res:Strings.Material_NotLoaded}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock FontSize="18" Foreground="#FFCFD8DC" Visibility="{Binding CanUnload, Converter={StaticResource BoolToVisibility}}">
+                                            <Run Text="{x:Static res:Strings.Material_Remaining}" /><Run Text=": " /><Run Text="{Binding Material.RemainingQty, Mode=OneWay, StringFormat=N0}" /><Run Text="  ·  " /><Run Text="{x:Static res:Strings.Material_LoadedBy}" /><Run Text=": " /><Run Text="{Binding Material.LoadedBy, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Yellow: an older reel exists. Load it, or tap a reason and let the supervisor scan the badge. -->
+        <Border Grid.Row="3" Background="#FFF9A825" Padding="16" Margin="32,8,32,0"
+                Visibility="{Binding IsOverrideOpen, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock AutomationProperties.AutomationId="FifoPanel" Text="{Binding OverrideText}" Foreground="Black" FontSize="26"
+                           FontWeight="SemiBold" TextWrapping="Wrap" />
+                <DockPanel Margin="0,10,0,0">
+                    <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="CancelOverride" Content="{x:Static res:Strings.Material_Cancel}"
+                            Command="{Binding CancelOverrideCommand}" Focusable="False" FontSize="22" Padding="24,8" />
+                    <ItemsControl ItemsSource="{Binding OverrideReasons}" Focusable="False">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding}" AutomationProperties.AutomationId="{Binding}" Focusable="False" FontSize="22"
+                                        Padding="20,10" Margin="0,0,10,0"
+                                        Command="{Binding DataContext.ChooseReasonCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Taking a reel off: type the count in the scan box, or Empty / Keep. -->
+        <Border Grid.Row="3" Background="#FF455A64" Padding="16" Margin="32,8,32,0"
+                Visibility="{Binding IsUnloadOpen, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Orientation="Horizontal">
+                <Button AutomationProperties.AutomationId="UnloadEmpty" Content="{x:Static res:Strings.Material_UnloadEmpty}" Command="{Binding UnloadEmptyCommand}"
+                        Focusable="False" FontSize="22" Padding="24,10" Margin="0,0,10,0" />
+                <Button AutomationProperties.AutomationId="UnloadKeep" Content="{x:Static res:Strings.Material_UnloadKeep}" Command="{Binding UnloadKeepCommand}"
+                        Focusable="False" FontSize="22" Padding="24,10" Margin="0,0,10,0" />
+                <Button AutomationProperties.AutomationId="CancelUnload" Content="{x:Static res:Strings.Material_Cancel}" Command="{Binding CancelUnloadCommand}"
+                        Focusable="False" FontSize="22" Padding="24,10" />
+            </StackPanel>
+        </Border>
+
+        <!-- The result of the last scan, then what the scan box expects now. -->
+        <StackPanel Grid.Row="4" HorizontalAlignment="Center" Margin="32,12,32,8">
+            <TextBlock AutomationProperties.AutomationId="Headline" Text="{Binding Headline}" FontSize="72" FontWeight="Bold" HorizontalAlignment="Center" />
+            <TextBlock AutomationProperties.AutomationId="Message" Text="{Binding Message}" FontSize="30" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+            <TextBlock AutomationProperties.AutomationId="Detail" Text="{Binding Detail}" FontSize="20" Foreground="#E0FFFFFF" HorizontalAlignment="Center" TextWrapping="Wrap" />
+            <!-- On a dark band: readable on grey, green, yellow and red alike. -->
+            <Border Background="#99000000" CornerRadius="4" Padding="16,4" Margin="0,8,0,0" HorizontalAlignment="Center">
+                <TextBlock AutomationProperties.AutomationId="Prompt" Text="{Binding Prompt}" FontSize="24" Foreground="White" />
+            </Border>
+        </StackPanel>
+
+        <TextBox Grid.Row="5" x:Name="ScanBox" AutomationProperties.AutomationId="ScanBox"
+                 AutomationProperties.Name="{x:Static res:Strings.Scan_Input}"
+                 Text="{Binding ScanInput, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsOffline}"
+                 FontSize="36" Padding="12" Margin="32,0,32,32" HorizontalContentAlignment="Center">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Return" Command="{Binding SubmitCommand}" />
+            </TextBox.InputBindings>
+        </TextBox>
+    </Grid>
+</UserControl>

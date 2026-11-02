@@ -20,6 +20,9 @@
         <DataTemplate DataType="{x:Type kiosk:ScanViewModel}">
             <views:ScanView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type kiosk:LoadMaterialViewModel}">
+            <views:LoadMaterialView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type kiosk:RepairViewModel}">
             <views:RepairView />
         </DataTemplate>

@@ -27,6 +27,8 @@ public sealed partial class Navigation(IServiceProvider services) : ObservableOb
         ? services.GetRequiredService<RepairViewModel>()
         : services.GetRequiredService<ScanViewModel>());
 
+    public void ShowMaterial() => Show(services.GetRequiredService<LoadMaterialViewModel>());
+
     // Shown first so its "loading" text is visible; LoadAsync never throws (errors go to the screen).
     // The screen left behind lets go of what it holds open (the Andon panel's SignalR connection).
     private void Show(object viewModel)

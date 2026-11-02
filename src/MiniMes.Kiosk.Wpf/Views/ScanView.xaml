@@ -39,6 +39,9 @@
                     Command="{Binding LogoutCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
             <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="ChangeWorkOrder" Content="{x:Static res:Strings.Scan_ChangeWorkOrder}"
                     Command="{Binding ChangeWorkOrderCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
+            <!-- M6 step 4: reels on this station (load, replace, take off). -->
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Material" Content="{x:Static res:Strings.Material_Button}"
+                    Command="{Binding ShowMaterialCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
             <!-- Step 8: only at an inspection step (Test). Big and red: tapped with gloves. -->
             <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Ng" Content="{x:Static res:Strings.Scan_NgButton}"
                     Command="{Binding OpenNgPanelCommand}" Focusable="False" Padding="48,8" Margin="12,0,0,0"

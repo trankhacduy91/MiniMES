@@ -13,6 +13,7 @@ public sealed class SystemSoundFeedback : IKioskFeedback
         {
             case ScanState.Ok: SystemSounds.Asterisk.Play(); break;
             case ScanState.Ng or ScanState.Blocked: SystemSounds.Hand.Play(); break;
+            case ScanState.Warning: SystemSounds.Exclamation.Play(); break;
         }
     }
 }

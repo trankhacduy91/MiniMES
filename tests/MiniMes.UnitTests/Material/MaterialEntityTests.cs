@@ -69,4 +69,27 @@ public class MaterialEntityTests
 
         Assert.Equal(MaterialLot.LotNoMaxLength, log.ScannedLotNo.Length);
     }
+
+    // R10: at unload the real count replaces the theoretical one; nothing left = Consumed.
+    [Theory]
+    [InlineData(1840, MaterialLotStatus.Available)]
+    [InlineData(0, MaterialLotStatus.Consumed)]
+    public void Correcting_the_remaining_quantity(int actual, MaterialLotStatus status)
+    {
+        var lot = new MaterialLot("L-1", 7, 10_000, "S1", T0, null, needsIqc: false);
+
+        lot.CorrectRemaining(actual);
+
+        Assert.Equal((actual, status), ((int)lot.RemainingQty, lot.Status));
+    }
+
+    [Fact]
+    public void Correction_cannot_go_below_zero_or_above_the_received_quantity()
+    {
+        var lot = new MaterialLot("L-1", 7, 100, "S1", T0, null, needsIqc: false);
+
+        Assert.Throws<DomainException>(() => lot.CorrectRemaining(-1));
+        Assert.Throws<DomainException>(() => lot.CorrectRemaining(101));
+        Assert.Equal(100m, lot.RemainingQty);
+    }
 }

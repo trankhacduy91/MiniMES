@@ -4,4 +4,7 @@ namespace MiniMes.Client.Core.Navigation;
 public interface IKioskNavigation : INavigation
 {
     void ShowScan();
+
+    // M6 step 4: the station's reels (load, replace, take off); back to ShowScan.
+    void ShowMaterial();
 }

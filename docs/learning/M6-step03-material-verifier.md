@@ -2,7 +2,7 @@
 
 > Tài liệu học cho bước 3 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **1.2** "Setup và Material
 > verification", **1.3 A**, **2.4**, R2–R5, R15).
-> Bước trước: [M6-step02b](M6-step02b-iqc.md).
+> Bước trước: [M6-step02b](M6-step02b-iqc.md). Bước sau: [M6-step04](M6-step04-load-material.md).
 > Code: `src/MiniMes.Domain/Material/MaterialVerifier.cs`, test `tests/MiniMes.UnitTests/Material/MaterialVerifierTests.cs`.
 
 ---

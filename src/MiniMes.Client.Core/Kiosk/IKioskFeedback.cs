@@ -8,6 +8,7 @@ public enum ScanState
     Ok,
     Ng,
     Blocked,
+    Warning,   // M6: yellow, allowed after a supervisor confirms (FIFO)
 }
 
 // Sound of a result: operators wear ear protection and look at the board, so sound is the second channel.
