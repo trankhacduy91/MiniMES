@@ -1,7 +1,7 @@
 # M6 · Bước 4 — Nạp vật tư trên Kiosk: kiến thức cần nắm
 
 > Tài liệu học cho bước 4 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **1.3 A**, **2.4**, R2–R6, R10, R13).
-> Bước trước: [M6-step03](M6-step03-material-verifier.md).
+> Bước trước: [M6-step03](M6-step03-material-verifier.md). Bước sau: [M6-step05](M6-step05-consumption.md).
 > Code: `src/MiniMes.Application/Material/MaterialLoads.cs`, `src/MiniMes.Api/Controllers/MaterialLoadsController.cs`,
 > `src/MiniMes.Client.Core/ViewModels/Kiosk/LoadMaterialViewModel.cs`, `src/MiniMes.Kiosk.Wpf/Views/LoadMaterialView.xaml`.
 > Ảnh: [vàng FIFO](../images/m6-load-material-fifo.png), [đỏ](../images/m6-load-material-rejected.png).

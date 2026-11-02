@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using MediatR;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using MiniMes.Application.Execution;
 using MiniMes.Application.Labels;
+using MiniMes.Application.Material;
 using MiniMes.Application.Oee;
 using MiniMes.Infrastructure.Persistence;
 
@@ -34,6 +37,12 @@ public sealed class ApiFactory(SqlServerFixture sql, int? mqttPort = null) : Web
             services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(ScanGate));
             // M5: the MQTT host announces stops of 5 s or more, so its test does not wait a real minute.
             if (mqttPort is not null) services.Configure<OeeOptions>(o => o.MicroStopThresholdSec = 5);
+            // M6: the M3-M5 tests scan boards without loading reels, the case the flag exists for. Consumption
+            // tests switch it on for themselves (MaterialEnforcement).
+            services.Configure<MaterialOptions>(o => o.EnforceLoadedMaterial = false);
+            // M6 step 5 (g): a second consumption handler, after the real one, that can be made to fail.
+            services.AddSingleton(ConsumptionFault);
+            services.AddTransient<INotificationHandler<SerialScannedOk>, ConsumptionFaultHandler>();
         });
     }
 
@@ -41,6 +50,20 @@ public sealed class ApiFactory(SqlServerFixture sql, int? mqttPort = null) : Web
 
     // Replays scan races in a fixed order (see ScanGate).
     public ScanGate ScanGate { get; } = new();
+
+    public ConsumptionFault ConsumptionFault { get; } = new();
+}
+
+// Makes the consumption of one serial throw, to prove the scan rolls back with it (M6 2.5).
+public sealed class ConsumptionFault
+{
+    public volatile string? FailForSerialNo;
+}
+
+public sealed class ConsumptionFaultHandler(ConsumptionFault fault) : INotificationHandler<SerialScannedOk>
+{
+    public Task Handle(SerialScannedOk e, CancellationToken ct)
+        => e.SerialNo == fault.FailForSerialNo ? throw new InvalidOperationException("Injected consumption failure.") : Task.CompletedTask;
 }
 
 public sealed class FakeLabelPreview : ILabelPreview

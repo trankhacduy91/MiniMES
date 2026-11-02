@@ -165,3 +165,11 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Vì sao test không bắt:** test bước 6 đổi lý do **ngay trong khoảng bắt kịp**, khi mọi dòng của ngày đều đã được nạp.
 - **Cách sửa:** tìm trước các **ngày** có dòng chưa final, rồi nạp **mọi** dòng của các ngày sẽ xét. Thêm test `Reason_given_after_the_catch_up_range_recomputes_without_duplicates`: đổi lý do một tuần sau ca; không có bản sửa thì test đỏ.
 - **Bài học:** câu lọc "tập dòng để so khớp" phải phủ đúng tập "bucket sẽ dựng". Lệch nhau một chút là upsert biến thành insert. Unique index đã biến lỗi âm thầm (dòng trùng, OEE tháng sai) thành lỗi ồn ào: đó chính là lý do có nó. Test cũng cần một case "sửa dữ liệu cũ, ngoài khoảng thường xét".
+
+## 2026-11-02 — Kem hàn bị trừ nhiều hơn 57 % mỗi board (M6 bước 5)
+
+- **Triệu chứng:** chạy thật bước 5, mỗi board trừ reel kem hàn 0,001 kg, trong khi snapshot BOM của WO ghi 0,0006363 kg. `SerialComponents.Qty` cũng ghi 0,001. Vật tư `pcs` (1,01505) chỉ lệch ở chữ số thứ tư nên không ai để ý.
+- **Nguyên nhân:** hai module chọn độ chính xác khác nhau cho cùng một đại lượng. M2 lưu `QtyPerUnit` là `decimal(28,9)` (BOM explode cần nhiều chữ số), còn spec M6 cho lot và tiêu hao là `decimal(18,3)`. EF gửi tham số theo kiểu của **cột đích**, nên số bị làm tròn lúc ghi, không có lỗi hay cảnh báo nào.
+- **Cách tìm:** không phải unit test (hàm thuần không biết kiểu cột), mà là đọc bảng sau khi chạy thật trên dữ liệu seed có vật tư tính theo kg, rồi so cột này với cột kia bằng `INFORMATION_SCHEMA.COLUMNS`.
+- **Cách sửa (user duyệt):** bốn cột số lượng vật tư thành `decimal(18,6)`, migration mới. SQL Server từ chối `ALTER COLUMN` khi CHECK constraint dùng cột đó, nên migration bỏ `CK_MaterialLots_Qty` rồi tạo lại (EF tự lo phần index). Chạy thử Down/Up trên DB dev.
+- **Bài học:** khi dữ liệu chảy từ bảng này sang bảng khác, kiểm tra kiểu cột ở **cả hai đầu**. Làm tròn decimal trong SQL Server là im lặng. Test với dữ liệu "khó" (số rất nhỏ, đơn vị kg) chứ không chỉ số nguyên `pcs`.

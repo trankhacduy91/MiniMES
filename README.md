@@ -343,6 +343,8 @@ Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md
 
 ![Nạp vật tư: cảnh báo FIFO](docs/images/m6-load-material-fifo.png)
 
+**Tiêu hao khi scan OK**: mỗi scan OK ở bước có vật tư quản lý theo lot ghi `SerialComponents` (board dùng lot nào) và trừ số lý thuyết của lot, trong **cùng transaction** với lần scan. Trạm chưa nạp đủ reel, hoặc reel đang nạp bị Hold/hết hạn → scan bị chặn `MaterialNotLoaded` (kể cả scan của máy qua MQTT). Tắt bằng `Material__EnforceLoadedMaterial=false` khi muốn chạy demo M3–M5 mà không nạp reel.
+
 ## Edge Gateway (M4b)
 
 Máy không nói MQTT thì đi qua **edge gateway** (`MiniMes.EdgeGateway`, .NET Worker): đọc PLC, chuẩn hóa sang đúng hợp đồng MQTT của M4, đệm vào SQLite khi mất mạng. MES không biết máy nói giao thức gì ([ADR-009](ARCHITECTURE.md#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật)).

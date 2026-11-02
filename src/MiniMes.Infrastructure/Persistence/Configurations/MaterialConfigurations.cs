@@ -10,6 +10,13 @@ namespace MiniMes.Infrastructure.Persistence.Configurations;
 
 // Spec M6 step 1 / 2.3: one covering index per trace path. Codes are varchar (A-Z, digits, '-'): an nvarchar
 // parameter against a varchar column would force CONVERT_IMPLICIT and a scan (same rule as ScanLogs).
+internal static class MaterialQty
+{
+    // 6 decimals: solder paste is 0.0006363 kg per board (BOM snapshot, decimal(28,9)); 3 decimals recorded and
+    // subtracted 0.001, 57 % too much (found in M6 step 5).
+    public const int Precision = 18, Scale = 6;
+}
+
 public class MaterialLotConfiguration : IEntityTypeConfiguration<MaterialLot>
 {
     // Step 2: LotNo numbers (LotNumberFormat). A sequence, not MAX + 1: two receivings at once get different numbers.
@@ -27,8 +34,8 @@ public class MaterialLotConfiguration : IEntityTypeConfiguration<MaterialLot>
         });
         b.Property(x => x.LotNo).HasMaxLength(MaterialLot.LotNoMaxLength).IsUnicode(false);
         b.Property(x => x.SupplierLot).HasMaxLength(MaterialLot.SupplierLotMaxLength).IsUnicode(false);
-        b.Property(x => x.Qty).HasPrecision(18, 3);
-        b.Property(x => x.RemainingQty).HasPrecision(18, 3);
+        b.Property(x => x.Qty).HasPrecision(MaterialQty.Precision, MaterialQty.Scale);
+        b.Property(x => x.RemainingQty).HasPrecision(MaterialQty.Precision, MaterialQty.Scale);
         b.Property(x => x.Status).HasConversion<byte>();
         b.Property(x => x.RowVersion).IsRowVersion();
         b.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
@@ -72,7 +79,7 @@ public class SerialComponentConfiguration : IEntityTypeConfiguration<SerialCompo
     public void Configure(EntityTypeBuilder<SerialComponent> b)
     {
         b.ToTable("SerialComponents");
-        b.Property(x => x.Qty).HasPrecision(18, 3);
+        b.Property(x => x.Qty).HasPrecision(MaterialQty.Precision, MaterialQty.Scale);
         b.HasOne<MaterialLot>().WithMany().HasForeignKey(x => x.LotId).OnDelete(DeleteBehavior.Restrict);
 
         // R9 + backward trace (serial -> lots): seek on SerialId.
@@ -88,7 +95,7 @@ public class LotGenealogyConfiguration : IEntityTypeConfiguration<LotGenealogy>
     public void Configure(EntityTypeBuilder<LotGenealogy> b)
     {
         b.ToTable("LotGenealogy", t => t.HasCheckConstraint("CK_LotGenealogy_NotSelf", "[ParentLotId] <> [ChildLotId]"));
-        b.Property(x => x.Qty).HasPrecision(18, 3);
+        b.Property(x => x.Qty).HasPrecision(MaterialQty.Precision, MaterialQty.Scale);
         b.HasOne<MaterialLot>().WithMany().HasForeignKey(x => x.ParentLotId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<MaterialLot>().WithMany().HasForeignKey(x => x.ChildLotId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.ParentLotId, x.ChildLotId }).IsUnique();               // forward recursion seeks on Parent

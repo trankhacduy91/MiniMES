@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MiniMes.Application.Common;
+using MiniMes.Application.Material;
 using MiniMes.Contracts.Execution;
 using MiniMes.Domain.Common;
 using MiniMes.Domain.Execution;
@@ -17,6 +18,11 @@ namespace MiniMes.Application.Execution;
 // the ScanLog row and the step counter. Blocked or duplicate scans write nothing.
 public sealed record ScanCommand(int StationId, string SerialNo, string Result, string? DefectCode, string Source)
     : IRequest<ScanResponse>;
+
+// Published inside the scan's transaction after a NEW scan OK at a routing step is saved (never for a duplicate,
+// an NG or a Repair check-in). Handlers share the scan's DbContext; one that throws rolls the scan back (M6 2.5).
+public sealed record SerialScannedOk(long SerialId, string SerialNo, int WoId, int StationId, int Seq, long ScanLogId, DateTime At)
+    : INotification;
 
 public sealed class ScanValidator : AbstractValidator<ScanCommand>
 {
@@ -35,7 +41,8 @@ public sealed class ScanValidator : AbstractValidator<ScanCommand>
     }
 }
 
-public sealed class ScanHandler(IAppDbContext db, ICurrentUser user, TimeProvider time, ILogger<ScanHandler> log)
+public sealed class ScanHandler(IAppDbContext db, ICurrentUser user, TimeProvider time, IMaterialGate materialGate,
+    IPublisher publisher, ILogger<ScanHandler> log)
     : IRequestHandler<ScanCommand, ScanResponse>
 {
     public async Task<ScanResponse> Handle(ScanCommand cmd, CancellationToken ct)
@@ -78,6 +85,11 @@ public sealed class ScanHandler(IAppDbContext db, ICurrentUser user, TimeProvide
             var decision = RouteCheck.Evaluate(ctx);
             if (decision.Verdict == RouteVerdict.Block) return Blocked(decision.Reason, decision.Message);
             if (decision.Verdict == RouteVerdict.Duplicate) return Duplicate(ctx);
+            // M6 R8: the parts this step puts on the board must come from a known, usable lot. Before the
+            // transaction: a blocked scan writes nothing, like any other block.
+            if (!isRepair && result == ScanResult.Ok
+                && await materialGate.CheckAsync(station.Id, ctx.Serial!.WorkOrderId, decision.Step!.Seq, now, ct) is { } missing)
+                return Blocked(BlockReason.MaterialNotLoaded, missing);
             try
             {
                 return await RecordAsync(ctx, decision, isRepair, result, defectCode, operatorCode, source, ct);
@@ -121,7 +133,8 @@ public sealed class ScanHandler(IAppDbContext db, ICurrentUser user, TimeProvide
             wo.EnsureStarted(ctx.NowUtc);
         }
 
-        db.ScanLogs.Add(new ScanLog(serial, ctx.Station.Id, step?.Seq ?? 0, result, defectCode, operatorCode, source, ctx.NowUtc));
+        var scanLog = new ScanLog(serial, ctx.Station.Id, step?.Seq ?? 0, result, defectCode, operatorCode, source, ctx.NowUtc);
+        db.ScanLogs.Add(scanLog);
         await db.SaveChangesAsync(ct);   // stale serial RowVersion -> ConflictException -> the caller retries
 
         if (!isRepair)
@@ -139,6 +152,11 @@ public sealed class ScanHandler(IAppDbContext db, ICurrentUser user, TimeProvide
                 wo ??= await db.WorkOrders.SingleAsync(w => w.Id == serial.WorkOrderId, ct);
                 if (wo.TryAutoComplete(good, ctx.NowUtc)) await db.SaveChangesAsync(ct);
             }
+
+            // M6: material consumption (SerialComponent, lot quantity) in this same transaction.
+            if (result == ScanResult.Ok)
+                await publisher.Publish(new SerialScannedOk(serial.Id, serial.SerialNo, serial.WorkOrderId, ctx.Station.Id,
+                    step!.Seq, scanLog.Id, ctx.NowUtc), ct);
         }
         await tx.CommitAsync(ct);
 

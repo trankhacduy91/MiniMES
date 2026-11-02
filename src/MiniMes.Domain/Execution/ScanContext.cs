@@ -50,6 +50,7 @@ public enum BlockReason
     FaiNotApproved,   // [v2]
     SkippedStep,
     AlreadyPassed,
+    MaterialNotLoaded,   // M6 R8: a consumed item has no usable lot on the station; checked by the handler (IMaterialGate)
 }
 
 // Step = the routing step done at this station (null at Repair or when blocked).

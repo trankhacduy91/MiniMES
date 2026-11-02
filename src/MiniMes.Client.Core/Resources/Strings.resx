@@ -767,6 +767,9 @@
   <data name="Block_AlreadyPassed" xml:space="preserve">
     <value>This step is already done for this board.</value>
   </data>
+  <data name="Block_MaterialNotLoaded" xml:space="preserve">
+    <value>Material missing or not usable: open Material and load the reel.</value>
+  </data>
   <data name="Scan_Input" xml:space="preserve">
     <value>Scan serial</value>
     <comment>Automation name of the scan box</comment>

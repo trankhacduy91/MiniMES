@@ -19,6 +19,7 @@ public static class DependencyInjection
             cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
         services.AddValidatorsFromAssembly(assembly);
+        services.AddScoped<Material.IMaterialGate, Material.MaterialGate>();   // M6: asked by the scan (M3)
         return services;
     }
 }
