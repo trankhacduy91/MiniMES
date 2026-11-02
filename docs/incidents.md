@@ -181,3 +181,11 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Nguyên nhân:** khi DataGrid bật grouping, cột star (`*`) cùng các cột cố định cho kết quả layout sai: các cột khác bị ép xuống tối thiểu. Lưới IQC dùng cùng kiểu cột `*` nhưng không group nên không bị.
 - **Cách sửa:** lưới Trace chỉ dùng cột độ rộng cố định; ghi chú trong XAML. Giữ `Expander` để gập/mở từng nhóm.
 - **Bài học:** test ViewModel không thấy lỗi layout; phải chạy app thật và **nhìn**. Khi debug UI, đổi một thứ mỗi lần và chụp lại, đừng sửa nhiều chỗ cùng lúc rồi đoán cái nào có tác dụng.
+
+## 2026-11-02 — Bẫy `nvarchar` của M3 quay lại trong SQL truy xuất viết tay (M6 bước 9)
+
+- **Triệu chứng:** đo truy xuất trên 5 triệu `SerialComponents` / 625.000 serial: câu ngược theo serial mất **0,65 ms** khi gửi tham số `varchar`, **82,6 ms** khi gửi `nvarchar(4000)`; plan đổi từ Index Seek sang **Index Scan** trên `IX_Serials_SerialNo`. Code bước 7 đang gửi `nvarchar`.
+- **Nguyên nhân:** `new SqlParameter("@SerialNo", serialNo)` lấy kiểu từ chuỗi .NET = `nvarchar`. Cột mã là `varchar` (`IsUnicode(false)`), nên SQL Server phải đổi kiểu **cả cột** để so sánh và không seek được. Ở LINQ, EF lấy kiểu tham số từ model nên không bị; SQL viết tay (`SqlQueryRaw`) thì không có model nào bảo vệ. Đúng bài học M3, mắc lại ở chỗ khác.
+- **Vì sao test không bắt:** integration test chạy trên vài trăm serial, Index Scan trên vài trăm dòng vẫn nhanh. Kết quả đúng, chỉ chậm, và chậm dần theo dữ liệu.
+- **Cách sửa:** `SqlDbType.VarChar` đúng độ dài cột cho mọi tham số mã. Tham số có độ dài cố định sẽ **cắt** giá trị dài hơn mà không báo, nên mã dài hơn cột trả rỗng ngay (nếu không, một mã gõ sai 40 ký tự có thể khớp với lot mang 30 ký tự đầu). Hai test: một interceptor ghi lại tham số thật gửi xuống DB và đòi `DbType.AnsiString` (đột biến: bỏ sửa → đỏ); một test mã quá dài.
+- **Bài học:** mọi chỗ ra khỏi EF model (raw SQL, Dapper, ADO.NET) phải tự khai kiểu tham số. Lỗi hiệu năng chỉ thấy khi đo trên dữ liệu cỡ thật; test trên dữ liệu nhỏ chỉ chứng minh đúng, không chứng minh nhanh.

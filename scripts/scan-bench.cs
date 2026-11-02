@@ -3,8 +3,11 @@
 // each walk their boards through SMT -> ASSY -> TEST -> PACK; 2 % fail at TEST and go through Repair
 // (check-in + repair) and are retested. Prints p50/p95/p99 per step after a warm-up.
 // Run against a perf database (seed-scanlog.sql first), API in Release:
-//   dotnet run scripts/scan-bench.cs -- [baseUrl] [boards] [workers]
+//   dotnet run scripts/scan-bench.cs -- [baseUrl] [boards] [workers] [material]
 //   dotnet run scripts/scan-bench.cs -- http://localhost:5157 2000 8
+// M6 step 9: "material" receives, passes IQC and loads one big reel of every lot-controlled item the WO needs at each
+// station first, so every OK scan also writes its SerialComponents and subtracts the reels (API with the gate on).
+// Without it, run the API with Material__EnforceLoadedMaterial=false (the M3 situation: no reels, nothing recorded).
 #:project ../src/MiniMes.Contracts/MiniMes.Contracts.csproj
 // File-based apps default to Native AOT, which turns off reflection JSON; a dev tool does not need AOT.
 #:property PublishAot=false
@@ -17,11 +20,13 @@ using MiniMes.Contracts.Common;
 using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Factory;
 using MiniMes.Contracts.MasterData;
+using MiniMes.Contracts.Material;
 using MiniMes.Contracts.Planning;
 
 var baseUrl = args.ElementAtOrDefault(0) ?? "http://localhost:5157";
 var boards = int.Parse(args.ElementAtOrDefault(1) ?? "2000");
 var workers = int.Parse(args.ElementAtOrDefault(2) ?? "8");
+var withMaterial = args.ElementAtOrDefault(3) == "material";
 const int WarmUp = 100;          // first requests: JIT, EF model, connection pool; not counted
 const string Password = "Demo@12345";
 
@@ -49,7 +54,30 @@ var op = await LoginAsync("api/auth/login-operator", new OperatorLoginRequest("E
 var stations = (await op.GetFromJsonAsync<List<StationDto>>("api/stations"))!.ToDictionary(s => s.Code, s => s.Id);
 foreach (var code in new[] { "L1-SMT-01", "L1-ASM-01", "L1-TEST-01", "L1-PACK-01", "L1-REPAIR" })
     (await op.PostAsJsonAsync($"api/stations/{stations[code]}/sessions", new OpenSessionRequest(wo!.Id))).EnsureSuccessStatusCode();
-Console.WriteLine($"{wo!.WoNo}: {serials.Count} boards, {workers} workers, {baseUrl}");
+
+if (withMaterial)
+{
+    var wh = await LoginAsync("api/auth/login", new LoginRequest("wh01", Password));
+    var qc = await LoginAsync("api/auth/login", new LoginRequest("qc01", Password));
+    foreach (var code in new[] { "L1-SMT-01", "L1-ASM-01", "L1-TEST-01", "L1-PACK-01" })
+        foreach (var m in (await op.GetFromJsonAsync<List<StationMaterialDto>>($"api/stations/{stations[code]}/material-loads"))!.Where(m => m.Required))
+        {
+            var supplierLot = $"B{wo!.Id}-{m.ItemId}";
+            var qty = Math.Ceiling(boards * (m.QtyPerUnit ?? 1) * 1.1m);   // enough for the run; pcs must be whole
+            var lot = (await (await wh.PostAsJsonAsync("api/material/lots", new ReceiveLotsRequest(m.ItemId, supplierLot, qty, 1, null)))
+                .EnsureSuccessStatusCode().Content.ReadFromJsonAsync<ReceiveLotsResultDto>())!.Lots[0];
+            if (lot.Status == "PendingIqc")
+                (await qc.PostAsJsonAsync("api/material/iqc", new RecordIqcRequest(m.ItemId, supplierLot, 5, 0, "Pass", null, null))).EnsureSuccessStatusCode();
+            var load = (await (await op.PostAsJsonAsync($"api/stations/{stations[code]}/material-loads", new LoadMaterialRequest(lot.LotNo, null, null, null)))
+                .EnsureSuccessStatusCode().Content.ReadFromJsonAsync<LoadMaterialResponse>())!;
+            if (load.Outcome == "Warning")   // a reel of an earlier run still has stock (FIFO): let a supervisor approve
+                load = (await (await op.PostAsJsonAsync($"api/stations/{stations[code]}/material-loads",
+                    new LoadMaterialRequest(lot.LotNo, null, "sup01", "Benchmark"))).EnsureSuccessStatusCode().Content.ReadFromJsonAsync<LoadMaterialResponse>())!;
+            if (load.Outcome != "Accepted") throw new InvalidOperationException($"{code} {m.ItemCode}: {load.Outcome} {load.Code} {load.Message}");
+            Console.WriteLine($"  loaded {lot.LotNo} ({m.ItemCode}, {qty}) on {code}");
+        }
+}
+Console.WriteLine($"{wo!.WoNo}: {serials.Count} boards, {workers} workers, material {(withMaterial ? "loaded" : "off")}, {baseUrl}");
 
 // ---------- load ----------
 var samples = new ConcurrentQueue<(long Order, string Step, double Ms)>();

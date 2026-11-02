@@ -1,8 +1,13 @@
+using System.Data;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Traceability;
 using MiniMes.Domain.Material;
+using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Seed;
+using MiniMes.Infrastructure.Traceability;
 using MiniMes.IntegrationTests.Infrastructure;
 
 namespace MiniMes.IntegrationTests.Traceability;
@@ -139,5 +144,48 @@ public class TraceQueriesTests(ApiFixture api)
         Assert.Equal(80, forward.Count);
         Assert.Equal([(0, s.Code("L-CAP-B")), (1, s.Code("L-CAP-P")), (0, s.Code("L-RES-A"))],
             backward.Select(r => (r.Depth, r.LotNo)).ToList());
+    }
+
+    // M6 step 9: a .NET string goes out as nvarchar unless told otherwise, and nvarchar against the varchar code
+    // columns turned the serial seek into a scan (0.65 -> 83 ms on 625,000 serials). Every key must go out as varchar.
+    [Fact]
+    public async Task Keys_are_sent_as_varchar_so_the_indexes_can_seek()
+    {
+        var s = await ScenarioAsync();
+        var recorder = new ParameterRecorder();
+        var connection = await api.WithDbAsync(db => Task.FromResult(db.Database.GetConnectionString()!));
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlServer(connection).AddInterceptors(recorder).Options);
+        var trace = new TraceQueries(db);
+
+        await trace.ForwardByLotAsync(s.Code("L-CAP-A"), default);
+        await trace.ForwardBySupplierLotAsync(s.Code("SUP-S1"), await CapItemIdAsync(), default);
+        await trace.BackwardAsync(s.SerialNo(150), default);
+
+        var keys = recorder.Parameters.Where(p => p.Value is string).ToList();
+        Assert.Equal(["@LotNo", "@SupplierLot", "@SerialNo"], keys.Select(p => p.ParameterName));
+        Assert.All(keys, p => Assert.Equal(DbType.AnsiString, p.DbType));
+    }
+
+    // A sized varchar parameter would silently cut a longer value: longer than the column = nothing, not a prefix match.
+    [Fact]
+    public async Task Keys_longer_than_the_column_find_nothing()
+    {
+        var s = await ScenarioAsync();
+
+        Assert.Empty(await TraceAsync(q => q.ForwardByLotAsync(s.Code("L-CAP-A").PadRight(31, 'X'), default)));
+        Assert.Empty(await TraceAsync(q => q.BackwardAsync(s.SerialNo(150).PadRight(31, 'X'), default)));
+        Assert.Empty(await TraceAsync(async q => await q.ForwardBySupplierLotAsync(new string('S', 51), await CapItemIdAsync(), default)));
+    }
+
+    private sealed class ParameterRecorder : DbCommandInterceptor
+    {
+        public List<DbParameter> Parameters { get; } = [];
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData,
+            InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            Parameters.AddRange(command.Parameters.Cast<DbParameter>());
+            return ValueTask.FromResult(result);
+        }
     }
 }

@@ -427,6 +427,18 @@ Scan qua API, SQL Server 2022 trong Docker, `ScanLogs` **10 triệu dòng**, 8 l
 - Tham số `nvarchar` gặp cột `varchar` làm SQL Server bỏ index (`CONVERT_IMPLICIT`): 147 ms dù có index.
 - Chạy đo còn tìm ra một race condition mà test đồng thời bỏ sót (ở `incidents.md`).
 
+Truy xuất (M6), `SerialComponents` **5 triệu dòng**:
+
+| | Kết quả |
+| --- | ---: |
+| Xuôi một supplier lot (12.500 serial), qua API | 87–120 ms |
+| Ngược một serial, qua API | 3–5 ms |
+| Ngược một serial, tham số `varchar` / `nvarchar` (SQL) | 0,65 / 82,6 ms |
+| Scan SMT có ghi tiêu hao, p95 (1 / 8 luồng) | 26,8 / 76,1 ms (không ghi: 19,2 / 32,5) |
+
+- Bẫy `nvarchar` của M3 lặp lại trong SQL viết tay của truy xuất; đã sửa và có test chặn.
+- Index phủ đủ cột bớt 1/3 logical reads nhưng không nhanh hơn, mà index to hơn 76 %: giữ index theo spec.
+
 ## Chạy test
 
 ```bash
@@ -477,6 +489,6 @@ src/MiniMes.EdgeGateway     edge gateway: OPC UA + Modbus → MQTT, outbox SQLit
 docker/                     mosquitto.conf, Dockerfile của simulator và gateway
 tests/                      unit test, integration test (Testcontainers)
 spec/                       spec dự án và từng module
-scripts/                    seed 10 triệu dòng ScanLog, đo SQL các phương án index, benchmark API scan (docs/perf.md)
+scripts/                    seed 10 triệu ScanLog / 5 triệu SerialComponent, đo SQL các phương án index, benchmark API scan (docs/perf.md)
 docs/                       ERD master data, SOP mẫu, file import mẫu, perf.md, incidents.md (lỗi đáng nhớ và bài học)
 ```

@@ -1,7 +1,7 @@
 # M6 · Bước 8 — API truy xuất và màn hình Trace: kiến thức cần nắm
 
 > Tài liệu học cho bước 8 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **2.2b**, **2.6**, demo spec v2 bước 12).
-> Bước trước: [M6-step07](M6-step07-trace-queries.md).
+> Bước trước: [M6-step07](M6-step07-trace-queries.md). Bước sau: [M6-step09](M6-step09-performance.md).
 > Code: `src/MiniMes.Api/Controllers/TraceController.cs`, `src/MiniMes.Application/Traceability/Trace.cs`,
 > `src/MiniMes.Client.Core/ViewModels/Traceability/*`, `src/MiniMes.BackOffice.Wpf/Views/Traceability/TraceView.xaml`.
 

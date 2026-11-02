@@ -1,6 +1,9 @@
+using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using MiniMes.Application.Traceability;
+using MiniMes.Domain.Material;
+using MiniMes.Domain.Planning;
 using MiniMes.Infrastructure.Persistence;
 
 namespace MiniMes.Infrastructure.Traceability;
@@ -15,19 +18,27 @@ public sealed class TraceQueries(AppDbContext db) : ITraceQueries
     public const int MaxDepth = 10;
 
     public async Task<IReadOnlyList<ForwardTraceRow>> ForwardByLotAsync(string lotNo, CancellationToken ct)
-        => await db.Database.SqlQueryRaw<ForwardTraceRow>(Forward("l.LotNo = @LotNo"),
-            new SqlParameter("@LotNo", lotNo), Depth()).ToListAsync(ct);
+        => lotNo.Length > MaterialLot.LotNoMaxLength ? [] : await db.Database.SqlQueryRaw<ForwardTraceRow>(Forward("l.LotNo = @LotNo"),
+            Varchar("@LotNo", lotNo, MaterialLot.LotNoMaxLength), Depth()).ToListAsync(ct);
 
     // A supplier lot is several reels: the anchor starts the tree from all of them (index (SupplierLot, ItemId)).
     public async Task<IReadOnlyList<ForwardTraceRow>> ForwardBySupplierLotAsync(string supplierLot, int itemId, CancellationToken ct)
-        => await db.Database.SqlQueryRaw<ForwardTraceRow>(Forward("l.SupplierLot = @SupplierLot AND l.ItemId = @ItemId"),
-            new SqlParameter("@SupplierLot", supplierLot), new SqlParameter("@ItemId", itemId), Depth()).ToListAsync(ct);
+        => supplierLot.Length > MaterialLot.SupplierLotMaxLength ? [] : await db.Database.SqlQueryRaw<ForwardTraceRow>(Forward("l.SupplierLot = @SupplierLot AND l.ItemId = @ItemId"),
+            Varchar("@SupplierLot", supplierLot, MaterialLot.SupplierLotMaxLength), new SqlParameter("@ItemId", itemId), Depth()).ToListAsync(ct);
 
     public async Task<IReadOnlyList<BackwardTraceRow>> BackwardAsync(string serialNo, CancellationToken ct)
-        => await db.Database.SqlQueryRaw<BackwardTraceRow>(BackwardSql,
-            new SqlParameter("@SerialNo", serialNo), Depth()).ToListAsync(ct);
+        => serialNo.Length > Serial.SerialNoMaxLength ? [] : await db.Database.SqlQueryRaw<BackwardTraceRow>(BackwardSql,
+            Varchar("@SerialNo", serialNo, Serial.SerialNoMaxLength), Depth()).ToListAsync(ct);
 
     private static SqlParameter Depth() => new("@MaxDepth", MaxDepth);
+
+    // The code columns are varchar (IsUnicode(false)). A .NET string becomes nvarchar(4000) by default, and comparing a
+    // varchar column with nvarchar converts the whole column: the serial lookup turned from an Index Seek into an
+    // Index Scan, 0.65 ms -> 83 ms on 625,000 serials (docs/perf.md, M6 step 9). LINQ gets this from the EF model;
+    // raw SQL has to say it. A sized parameter silently cuts a longer value, so the callers refuse those first (a
+    // 40-character typo must not find the lot made of its first 30 characters).
+    private static SqlParameter Varchar(string name, string value, int size)
+        => new(name, SqlDbType.VarChar, size) { Value = value };
 
     // The anchor is one of the two constant conditions above, never user text: values travel as parameters.
     private static string Forward(string anchor) => $"""
