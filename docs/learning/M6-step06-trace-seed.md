@@ -1,7 +1,7 @@
 # M6 · Bước 6 — Seed kịch bản truy xuất: kiến thức cần nắm
 
 > Tài liệu học cho bước 6 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **3**, bảng "Dữ liệu kiểm thử chuẩn").
-> Bước trước: [M6-step05](M6-step05-consumption.md).
+> Bước trước: [M6-step05](M6-step05-consumption.md). Bước sau: [M6-step07](M6-step07-trace-queries.md).
 > Code: `src/MiniMes.Infrastructure/Persistence/Seed/TraceabilitySeeder.cs`. Test: `tests/MiniMes.IntegrationTests/Traceability/TraceabilitySeedTests.cs`.
 
 ## A. Vì sao cần một bộ dữ liệu chuẩn

@@ -14,6 +14,7 @@ using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Auth;
 using MiniMes.Infrastructure.Execution;
 using MiniMes.Application.Realtime;
+using MiniMes.Application.Traceability;
 using MiniMes.Infrastructure.Machines;
 using MiniMes.Infrastructure.Oee;
 using MiniMes.Infrastructure.Persistence;
@@ -22,6 +23,7 @@ using MiniMes.Infrastructure.Persistence.Queries;
 using MiniMes.Infrastructure.Persistence.Seed;
 using MiniMes.Infrastructure.Planning;
 using MiniMes.Infrastructure.Realtime;
+using MiniMes.Infrastructure.Traceability;
 
 namespace MiniMes.Infrastructure;
 
@@ -56,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IBomExplosionQuery, BomExplosionQuery>();
         services.AddScoped<ISequenceNumbers, SequenceNumbers>();
         services.AddScoped<IExecutionReportQueries, ExecutionReportQueries>();
+        services.AddScoped<ITraceQueries, TraceQueries>();   // M6
         services.Configure<OeeOptions>(config.GetSection(OeeOptions.SectionName));   // M5
         services.Configure<MaterialOptions>(config.GetSection(MaterialOptions.SectionName));   // M6
         services.AddScoped<IOeeInputReader, OeeInputReader>();
