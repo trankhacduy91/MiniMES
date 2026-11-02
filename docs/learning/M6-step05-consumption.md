@@ -1,7 +1,7 @@
 # M6 · Bước 5 — Chặn scan khi thiếu vật tư và ghi tiêu hao khi scan OK: kiến thức cần nắm
 
 > Tài liệu học cho bước 5 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **1.4** R7–R10, **2.5**).
-> Bước trước: [M6-step04](M6-step04-load-material.md).
+> Bước trước: [M6-step04](M6-step04-load-material.md). Bước sau: [M6-step06](M6-step06-trace-seed.md).
 > Code: `src/MiniMes.Domain/Material/MaterialGateRule.cs`, `src/MiniMes.Application/Material/Consumption.cs`,
 > `src/MiniMes.Application/Execution/Scan.cs`. Test: `tests/MiniMes.IntegrationTests/Material/ConsumptionTests.cs`,
 > `tests/MiniMes.UnitTests/Material/MaterialGateRuleTests.cs`.

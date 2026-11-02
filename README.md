@@ -345,6 +345,8 @@ Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md
 
 **Tiêu hao khi scan OK**: mỗi scan OK ở bước có vật tư quản lý theo lot ghi `SerialComponents` (board dùng lot nào) và trừ số lý thuyết của lot, trong **cùng transaction** với lần scan. Trạm chưa nạp đủ reel, hoặc reel đang nạp bị Hold/hết hạn → scan bị chặn `MaterialNotLoaded` (kể cả scan của máy qua MQTT). Tắt bằng `Material__EnforceLoadedMaterial=false` khi muốn chạy demo M3–M5 mà không nạp reel.
 
+**Dữ liệu truy xuất mẫu** (Development, tự seed khi khởi động, spec M6 mục 3): WO `WO-TRACE` đã đóng, 200 board `TRACE-0001`…`TRACE-0200` ở `L1-SMT-01`. Tụ `CAP-100NF`: board 1–120 từ `L-CAP-A`, 121–200 từ `L-CAP-B` (tách từ reel `L-CAP-P`); cả hai reel gốc thuộc supplier lot `SUP-S1`. Điện trở `RES-100K`: cả 200 board từ `L-RES-A` (`SUP-R1`).
+
 ## Edge Gateway (M4b)
 
 Máy không nói MQTT thì đi qua **edge gateway** (`MiniMes.EdgeGateway`, .NET Worker): đọc PLC, chuẩn hóa sang đúng hợp đồng MQTT của M4, đệm vào SQLite khi mất mạng. MES không biết máy nói giao thức gì ([ADR-009](ARCHITECTURE.md#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật)).
