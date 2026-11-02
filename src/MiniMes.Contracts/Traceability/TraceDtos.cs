@@ -1,0 +1,36 @@
+namespace MiniMes.Contracts.Traceability;
+
+// Spec M6 step 8. Instants in UTC; the client shows plant time.
+
+// Location: Wip, CompletedUnpacked, Scrapped; M3b adds InCarton, OnPallet, Shipped (spec 2.2b) and fills
+// CartonNo, PalletNo, ShipmentRef (null until then).
+public sealed record ForwardTraceDto(string SerialNo, string SerialStatus, string WoNo, int Depth, string LotNo, string? StationCode,
+    DateTime ConsumedAt, string? OperatorCode, string Location, string? CartonNo, string? PalletNo, string? ShipmentRef);
+
+public sealed record LocationCountDto(string Location, int Count);
+
+// StartLots: the lots the search started from (one lot, or every reel of a supplier lot).
+public sealed record ForwardTraceResultDto(IReadOnlyList<string> StartLots, IReadOnlyList<LocationCountDto> ByLocation,
+    IReadOnlyList<ForwardTraceDto> Serials);
+
+public sealed record BackwardTraceDto(int Depth, string LotNo, string? ChildLotNo, string ItemCode, string? SupplierLot,
+    string? StationCode, DateTime ConsumedAt, string? OperatorCode, string? LoadedBy);
+
+public static class TraceNodeKind
+{
+    public const string Serial = "serial";
+    public const string Lot = "lot";
+}
+
+// One node of the backward tree, loaded when its parent is opened (spec 2.6). Under a serial: the lots it consumed
+// (station, time, operator, who loaded the reel). Under a lot: the lots it was split from (Qty taken from each).
+public sealed record TraceNodeDto(string Kind, string Key, string ItemCode, string? SupplierLot, string? StationCode, DateTime? ConsumedAt,
+    string? OperatorCode, string? LoadedBy, decimal? Qty, bool HasChildren);
+
+public sealed record HoldLotRequest(string LotNo);
+
+// Held: the lots now on Hold. Skipped: lots of the same delivery or family left as they were (already Hold,
+// Consumed, waiting for IQC...), with their status.
+public sealed record HoldLotResultDto(IReadOnlyList<string> Held, IReadOnlyList<SkippedLotDto> Skipped);
+
+public sealed record SkippedLotDto(string LotNo, string Status);

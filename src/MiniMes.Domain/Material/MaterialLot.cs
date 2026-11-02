@@ -64,4 +64,15 @@ public class MaterialLot : IAudited
         RemainingQty = actual;
         if (actual == 0 && Status == MaterialLotStatus.Available) Status = MaterialLotStatus.Consumed;
     }
+
+    // Containment from the trace screen (spec M6 step 8): an Available lot cannot be loaded any more (R4) and a
+    // loaded one stops the next scan (step 5 gate). PendingIqc, IqcRejected and Consumed are blocked already, so
+    // they are left as they are (Hold over PendingIqc would also hide the lot from IQC). Releasing a Hold is an
+    // NCR decision (M7). False = nothing changed.
+    public bool PutOnHold()
+    {
+        if (Status != MaterialLotStatus.Available) return false;
+        Status = MaterialLotStatus.Hold;
+        return true;
+    }
 }

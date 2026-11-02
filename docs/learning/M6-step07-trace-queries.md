@@ -1,7 +1,7 @@
 # M6 · Bước 7 — Truy vấn truy xuất xuôi/ngược bằng recursive CTE: kiến thức cần nắm
 
 > Tài liệu học cho bước 7 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **2.2**, **2.3**, R12).
-> Bước trước: [M6-step06](M6-step06-trace-seed.md).
+> Bước trước: [M6-step06](M6-step06-trace-seed.md). Bước sau: [M6-step08](M6-step08-trace-screen.md).
 > Code: `src/MiniMes.Application/Traceability/TraceQueries.cs` (interface, kiểu dòng), `src/MiniMes.Infrastructure/Traceability/TraceQueries.cs` (SQL).
 > Test: `tests/MiniMes.IntegrationTests/Traceability/TraceQueriesTests.cs`.
 

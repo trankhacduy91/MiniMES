@@ -347,6 +347,19 @@ Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md
 
 **Dữ liệu truy xuất mẫu** (Development, tự seed khi khởi động, spec M6 mục 3): WO `WO-TRACE` đã đóng, 200 board `TRACE-0001`…`TRACE-0200` ở `L1-SMT-01`. Tụ `CAP-100NF`: board 1–120 từ `L-CAP-A`, 121–200 từ `L-CAP-B` (tách từ reel `L-CAP-P`); cả hai reel gốc thuộc supplier lot `SUP-S1`. Điện trở `RES-100K`: cả 200 board từ `L-RES-A` (`SUP-R1`).
 
+**Truy xuất** (BackOffice, menu **Traceability**, role `QC`/`Supervisor`/`Admin`): *Serial (backward)* → cây board → lot đã dùng (trạm, giờ, operator, người nạp reel) → lot cha, mở nhánh nào tải nhánh đó. *Lot* hoặc *Supplier lot + mã hàng (forward)* → mọi board đã dùng, nhóm theo vị trí hiện tại, **Export Excel**, **Hold lot** (lot đó, các reel cùng lô giao hàng và lot tách ra từ chúng; chỉ M7 mới gỡ được). Thử với dữ liệu mẫu: `TRACE-0150`, `L-CAP-B`, `SUP-S1` + `CAP-100NF`.
+
+| Endpoint | Nội dung |
+| --- | --- |
+| `GET /api/trace/forward?lotNo=` hoặc `?supplierLot=&itemCode=` | Board đã dùng lot, đếm theo vị trí |
+| `GET /api/trace/forward.xlsx?…` | Cùng kết quả, file Excel (giờ nhà máy) |
+| `GET /api/trace/backward?serialNo=` | Lịch sử vật tư của một board (phẳng) |
+| `GET /api/trace/nodes/{serial\|lot}/{key}/children` | Một cấp của cây (lazy-load) |
+| `POST /api/trace/hold-lot` `{ lotNo }` | Hold lot, lô giao hàng và lot con |
+
+![Truy xuất ngược](docs/images/m6-trace-backward.png)
+![Truy xuất xuôi](docs/images/m6-trace-forward.png)
+
 ## Edge Gateway (M4b)
 
 Máy không nói MQTT thì đi qua **edge gateway** (`MiniMes.EdgeGateway`, .NET Worker): đọc PLC, chuẩn hóa sang đúng hợp đồng MQTT của M4, đệm vào SQLite khi mất mạng. MES không biết máy nói giao thức gì ([ADR-009](ARCHITECTURE.md#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật)).

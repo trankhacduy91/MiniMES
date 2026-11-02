@@ -92,4 +92,20 @@ public class MaterialEntityTests
         Assert.Throws<DomainException>(() => lot.CorrectRemaining(101));
         Assert.Equal(100m, lot.RemainingQty);
     }
+
+    // Step 8 "Hold lot": only an Available lot changes; the others are blocked already (and PendingIqc stays visible to IQC).
+    [Fact]
+    public void Hold_applies_to_an_available_lot_only()
+    {
+        var available = new MaterialLot("L-1", 7, 100, "S1", T0, null, needsIqc: false);
+        var pending = new MaterialLot("L-2", 7, 100, "S1", T0, null, needsIqc: true);
+        var consumed = new MaterialLot("L-3", 7, 100, "S1", T0, null, needsIqc: false);
+        consumed.CorrectRemaining(0);
+
+        Assert.Equal((true, false), (available.PutOnHold(), available.PutOnHold()));   // twice: changed once
+        Assert.False(pending.PutOnHold());
+        Assert.False(consumed.PutOnHold());
+        Assert.Equal((MaterialLotStatus.Hold, MaterialLotStatus.PendingIqc, MaterialLotStatus.Consumed),
+            (available.Status, pending.Status, consumed.Status));
+    }
 }

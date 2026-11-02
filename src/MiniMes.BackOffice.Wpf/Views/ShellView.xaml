@@ -24,6 +24,8 @@
                             Command="{Binding ShowReceivingCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Button AutomationProperties.AutomationId="MenuIqc" Content="{x:Static res:Strings.Menu_Iqc}"
                             Command="{Binding ShowIqcCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuTrace" Content="{x:Static res:Strings.Menu_Trace}"
+                            Command="{Binding ShowTraceCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Separator Margin="0,6" />
                     <Button AutomationProperties.AutomationId="MenuItems" Content="{x:Static res:Strings.Menu_Items}"
                             Command="{Binding ShowItemsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />

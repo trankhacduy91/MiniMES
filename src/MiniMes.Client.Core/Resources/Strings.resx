@@ -1483,4 +1483,130 @@
   <data name="Load_LotExpired" xml:space="preserve">
     <value>This reel is expired.</value>
   </data>
+  <data name="Menu_Trace" xml:space="preserve">
+    <value>Traceability</value>
+  </data>
+  <data name="Trace_Title" xml:space="preserve">
+    <value>Traceability</value>
+  </data>
+  <data name="Trace_Hint" xml:space="preserve">
+    <value>Backward: which lots went into a board. Forward: which boards used a lot, and where they are now.</value>
+  </data>
+  <data name="Trace_ModeSerial" xml:space="preserve">
+    <value>Serial (backward)</value>
+  </data>
+  <data name="Trace_ModeLot" xml:space="preserve">
+    <value>Lot (forward)</value>
+  </data>
+  <data name="Trace_ModeSupplierLot" xml:space="preserve">
+    <value>Supplier lot (forward)</value>
+  </data>
+  <data name="Trace_Search" xml:space="preserve">
+    <value>Serial, lot or supplier lot</value>
+  </data>
+  <data name="Trace_ItemCode" xml:space="preserve">
+    <value>Item code (for a supplier lot)</value>
+  </data>
+  <data name="Trace_Run" xml:space="preserve">
+    <value>Trace</value>
+  </data>
+  <data name="Trace_Export" xml:space="preserve">
+    <value>Export Excel</value>
+  </data>
+  <data name="Trace_HoldLot" xml:space="preserve">
+    <value>Hold lot</value>
+  </data>
+  <data name="Trace_HoldSerials" xml:space="preserve">
+    <value>Hold all serials</value>
+  </data>
+  <data name="Trace_HoldPallets" xml:space="preserve">
+    <value>Hold pallets</value>
+  </data>
+  <data name="Trace_NeedsM7" xml:space="preserve">
+    <value>Available with the quality module (M7).</value>
+  </data>
+  <data name="Trace_Serial" xml:space="preserve">
+    <value>Serial</value>
+  </data>
+  <data name="Trace_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Trace_Wo" xml:space="preserve">
+    <value>Work order</value>
+  </data>
+  <data name="Trace_LotUsed" xml:space="preserve">
+    <value>Lot used</value>
+  </data>
+  <data name="Trace_Depth" xml:space="preserve">
+    <value>Depth</value>
+  </data>
+  <data name="Trace_Station" xml:space="preserve">
+    <value>Station</value>
+  </data>
+  <data name="Trace_ConsumedAt" xml:space="preserve">
+    <value>Consumed at</value>
+  </data>
+  <data name="Trace_Operator" xml:space="preserve">
+    <value>Operator</value>
+  </data>
+  <data name="Trace_Location" xml:space="preserve">
+    <value>Location</value>
+  </data>
+  <data name="Trace_Loading" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="Trace_LoadFailed" xml:space="preserve">
+    <value>Load failed: {0} (close and open again to retry)</value>
+  </data>
+  <data name="Trace_NoMaterial" xml:space="preserve">
+    <value>No material recorded for this serial.</value>
+  </data>
+  <data name="Trace_NoParents" xml:space="preserve">
+    <value>Not split from another lot.</value>
+  </data>
+  <data name="Trace_SerialNode" xml:space="preserve">
+    <value>board</value>
+  </data>
+  <data name="Trace_SupplierLot" xml:space="preserve">
+    <value>  ·  supplier lot {0}</value>
+  </data>
+  <data name="Trace_ConsumedDetail" xml:space="preserve">
+    <value>{0}  ·  {1}  ·  scanned by {2}  ·  reel loaded by {3}</value>
+  </data>
+  <data name="Trace_ParentDetail" xml:space="preserve">
+    <value>parent lot, {0:N0} taken</value>
+  </data>
+  <data name="Trace_NothingFound" xml:space="preserve">
+    <value>No serial used this lot.</value>
+  </data>
+  <data name="Trace_Summary" xml:space="preserve">
+    <value>{0:N0} serial(s): {1}. Start lot(s): {2}</value>
+  </data>
+  <data name="Trace_Exported" xml:space="preserve">
+    <value>Saved to {0}</value>
+  </data>
+  <data name="Trace_ConfirmHold" xml:space="preserve">
+    <value>Put lot {0}, the other reels of its delivery and the lots split from them on Hold? Only a quality decision (NCR) releases them.</value>
+  </data>
+  <data name="Trace_Held" xml:space="preserve">
+    <value>On hold: {0}. Unchanged: {1}.</value>
+  </data>
+  <data name="Trace_Location_Shipped" xml:space="preserve">
+    <value>Shipped</value>
+  </data>
+  <data name="Trace_Location_OnPallet" xml:space="preserve">
+    <value>On pallet</value>
+  </data>
+  <data name="Trace_Location_InCarton" xml:space="preserve">
+    <value>In carton</value>
+  </data>
+  <data name="Trace_Location_CompletedUnpacked" xml:space="preserve">
+    <value>Completed, not packed</value>
+  </data>
+  <data name="Trace_Location_Wip" xml:space="preserve">
+    <value>In production</value>
+  </data>
+  <data name="Trace_Location_Scrapped" xml:space="preserve">
+    <value>Scrapped</value>
+  </data>
 </root>

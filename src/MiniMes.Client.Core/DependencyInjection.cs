@@ -16,6 +16,7 @@ using MiniMes.Client.Core.ViewModels.Material;
 using MiniMes.Client.Core.ViewModels.Oee;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
+using MiniMes.Client.Core.ViewModels.Traceability;
 
 namespace MiniMes.Client.Core;
 
@@ -93,6 +94,8 @@ public static class DependencyInjection
         services.AddTransient<OeeDashboardViewModel>();
         services.AddTransient<ReceivingViewModel>();   // M6
         services.AddTransient<IqcViewModel>();
+        services.AddTransient<ITraceApi, TraceApi>();   // M6 step 8
+        services.AddTransient<TraceViewModel>();
         return services;
     }
 

@@ -173,3 +173,11 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Cách tìm:** không phải unit test (hàm thuần không biết kiểu cột), mà là đọc bảng sau khi chạy thật trên dữ liệu seed có vật tư tính theo kg, rồi so cột này với cột kia bằng `INFORMATION_SCHEMA.COLUMNS`.
 - **Cách sửa (user duyệt):** bốn cột số lượng vật tư thành `decimal(18,6)`, migration mới. SQL Server từ chối `ALTER COLUMN` khi CHECK constraint dùng cột đó, nên migration bỏ `CK_MaterialLots_Qty` rồi tạo lại (EF tự lo phần index). Chạy thử Down/Up trên DB dev.
 - **Bài học:** khi dữ liệu chảy từ bảng này sang bảng khác, kiểm tra kiểu cột ở **cả hai đầu**. Làm tròn decimal trong SQL Server là im lặng. Test với dữ liệu "khó" (số rất nhỏ, đơn vị kg) chứ không chỉ số nguyên `pcs`.
+
+## 2026-11-02 — DataGrid nhóm theo Location: mọi cột co còn vài pixel (M6 bước 8)
+
+- **Triệu chứng:** màn Trace, truy xuất xuôi `L-CAP-B`: 80 dòng hiện đủ, nhóm "Completed, not packed (80)" đúng, nhưng mọi cột (đã đặt `Width="170"`, `"90"`…) chỉ rộng vài pixel, đọc được hai ký tự đầu. Unit test ViewModel xanh hết; chỉ thấy khi chụp màn hình thật.
+- **Cách tìm (loại trừ từng giả thuyết, mỗi lần một thay đổi):** bỏ `IsVirtualizingWhenGrouping` → vẫn lỗi; bỏ `Visibility` ẩn/hiện khung → vẫn lỗi; bỏ `GroupStyle` → cột đúng (nhưng mất nhóm); thay `HeaderTemplate` bằng `ContainerStyle` Expander → vẫn lỗi; đổi cột cuối `Width="*"` sang số cố định → **đúng**.
+- **Nguyên nhân:** khi DataGrid bật grouping, cột star (`*`) cùng các cột cố định cho kết quả layout sai: các cột khác bị ép xuống tối thiểu. Lưới IQC dùng cùng kiểu cột `*` nhưng không group nên không bị.
+- **Cách sửa:** lưới Trace chỉ dùng cột độ rộng cố định; ghi chú trong XAML. Giữ `Expander` để gập/mở từng nhóm.
+- **Bài học:** test ViewModel không thấy lỗi layout; phải chạy app thật và **nhìn**. Khi debug UI, đổi một thứ mỗi lần và chụp lại, đừng sửa nhiều chỗ cùng lúc rồi đoán cái nào có tác dụng.
