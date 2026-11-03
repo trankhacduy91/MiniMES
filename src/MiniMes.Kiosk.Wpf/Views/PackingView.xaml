@@ -1,0 +1,163 @@
+<UserControl x:Class="MiniMes.Kiosk.Wpf.Views.PackingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             xmlns:kiosk="clr-namespace:MiniMes.Client.Core.ViewModels.Kiosk;assembly=MiniMes.Client.Core"
+             Foreground="White" KeyboardNavigation.TabNavigation="None">
+    <!-- DataContext = PackingViewModel (spec M3b 2.5). Same rules as the scan screen: the barcode scanner types into
+         ScanBox only (buttons Focusable=False, Tab off, the code-behind pulls the focus back), results are colours and
+         sounds, never a MessageBox. Pack: boards into the open carton; Palletize: carton labels onto the open pallet. -->
+    <Grid>
+        <Grid.Style>
+            <Style TargetType="Grid">
+                <Setter Property="Background" Value="#FF2B2B2B" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding State}" Value="Ok">
+                        <Setter Property="Background" Value="#FF1B8F3A" />
+                    </DataTrigger>
+                    <!-- Carton/pallet just closed: its own colour (and sound), take it away and stick the label. -->
+                    <DataTrigger Binding="{Binding State}" Value="Full">
+                        <Setter Property="Background" Value="#FF0D47A1" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="Blocked">
+                        <Setter Property="Background" Value="#FFC62828" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="32,32,32,16">
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="Logout" Content="{x:Static res:Strings.Home_Logout}"
+                    Command="{Binding LogoutCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="ChangeWorkOrder" Content="{x:Static res:Strings.Scan_ChangeWorkOrder}"
+                    Command="{Binding ChangeWorkOrderCommand}" Focusable="False" Padding="24,8" Margin="12,0,0,0" />
+            <!-- The two modes: the one in use is highlighted. -->
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="ModePalletize" Content="{x:Static res:Strings.Packing_ModePalletize}"
+                    Command="{Binding SwitchModeCommand}" CommandParameter="{x:Static kiosk:PackingMode.Palletize}"
+                    Focusable="False" Padding="32,8" Margin="12,0,0,0" FontWeight="Bold">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPalletizeMode}" Value="True">
+                                <Setter Property="Background" Value="#FFFFC107" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="ModePack" Content="{x:Static res:Strings.Packing_ModePack}"
+                    Command="{Binding SwitchModeCommand}" CommandParameter="{x:Static kiosk:PackingMode.Pack}"
+                    Focusable="False" Padding="32,8" Margin="12,0,0,0" FontWeight="Bold">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPackMode}" Value="True">
+                                <Setter Property="Background" Value="#FFFFC107" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <StackPanel>
+                <TextBlock AutomationProperties.AutomationId="Station" Text="{Binding StationCode}" FontSize="32" FontWeight="SemiBold" />
+                <TextBlock AutomationProperties.AutomationId="WorkOrder" Text="{Binding WorkOrderText}" />
+                <TextBlock AutomationProperties.AutomationId="Operator" Text="{Binding OperatorText}" Foreground="LightGray" />
+            </StackPanel>
+        </DockPanel>
+
+        <Border Grid.Row="1" Background="#FFB71C1C" Padding="16" Visibility="{Binding IsOffline, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock AutomationProperties.AutomationId="OfflineBanner" Text="{x:Static res:Strings.Scan_Offline}"
+                       FontSize="36" FontWeight="Bold" HorizontalAlignment="Center" />
+        </Border>
+
+        <Grid Grid.Row="2" Margin="32,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: the count readable from 2 m, the open carton/pallet, then the result of the last scan. -->
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock AutomationProperties.AutomationId="Progress" Text="{Binding ProgressText}"
+                           FontSize="180" FontWeight="Bold" HorizontalAlignment="Center" />
+                <TextBlock AutomationProperties.AutomationId="Container" Text="{Binding ContainerTitle}"
+                           FontSize="36" HorizontalAlignment="Center" Foreground="#E0FFFFFF" />
+                <TextBlock AutomationProperties.AutomationId="Headline" Text="{Binding Headline}"
+                           FontSize="72" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,24,0,0" />
+                <TextBlock AutomationProperties.AutomationId="Message" Text="{Binding Message}"
+                           FontSize="32" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                <TextBlock AutomationProperties.AutomationId="Detail" Text="{Binding Detail}"
+                           FontSize="22" Foreground="#E0FFFFFF" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0" />
+            </StackPanel>
+
+            <!-- Right: boards in the carton / cartons on the pallet, newest first; a held carton in orange. -->
+            <DockPanel Grid.Column="1" Margin="24,0,0,0">
+                <Button DockPanel.Dock="Bottom" AutomationProperties.AutomationId="ClosePartial" Content="{Binding PartialButtonText}"
+                        Command="{Binding OpenPartialCommand}" Focusable="False" FontSize="26" Padding="24,16" Margin="0,16,0,0" />
+                <Border Background="#40000000" Padding="12">
+                    <ItemsControl AutomationProperties.AutomationId="Lines" ItemsSource="{Binding Lines}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,2">
+                                    <TextBlock DockPanel.Dock="Right" Text="{x:Static res:Strings.Packing_OnHold}" FontSize="20" FontWeight="Bold"
+                                               Foreground="#FFFF9800" Visibility="{Binding OnHold, Converter={StaticResource BoolToVisibility}}" />
+                                    <TextBlock Text="{Binding Text}" FontSize="24" FontFamily="Consolas" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </DockPanel>
+        </Grid>
+
+        <!-- What the next scan means (board, carton label, supervisor's badge), on a dark strip: readable on any colour. -->
+        <Border Grid.Row="3" Background="#B0000000" Padding="12" Margin="32,16,32,8">
+            <TextBlock AutomationProperties.AutomationId="Prompt" Text="{Binding Prompt}" FontSize="30" HorizontalAlignment="Center" />
+        </Border>
+
+        <TextBox Grid.Row="4" x:Name="ScanBox" AutomationProperties.AutomationId="ScanBox"
+                 AutomationProperties.Name="{x:Static res:Strings.Scan_Input}"
+                 Text="{Binding ScanInput, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsOffline}"
+                 FontSize="36" Padding="12" Margin="32,0,32,32" HorizontalContentAlignment="Center">
+            <TextBox.InputBindings>
+                <KeyBinding Key="Return" Command="{Binding ScanCommand}" />
+            </TextBox.InputBindings>
+        </TextBox>
+
+        <!-- Partial close: tap a reason, then the supervisor scans a badge into the same scan box (rows 3-4 stay visible). -->
+        <Grid Grid.RowSpan="3" Background="#F0202020" Visibility="{Binding IsPartialOpen, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel Margin="32">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+                    <Button DockPanel.Dock="Right" AutomationProperties.AutomationId="CancelPartial" Content="{x:Static res:Strings.Packing_CancelPartial}"
+                            Command="{Binding CancelPartialCommand}" Focusable="False" FontSize="28" Padding="48,12" />
+                    <StackPanel>
+                        <TextBlock Text="{Binding PartialButtonText}" FontSize="36" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding ContainerTitle}" FontSize="26" Foreground="LightGray" />
+                    </StackPanel>
+                </DockPanel>
+                <ItemsControl AutomationProperties.AutomationId="PartialReasons" ItemsSource="{Binding PartialReasons}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button AutomationProperties.AutomationId="{Binding}" Content="{Binding}" Focusable="False"
+                                    Width="360" Height="120" Margin="8" FontSize="28" FontWeight="Bold"
+                                    Command="{Binding DataContext.ChooseReasonCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Grid>
+    </Grid>
+</UserControl>

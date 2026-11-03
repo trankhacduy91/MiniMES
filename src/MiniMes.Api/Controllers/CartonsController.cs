@@ -23,10 +23,11 @@ public class CartonsController(ISender sender) : ControllerBase
     public Task<CartonDto> Get(string cartonNo, CancellationToken ct) => sender.Send(new GetCartonQuery(cartonNo), ct);
 
     // P6: the short last carton of a WO; its label prints (LabelZpl). 422 = not open, empty or full; 409 = a pack in between.
-    [Authorize(Roles = Supervisors)]
+    // At the kiosk an operator sends the supervisor's scanned badge (400 when missing or not a supervisor).
+    [Authorize(Roles = Packers)]
     [HttpPost("{cartonNo}/close-partial")]
     public Task<CartonDto> ClosePartial(string cartonNo, ClosePartialRequest r, CancellationToken ct)
-        => sender.Send(new ClosePartialCartonCommand(cartonNo, r.Reason), ct);
+        => sender.Send(new ClosePartialCartonCommand(cartonNo, r.Reason, r.SupervisorBadge), ct);
 
     // P9: one serial out, history kept; a closed carton opens again to be filled up. 422 = on a pallet, shipped, the
     // serial is not in it, or the station has another open carton of the WO.

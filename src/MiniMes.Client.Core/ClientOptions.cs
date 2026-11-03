@@ -18,6 +18,10 @@ public sealed class ClientOptions
     public string LineTvBadge { get; init; } = "LINE-TV";
     public int LineTvRotateSeconds { get; init; } = 20;   // 0 = stay on the first line
 
+    // M3b step 6, Kiosk only: where carton/pallet labels go (one .zpl file per print, like a print queue; a real
+    // Zebra is out of scope as in M2). Empty = %LOCALAPPDATA%\MiniMes\labels.
+    public string? LabelOutputFolder { get; init; }
+
     public const string LineTvMode = "linetv";
     public bool IsLineTv => string.Equals(Mode, LineTvMode, StringComparison.OrdinalIgnoreCase);
 

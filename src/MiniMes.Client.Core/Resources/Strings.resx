@@ -1616,4 +1616,133 @@
   <data name="Trace_Location_Scrapped" xml:space="preserve">
     <value>Scrapped</value>
   </data>
+  <data name="Block_NotASerial" xml:space="preserve">
+    <value>This is a carton or pallet label. Scan a board, or switch to Palletize.</value>
+  </data>
+  <data name="Block_CartonNotOpen" xml:space="preserve">
+    <value>The carton is closed.</value>
+  </data>
+  <data name="Block_WrongItem" xml:space="preserve">
+    <value>Another model: it does not belong in this carton or on this pallet.</value>
+  </data>
+  <data name="Block_WrongWorkOrder" xml:space="preserve">
+    <value>The board belongs to another work order.</value>
+  </data>
+  <data name="Block_CartonFull" xml:space="preserve">
+    <value>The carton is full.</value>
+  </data>
+  <data name="Block_NotACartonLabel" xml:space="preserve">
+    <value>This is not a carton label. Scan a carton, or switch to Pack.</value>
+  </data>
+  <data name="Block_CartonNotFound" xml:space="preserve">
+    <value>Unknown carton label.</value>
+  </data>
+  <data name="Block_CartonNotClosed" xml:space="preserve">
+    <value>The carton is not closed yet: fill it or close it short first.</value>
+  </data>
+  <data name="Block_CartonOnAPallet" xml:space="preserve">
+    <value>The carton is already on a pallet.</value>
+  </data>
+  <data name="Block_CartonOnHold" xml:space="preserve">
+    <value>The carton contains held boards: it cannot go on a pallet.</value>
+  </data>
+  <data name="Block_PalletNotOpen" xml:space="preserve">
+    <value>The pallet is closed.</value>
+  </data>
+  <data name="Block_PalletFull" xml:space="preserve">
+    <value>The pallet is full.</value>
+  </data>
+  <data name="Packing_ModePack" xml:space="preserve">
+    <value>PACK</value>
+  </data>
+  <data name="Packing_ModePalletize" xml:space="preserve">
+    <value>PALLETIZE</value>
+  </data>
+  <data name="Packing_Carton" xml:space="preserve">
+    <value>Carton {0}</value>
+  </data>
+  <data name="Packing_Pallet" xml:space="preserve">
+    <value>Pallet {0}</value>
+  </data>
+  <data name="Packing_NewCarton" xml:space="preserve">
+    <value>New carton (opens with the next board)</value>
+  </data>
+  <data name="Packing_NewPallet" xml:space="preserve">
+    <value>New pallet (opens with the next carton)</value>
+  </data>
+  <data name="Packing_PromptSerial" xml:space="preserve">
+    <value>Scan a board</value>
+  </data>
+  <data name="Packing_PromptCarton" xml:space="preserve">
+    <value>Scan a carton label</value>
+  </data>
+  <data name="Packing_PromptReason" xml:space="preserve">
+    <value>Why is it short? Tap a reason.</value>
+  </data>
+  <data name="Packing_PromptBadge" xml:space="preserve">
+    <value>{0}: supervisor, scan your badge</value>
+  </data>
+  <data name="Packing_ClosePartialCarton" xml:space="preserve">
+    <value>Close short carton</value>
+  </data>
+  <data name="Packing_ClosePartialPallet" xml:space="preserve">
+    <value>Close short pallet</value>
+  </data>
+  <data name="Packing_CancelPartial" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Packing_ReasonWoEnd" xml:space="preserve">
+    <value>Work order end</value>
+  </data>
+  <data name="Packing_ReasonShiftEnd" xml:space="preserve">
+    <value>Shift end</value>
+  </data>
+  <data name="Packing_ReasonLineChange" xml:space="preserve">
+    <value>Model change on the line</value>
+  </data>
+  <data name="Packing_CartonLine" xml:space="preserve">
+    <value>{0}    {1} pcs  {2}</value>
+  </data>
+  <data name="Packing_Partial" xml:space="preserve">
+    <value>SHORT</value>
+  </data>
+  <data name="Packing_OnHold" xml:space="preserve">
+    <value>ON HOLD</value>
+  </data>
+  <data name="Packing_Packed" xml:space="preserve">
+    <value>PACKED</value>
+  </data>
+  <data name="Packing_AlreadyPacked" xml:space="preserve">
+    <value>ALREADY PACKED</value>
+  </data>
+  <data name="Packing_CartonFull" xml:space="preserve">
+    <value>CARTON FULL</value>
+  </data>
+  <data name="Packing_OnPallet" xml:space="preserve">
+    <value>ON PALLET</value>
+  </data>
+  <data name="Packing_AlreadyOnPallet" xml:space="preserve">
+    <value>ALREADY ON PALLET</value>
+  </data>
+  <data name="Packing_PalletFull" xml:space="preserve">
+    <value>PALLET FULL</value>
+  </data>
+  <data name="Packing_ClosedShortHeadline" xml:space="preserve">
+    <value>CLOSED SHORT</value>
+  </data>
+  <data name="Packing_CartonClosedShort" xml:space="preserve">
+    <value>{0} closed with {1} pcs, approved by {2}.</value>
+  </data>
+  <data name="Packing_PalletClosedShort" xml:space="preserve">
+    <value>{0} closed with {1} cartons, approved by {2}.</value>
+  </data>
+  <data name="Packing_LabelPrinted" xml:space="preserve">
+    <value>Label printed ({0}): stick it on.</value>
+  </data>
+  <data name="Packing_LabelFailed" xml:space="preserve">
+    <value>Label NOT saved: {0}</value>
+  </data>
+  <data name="Packing_LabelMissing" xml:space="preserve">
+    <value>Label NOT printed: print it again.</value>
+  </data>
 </root>

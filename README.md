@@ -16,7 +16,8 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 - **M4 (kết nối máy) xong:** MQTT (Mosquitto, topic UNS ISA-95) → ingest chống trùng, bộ đếm tích lũy, batch writer; Offline tách khỏi Down (heartbeat + LWT); SignalR realtime có throttle; Andon raise/ack/resolve + tự raise + leo thang; dashboard line WPF và nút Andon trên Kiosk; simulator vai máy + vai trạm tự động. Xem [mục Machine connectivity](#machine-connectivity-m4).
 - **M5 (OEE & downtime) xong:** A×P×Q ở một hàm thuần, khớp tính tay ca mẫu 79,8 %; snapshot theo giờ/ca có job bắt kịp và unique index; phân loại dừng (audit theo cột, đổi lý do thì tính lại ca); Pareto; cờ P > 100 % và `CounterMismatch`; dashboard OxyPlot, Excel, Line TV. Xem [mục OEE](#oee-m5).
 - **M6 (vật tư & truy xuất) xong:** nhập reel có nhãn ZPL, IQC theo supplier lot, nạp vật tư có kiểm tra đúng item/trạm/hạn/Hold và cảnh báo FIFO (supervisor duyệt có ghi vết); scan OK ghi `SerialComponents` và trừ lot trong cùng transaction (thiếu reel thì chặn scan); linh kiện thay ở Repair cũng vào hồ sơ; truy xuất ngược/xuôi bằng recursive CTE qua genealogy, xuất Excel, Hold lot; đo trên 5 triệu dòng (xuôi 12.500 serial ~100 ms). Xem [mục Material & traceability](#material--traceability-m6).
-- Các module tiếp theo (M3b → M7) làm theo [lộ trình](spec/spec-v2.md).
+- **M3b (đóng gói) đang làm:** đủ 6 bước (thùng/pallet, pack qua route check, nhãn, palletize, ship, Kiosk Packing), còn rà Definition of Done. Xem [mục Packing](#packing-m3b).
+- Module tiếp theo (M7) làm theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
 
@@ -146,7 +147,7 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | 8 | Ngắt mạng gateway–broker 60 s → đệm → gửi bù, không mất bộ đếm | M4b | chưa làm |
 | 9 | Máy Down → Andon → quá 3 phút chưa Ack thì leo thang → chọn lý do dừng | M4, M5 | xong (M4); Pareto lý do dừng ở M5 |
 | 10 | Nhiệt độ reflow trôi → SPC báo vi phạm → NCR, Hold serial liên quan | M7 | chưa làm |
-| 11 | Trạm Pack: serial vào thùng 10 pcs → nhãn thùng → pallet | M3b | chưa làm |
+| 11 | Trạm Pack: serial vào thùng 10 pcs → nhãn thùng → pallet | M3b | xong (Kiosk màn Packing) |
 | 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M3b, M7 | truy xuất xuôi + Hold lot xong (M6); thùng/pallet ở M3b, Hold serial/pallet ở M7 |
 | 13 | WO Completed → báo cáo sản lượng/FPY/OEE, xuất Excel | M2, M3, M5 | FPY/WIP xong (M3); OEE, Excel ở M5 |
 
@@ -362,6 +363,28 @@ Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md
 
 ![Truy xuất ngược](docs/images/m6-trace-backward.png)
 ![Truy xuất xuôi](docs/images/m6-trace-forward.png)
+
+## Packing (M3b)
+
+Trạm `L1-PACK-01` (Kiosk `--StationCode=L1-PACK-01`) có màn **Packing** thay cho màn scan:
+
+- **PACK**: scan board → board đi qua route check của bước PACK (chưa qua Test, Hold, khác WO đều bị chặn) và vào thùng đang mở của WO; màn hình hiện số to `7 / 10` và danh sách board. Thùng đủ (quy cách `PackingSpecs`, `PCB-A` 10/thùng) thì tự đóng: nền xanh dương, âm báo riêng, nhãn ZPL được ghi ra thư mục `LabelOutputFolder` (mặc định `%LOCALAPPDATA%\MiniMes\labels`, mỗi lần in một file).
+- **PALLETIZE**: scan nhãn thùng → lên pallet đang mở (`PCB-A` 20 thùng/pallet), đủ thì tự đóng và in nhãn pallet. Thùng còn mở, thùng có board Hold, nhãn không phải thùng: bị chặn.
+- **Close short carton / pallet** (thùng/pallet cuối WO): chọn lý do rồi supervisor **quẹt thẻ** vào ô scan (như duyệt FIFO ở M6).
+- Supervisor (API/Swagger): unpack serial, gỡ thùng khỏi pallet, **ship** pallet kèm số phiếu giao (pallet có serial Hold không ship được; đã ship thì không sửa được).
+
+| Endpoint | Nội dung |
+| --- | --- |
+| `POST /api/stations/{id}/pack` `{ serialNo }`, `…/palletize` `{ cartonNo }` | 200 + `result`/`reasonCode` như scan |
+| `GET /api/stations/{id}/packing-status` | Thùng đang mở, pallet đang mở |
+| `GET /api/cartons/{no}`, `GET /api/pallets/{no}` | Nội dung, `onHold` suy ra từ serial |
+| `POST /api/cartons/{no}/close-partial` `{ reason, supervisorBadge? }`, `…/unpack`, `…/remove-from-pallet` | Thùng lẻ, lấy serial ra, gỡ khỏi pallet |
+| `POST /api/pallets/{no}/close-partial`, `…/ship` `{ shipmentRef }` | Pallet lẻ, xuất hàng |
+| `POST /api/cartons/{no}/labels/print`, `/api/pallets/{no}/labels/print` | In lại nhãn (cần lý do) |
+
+![Packing: thùng đang xếp](docs/images/m3b-pack-progress.png)
+![Packing: thùng đầy](docs/images/m3b-carton-full.png)
+![Palletize](docs/images/m3b-palletize.png)
 
 ## Edge Gateway (M4b)
 

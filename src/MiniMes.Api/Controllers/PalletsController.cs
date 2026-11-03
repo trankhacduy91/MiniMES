@@ -23,10 +23,11 @@ public class PalletsController(ISender sender) : ControllerBase
     public Task<PalletDto> Get(string palletNo, CancellationToken ct) => sender.Send(new GetPalletQuery(palletNo), ct);
 
     // The short last pallet; its label prints (LabelZpl). 422 = not open, empty or full.
-    [Authorize(Roles = Supervisors)]
+    // At the kiosk an operator sends the supervisor's scanned badge, like the carton.
+    [Authorize(Roles = Packers)]
     [HttpPost("{palletNo}/close-partial")]
     public Task<PalletDto> ClosePartial(string palletNo, ClosePartialRequest r, CancellationToken ct)
-        => sender.Send(new ClosePartialPalletCommand(palletNo, r.Reason), ct);
+        => sender.Send(new ClosePartialPalletCommand(palletNo, r.Reason, r.SupervisorBadge), ct);
 
     // P8: 422 = not closed, held serials inside, already shipped; 409 = the pallet changed meanwhile.
     [Authorize(Roles = Supervisors)]

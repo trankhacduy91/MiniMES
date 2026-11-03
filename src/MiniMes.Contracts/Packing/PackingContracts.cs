@@ -33,8 +33,11 @@ public sealed record PrintPackingLabelRequest(string? Reason);
 public sealed record PackingLabelDto(string TargetKey, int PrintNo, string Zpl);
 
 // GET /api/stations/{id}/packing-status?woId=: what the Packing screen shows. woId defaults to the open session's WO.
+// OpenPallet (step 6, Palletize mode): the station's open pallet of the WO's item, cartons newest first.
 public sealed record PackingStatusDto(int StationId, int? WorkOrderId, string? WoNo, string? ItemCode, int? QtyPerCarton,
-    OpenCartonDto? OpenCarton);
+    OpenCartonDto? OpenCarton, int? CartonsPerPallet = null, OpenPalletDto? OpenPallet = null);
+
+public sealed record OpenPalletDto(string PalletNo, int CartonCount, IReadOnlyList<PalletCartonDto> Cartons);
 
 // Serials newest first (the board just scanned is on top).
 public sealed record OpenCartonDto(string CartonNo, int Qty, DateTime OpenedAt, IReadOnlyList<PackedSerialDto> Serials);
@@ -59,8 +62,9 @@ public sealed record PalletizeResponse(
     bool PalletClosed,
     string? LabelZpl = null);
 
-// POST /api/cartons/{no}/close-partial, /api/pallets/{no}/close-partial (Supervisor): the short last one, with why.
-public sealed record ClosePartialRequest(string Reason);
+// POST /api/cartons/{no}/close-partial, /api/pallets/{no}/close-partial: the short last one, with why. A supervisor
+// logged in sends no badge; at the kiosk (operator token) the supervisor scans a badge (like the FIFO exception, M6).
+public sealed record ClosePartialRequest(string Reason, string? SupervisorBadge = null);
 
 // POST /api/cartons/{no}/unpack (Supervisor): one serial out of the carton; the carton opens again to be filled up.
 public sealed record UnpackRequest(string SerialNo, string Reason);
@@ -76,7 +80,7 @@ public sealed record CartonDto(string CartonNo, string WoNo, string ItemCode, in
 
 // GET /api/pallets/{no}; also the answer of the pallet actions. TotalQty = boards on the pallet.
 public sealed record PalletDto(string PalletNo, string ItemCode, int CartonCount, int TotalQty, string Status, bool IsPartial,
-    bool OnHold, DateTime? ClosedAt, string? ShipmentRef, DateTime? ShippedAt, string? ShippedBy,
+    bool OnHold, DateTime? ClosedAt, string? ClosedBy, string? CloseReason, string? ShipmentRef, DateTime? ShippedAt, string? ShippedBy,
     IReadOnlyList<PalletCartonDto> Cartons, string? LabelZpl = null);
 
 public sealed record PalletCartonDto(string CartonNo, string WoNo, int Qty, bool IsPartial, bool OnHold);

@@ -9,6 +9,7 @@ public enum ScanState
     Ng,
     Blocked,
     Warning,   // M6: yellow, allowed after a supervisor confirms (FIFO)
+    Full,      // M3b: green with its own sound: the carton/pallet just closed, take it away and stick the label (spec 2.5)
 }
 
 // Sound of a result: operators wear ear protection and look at the board, so sound is the second channel.

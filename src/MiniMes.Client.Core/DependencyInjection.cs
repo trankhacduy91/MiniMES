@@ -111,6 +111,9 @@ public static class DependencyInjection
         services.AddTransient<ScanViewModel>();
         services.AddTransient<LoadMaterialViewModel>();   // M6 step 4
         services.AddTransient<RepairViewModel>();
+        services.AddTransient<IPackingApi, PackingApi>();           // M3b step 6
+        services.AddSingleton<ILabelPrinter, FolderLabelPrinter>();
+        services.AddTransient<PackingViewModel>();
         services.AddTransient<AndonPanelViewModel>();   // M4: part of the scan screen
         services.AddTransient<LineTvViewModel>();       // [v2] M5: --mode=linetv
         return services;

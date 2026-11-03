@@ -22,10 +22,14 @@ public sealed partial class Navigation(IServiceProvider services) : ObservableOb
 
     public void ShowHome() => Show(services.GetRequiredService<StationSelectViewModel>());
 
-    // The Repair station has its own screen (check-in + repair form); every other station scans.
-    public void ShowScan() => Show(services.GetRequiredService<IKioskContext>().Station?.Type == "Repair"
-        ? services.GetRequiredService<RepairViewModel>()
-        : services.GetRequiredService<ScanViewModel>());
+    // The Repair station has its own screen (check-in + repair form), so has the Pack station (M3b: boards into
+    // cartons, cartons onto pallets); every other station scans.
+    public void ShowScan() => Show(services.GetRequiredService<IKioskContext>().Station?.Type switch
+    {
+        "Repair" => services.GetRequiredService<RepairViewModel>(),
+        "Pack" => services.GetRequiredService<PackingViewModel>(),
+        _ => (object)services.GetRequiredService<ScanViewModel>(),
+    });
 
     public void ShowMaterial() => Show(services.GetRequiredService<LoadMaterialViewModel>());
 

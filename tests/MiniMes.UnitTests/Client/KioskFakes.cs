@@ -12,6 +12,7 @@ using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Factory;
 using MiniMes.Contracts.MasterData;
 using MiniMes.Contracts.Material;
+using MiniMes.Contracts.Packing;
 using MiniMes.Contracts.Planning;
 
 namespace MiniMes.UnitTests.Client;
@@ -160,6 +161,14 @@ internal sealed class FakeKiosk
 
     public LoadMaterialViewModel LoadMaterial() => new(Execution, Material, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time);
 
+    // M3b step 6: the Pack station's screen.
+    public FakePacking Packing { get; } = new();
+    public FakeLabelPrinter Printer { get; } = new();
+
+    public PackingViewModel PackingScreen() => new(Execution, Packing, Printer, Context, Navigation, new FakeKioskAuth(Tokens), Tokens, Feedback, Time);
+
+    public static readonly StationDto PackStation = new(4, LineId: 1, "L1-PACK-01", "Pack", "Pack", true, WorkCenterId: 4);
+
     public static readonly StationDto Test = new(3, LineId: 1, "L1-TEST-01", "Test", "Test", true, WorkCenterId: 3);
     public static readonly StationDto RepairStation = new(5, LineId: 1, "L1-REPAIR", "Repair", "Repair", true, WorkCenterId: null);
 
@@ -202,4 +211,61 @@ internal sealed class FakeStationMaterial : IMaterialApi
     public Task<IReadOnlyList<PendingIqcDto>> GetPendingIqcAsync(CancellationToken ct = default) => throw new NotImplementedException();
     public Task<IReadOnlyList<IqcRecordDto>> GetIqcRecordsAsync(int take, CancellationToken ct = default) => throw new NotImplementedException();
     public Task<IqcRecordDto> RecordIqcAsync(RecordIqcRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+}
+
+// M3b step 6: the packing endpoints; each answer is set by the test, the status is what the server would hold.
+internal sealed class FakePacking : IPackingApi
+{
+    public PackingStatusDto Status { get; set; } = new(4, 5, "WO-2610-00005", "PCB-A", 10, null, 20, null);
+    public Func<string, Task<PackResponse>> Pack { get; set; } = _ => throw new NotImplementedException();
+    public Func<string, Task<PalletizeResponse>> Palletize { get; set; } = _ => throw new NotImplementedException();
+    public Func<string, ClosePartialRequest, Task<CartonDto>> ClosePartialCarton { get; set; } = (_, _) => throw new NotImplementedException();
+    public Func<string, ClosePartialRequest, Task<PalletDto>> ClosePartialPallet { get; set; } = (_, _) => throw new NotImplementedException();
+    public List<string> Packed { get; } = [];
+    public List<string> Palletized { get; } = [];
+    public List<(string No, ClosePartialRequest Request)> Partials { get; } = [];
+    public int StatusLoads { get; private set; }
+
+    public Task<PackResponse> PackAsync(int stationId, string serialNo, CancellationToken ct = default)
+    {
+        Packed.Add(serialNo);
+        return Pack(serialNo);
+    }
+
+    public Task<PalletizeResponse> PalletizeAsync(int stationId, string cartonNo, CancellationToken ct = default)
+    {
+        Palletized.Add(cartonNo);
+        return Palletize(cartonNo);
+    }
+
+    public Task<PackingStatusDto> GetStatusAsync(int stationId, CancellationToken ct = default)
+    {
+        StatusLoads++;
+        return Task.FromResult(Status);
+    }
+
+    public Task<CartonDto> ClosePartialCartonAsync(string cartonNo, ClosePartialRequest request, CancellationToken ct = default)
+    {
+        Partials.Add((cartonNo, request));
+        return ClosePartialCarton(cartonNo, request);
+    }
+
+    public Task<PalletDto> ClosePartialPalletAsync(string palletNo, ClosePartialRequest request, CancellationToken ct = default)
+    {
+        Partials.Add((palletNo, request));
+        return ClosePartialPallet(palletNo, request);
+    }
+}
+
+internal sealed class FakeLabelPrinter : ILabelPrinter
+{
+    public List<(string Key, string Zpl)> Printed { get; } = [];
+    public Exception? Fails { get; set; }
+
+    public Task<string> PrintAsync(string labelKey, string zpl, CancellationToken ct = default)
+    {
+        if (Fails is not null) return Task.FromException<string>(Fails);
+        Printed.Add((labelKey, zpl));
+        return Task.FromResult($@"C:\labels\{labelKey}-1.zpl");
+    }
 }

@@ -1,7 +1,7 @@
 # M3b · Bước 5 — Palletize, đóng lẻ, unpack, ship: kiến thức cần nắm
 
 > Tài liệu học cho bước 5 của [module-03b](../../spec/module-03b-packing.md) (spec mục **1.3** từ 14:30, **1.4** P6–P10, **2.3**, **2.4**).
-> Bước trước: [M3b-step04](M3b-step04-packing-labels.md).
+> Bước trước: [M3b-step04](M3b-step04-packing-labels.md). Bước sau: [M3b-step06](M3b-step06-kiosk-packing.md).
 > Code: `src/MiniMes.Application/Packing/Palletize.cs`, `PackingActions.cs`, `PackingReads.cs`; `CartonsController`, `PalletsController`, `StationsController` (palletize).
 > Test: `tests/MiniMes.IntegrationTests/Packing/PalletTests.cs`.
 

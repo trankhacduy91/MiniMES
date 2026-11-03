@@ -1,4 +1,5 @@
 using FluentValidation;
+using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -7,6 +8,7 @@ using MiniMes.Contracts.Packing;
 using MiniMes.Domain.Common;
 using MiniMes.Domain.Packing;
 using MiniMes.Domain.Planning;
+using MiniMes.Domain.Users;
 
 namespace MiniMes.Application.Packing;
 
@@ -34,12 +36,21 @@ internal static class PackingActionSupport
 
     public static string Supervisor(this ICurrentUser user)
         => user.EmployeeCode ?? throw new InvalidOperationException("A packing action needs a logged-in user.");
+
+    // Partial close (P6): a supervisor/admin logged in decides it themselves; at the kiosk an operator calls with a
+    // supervisor's badge (user decision, M3b step 6). A badge sent always counts, whoever calls.
+    public static async Task<string> ApproverAsync(this IAppDbContext db, ICurrentUser user, string? badge, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(badge)) return await db.VerifyAsync(badge, ct);
+        if (user.Roles.Any(r => r is nameof(Role.Supervisor) or nameof(Role.Admin))) return user.Supervisor();
+        throw new ValidationException([new ValidationFailure(SupervisorBadges.FieldName, "A partial close needs a supervisor's badge.")]);
+    }
 }
 
 
 // ---------- POST /api/cartons/{no}/close-partial (P6) ----------
 
-public sealed record ClosePartialCartonCommand(string CartonNo, string Reason) : IRequest<CartonDto>;
+public sealed record ClosePartialCartonCommand(string CartonNo, string Reason, string? SupervisorBadge = null) : IRequest<CartonDto>;
 
 public sealed class ClosePartialCartonValidator : AbstractValidator<ClosePartialCartonCommand>
 {
@@ -53,7 +64,8 @@ public sealed class ClosePartialCartonHandler(IAppDbContext db, PackingLabels la
     {
         var carton = await db.TrackedCartonAsync(cmd.CartonNo, ct);
         var spec = await db.SpecAsync(carton.ItemId, ct);
-        carton.ClosePartial(cmd.Reason, user.Supervisor(), spec.QtyPerCarton, time.GetUtcNow().UtcDateTime);   // 422
+        var by = await db.ApproverAsync(user, cmd.SupervisorBadge, ct);   // 400 without a valid badge at the kiosk
+        carton.ClosePartial(cmd.Reason, by, spec.QtyPerCarton, time.GetUtcNow().UtcDateTime);   // 422
         await db.SaveChangesAsync(ct);   // a pack in between -> 409, look again
 
         // After the save, like the automatic close (spec 2.2 trap 2); a failed label does not reopen the carton.
@@ -129,7 +141,7 @@ public sealed class RemoveCartonFromPalletHandler(IAppDbContext db) : IRequestHa
 
 // ---------- POST /api/pallets/{no}/close-partial (user decision step 2) ----------
 
-public sealed record ClosePartialPalletCommand(string PalletNo, string Reason) : IRequest<PalletDto>;
+public sealed record ClosePartialPalletCommand(string PalletNo, string Reason, string? SupervisorBadge = null) : IRequest<PalletDto>;
 
 public sealed class ClosePartialPalletValidator : AbstractValidator<ClosePartialPalletCommand>
 {
@@ -143,7 +155,8 @@ public sealed class ClosePartialPalletHandler(IAppDbContext db, PackingLabels la
     {
         var pallet = await db.TrackedPalletAsync(cmd.PalletNo, ct);
         var spec = await db.SpecAsync(pallet.ItemId, ct);
-        pallet.ClosePartial(cmd.Reason, user.Supervisor(), spec.CartonsPerPallet, time.GetUtcNow().UtcDateTime);
+        var by = await db.ApproverAsync(user, cmd.SupervisorBadge, ct);
+        pallet.ClosePartial(cmd.Reason, by, spec.CartonsPerPallet, time.GetUtcNow().UtcDateTime);
         await db.SaveChangesAsync(ct);
 
         string? zpl = null;

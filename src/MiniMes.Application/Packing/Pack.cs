@@ -59,6 +59,9 @@ public sealed class PackHandler(IAppDbContext db, ScanExecutor scans, ISequenceN
 
     private async Task<PackResponse> PackAsync(IDbContextTransaction tx, int stationId, string serialNo, CancellationToken ct)
     {
+        // Spec 2.5: one scan box for serials and carton/pallet labels; in Pack mode a label is told apart by its shape.
+        if (PackingNumberFormat.IsCartonNo(serialNo) || PackingNumberFormat.IsPalletNo(serialNo))
+            return Blocked("NotASerial", $"{serialNo} is a {(PackingNumberFormat.IsCartonNo(serialNo) ? "carton" : "pallet")} label, not a serial.", 0);
         var board = await (from s in db.Serials.AsNoTracking()
                            join i in db.Items on s.ItemId equals i.Id
                            where s.SerialNo == serialNo

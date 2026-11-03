@@ -106,7 +106,7 @@ public sealed class LoadMaterialHandler(IAppDbContext db, ICurrentUser user, Tim
 
         var verdict = MaterialVerifier.Verify(lot, requirements, seqs, candidates, now);
         var supervisor = verdict.Outcome == VerifyOutcome.Warning && cmd.SupervisorBadge is { } badge
-            ? await SupervisorAsync(badge, ct) : null;
+            ? await db.VerifyAsync(badge, ct) : null;   // R5: wrong badge = 400 on the field, the warning stands
 
         db.MaterialVerificationLogs.Add(new MaterialVerificationLog(station.Id, lotNo, lot?.Id, lot?.ItemId, woId, verdict.Outcome,
             verdict.Code, verdict.SuggestedLotNo, by, now, supervisor, supervisor is null ? null : cmd.OverrideReason!.Trim()));
@@ -138,15 +138,6 @@ public sealed class LoadMaterialHandler(IAppDbContext db, ICurrentUser user, Tim
             await LoadedAsync(station, lot.ItemId, ct));
     }
 
-    // R5: the badge must be an active Supervisor. Wrong badge = 400 on the field, the warning stands.
-    private async Task<string> SupervisorAsync(string badge, CancellationToken ct)
-    {
-        var code = badge.Trim();
-        return await db.Users.Where(u => u.EmployeeCode == code && u.IsActive && u.Roles.Any(r => r.Role == Role.Supervisor))
-                   .Select(u => u.EmployeeCode).SingleOrDefaultAsync(ct)   // as stored (the column is case-insensitive)
-               ?? throw new ValidationException([new ValidationFailure(nameof(LoadMaterialCommand.SupervisorBadge),
-                   $"'{code}' is not an active supervisor's badge.")]);
-    }
 
     private async Task<StationMaterialDto> LoadedAsync(ScanContextReader.StationRow station, int itemId, CancellationToken ct)
         => (await db.ChecklistAsync(station, ct)).Single(r => r.ItemId == itemId);

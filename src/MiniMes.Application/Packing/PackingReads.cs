@@ -60,7 +60,7 @@ internal static class PackingReads
                        select new
                        {
                            pallet.Id, pallet.PalletNo, ItemCode = i.Code, pallet.CartonCount, pallet.Status, pallet.IsPartial,
-                           pallet.ClosedAt, pallet.ShipmentRef, pallet.ShippedAt, pallet.ShippedBy,
+                           pallet.ClosedAt, pallet.ClosedBy, pallet.CloseReason, pallet.ShipmentRef, pallet.ShippedAt, pallet.ShippedBy,
                        }).SingleOrDefaultAsync(ct)
                 ?? throw new KeyNotFoundException($"Pallet {key} not found.");
         var cartons = await (from c in db.Cartons.AsNoTracking()
@@ -70,7 +70,7 @@ internal static class PackingReads
                              select new { c.Id, c.CartonNo, w.WoNo, c.Qty, c.IsPartial }).ToListAsync(ct);
         var held = await db.HeldCartonIdsAsync(cartons.Select(c => c.Id).ToList(), ct);
         return new PalletDto(p.PalletNo, p.ItemCode, p.CartonCount, cartons.Sum(c => c.Qty), p.Status.ToString(), p.IsPartial,
-            held.Count > 0, p.ClosedAt, p.ShipmentRef, p.ShippedAt, p.ShippedBy,
+            held.Count > 0, p.ClosedAt, p.ClosedBy, p.CloseReason, p.ShipmentRef, p.ShippedAt, p.ShippedBy,
             cartons.Select(c => new PalletCartonDto(c.CartonNo, c.WoNo, c.Qty, c.IsPartial, held.Contains(c.Id))).ToList(), labelZpl);
     }
 }

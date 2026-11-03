@@ -92,12 +92,16 @@ public class PalletTests(ApiFixture api)
         var supervisor = await api.LoginAsync("sup01");
         var url = $"/api/cartons/{last}/close-partial";
 
-        var byOperator = await op.PostAsJsonAsync(url, new ClosePartialRequest("WO end"));
+        var byOperator = await op.PostAsJsonAsync(url, new ClosePartialRequest("WO end"));   // kiosk without a badge
+        var operatorBadge = await op.PostAsJsonAsync(url, new ClosePartialRequest("WO end", "EMP00123"));
         var noReason = await supervisor.PostAsJsonAsync(url, new ClosePartialRequest(""));
         var closed = await OkAsync<CartonDto>(supervisor.PostAsJsonAsync(url, new ClosePartialRequest("WO end, 7 pcs")));
         var again = await supervisor.PostAsJsonAsync(url, new ClosePartialRequest("again"));
 
-        Assert.Equal(HttpStatusCode.Forbidden, byOperator.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, byOperator.StatusCode);
+        Assert.Contains("\"SupervisorBadge\"", await byOperator.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, operatorBadge.StatusCode);
+        Assert.Contains("not an active supervisor", await operatorBadge.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.BadRequest, noReason.StatusCode);
         Assert.Equal(("Closed", 7, true, "sup01", "WO end, 7 pcs"), (closed.Status, closed.Qty, closed.IsPartial, closed.ClosedBy, closed.CloseReason));
         Assert.Contains("PARTIAL", closed.LabelZpl);
@@ -264,5 +268,44 @@ public class PalletTests(ApiFixture api)
                 .Select(p => p.CartonCount).ToListAsync());
             Assert.Equal([1, 20], counts.Order());
         }
+    }
+
+    // Step 6: at the kiosk the operator's token closes short with the supervisor's scanned badge (like the M6 FIFO
+    // exception); ClosedBy is the supervisor. The Packing screen reads the open pallet from packing-status.
+    [Fact]
+    public async Task Kiosk_closes_short_with_a_supervisors_badge_and_sees_the_open_pallet()
+    {
+        await FreshPalletAsync();
+        var (woId, _, cartons, op) = await PackedAsync(23);   // two full cartons, one open with 3
+        await PalletizeAsync(op, cartons[0]);
+
+        var carton = await OkAsync<CartonDto>(op.PostAsJsonAsync($"/api/cartons/{cartons[2]}/close-partial", new ClosePartialRequest("Work order end", " sup01 ")));
+        var status = await op.GetFromJsonAsync<PackingStatusDto>($"/api/stations/{await scan.StationIdAsync(PackTests.Pack)}/packing-status?woId={woId}");
+
+        Assert.Equal(("Closed", true, "sup01", "Work order end"), (carton.Status, carton.IsPartial, carton.ClosedBy, carton.CloseReason));
+        Assert.NotNull(carton.LabelZpl);
+        Assert.Null(status!.OpenCarton);
+        Assert.Equal((20, 1), (status.CartonsPerPallet!.Value, status.OpenPallet!.CartonCount));
+        Assert.Equal([cartons[0]], status.OpenPallet.Cartons.Select(c => c.CartonNo));
+
+        await PalletizeAsync(op, cartons[2]);
+        var pallet = await OkAsync<PalletDto>(op.PostAsJsonAsync($"/api/pallets/{status.OpenPallet.PalletNo}/close-partial", new ClosePartialRequest("Work order end", "sup01")));
+        Assert.Equal(("Closed", true, 2, "sup01"), (pallet.Status, pallet.IsPartial, pallet.CartonCount, pallet.ClosedBy));
+    }
+
+    // Spec 2.5: in Pack mode a carton or pallet label is not a board: said in words, nothing written.
+    [Fact]
+    public async Task Carton_label_scanned_in_pack_mode_is_not_a_board()
+    {
+        var (woId, _, cartons, op) = await PackedAsync(10);
+
+        var carton = await pack.PackAsync(op, cartons[0]);
+        var pallet = await pack.PackAsync(op, "P261103000004");
+
+        Assert.Equal(("Blocked", "NotASerial"), (carton.Result, carton.ReasonCode));
+        Assert.Contains("carton label", carton.Message);
+        Assert.Equal(("Blocked", "NotASerial"), (pallet.Result, pallet.ReasonCode));
+        Assert.Contains("pallet label", pallet.Message);
+        Assert.Equal(1, await api.WithDbAsync(db => db.Cartons.CountAsync(c => c.WorkOrderId == woId)));
     }
 }
