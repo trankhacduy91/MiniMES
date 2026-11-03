@@ -222,3 +222,13 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
   - DB dùng chung giữa các test là trạng thái ẩn. Truy vấn trong test phải dùng đúng khóa duy nhất, không dùng "cái tên chắc chỉ có một".
   - Chạy cả bộ test, không chỉ filter của bước đang làm.
   - Đỏ lặp lại y hệt thì không phải flaky; đừng vội gán nhãn đó.
+
+## 2026-11-03 — σ của ba số bằng nhau không bằng 0 (M7 bước 3)
+
+- **Triệu chứng (bắt được trước khi xảy ra):** trường hợp biên "σ = 0" của spec chỉ đúng trên giấy. Với `double`, `[3.3, 3.3, 3.3]` có tổng chia 3 bằng `3.2999999999999994`, nên σ ≈ 5,4e-16 chứ không phải 0. `CalcCapability` khi đó không vào nhánh "σ = 0 → null" mà trả Cpk ≈ 10^14: một quy trình "hoàn hảo" trên báo cáo.
+- **Cách tìm:** viết test σ = 0 với các giá trị thật của dự án, không phải `0` hay `1`. Một script nhỏ dò xem giá trị nào bị lệch khi cộng rồi chia: 3,3 × 3, 3,31 × 7, 245,1 × 7 đều lệch.
+- **Cách sửa:** `Compute` kiểm "mọi giá trị bằng giá trị đầu" trước, nếu đúng thì trả σ = 0 và mean là chính giá trị đó. Thử đột biến bỏ nhánh này thì 3 test đỏ.
+- **Bài học:**
+  - So sánh `== 0` trên kết quả tính bằng `double` gần như không bao giờ đúng như ý.
+  - Trường hợp biên phải được nhận ra từ dữ liệu đầu vào (mọi giá trị bằng nhau), không phải từ kết quả đã tính.
+  - Test biên nên dùng số thật của nghiệp vụ: số tròn như `1.0` hay `0.5` biểu diễn chính xác trong nhị phân nên che mất lỗi.
