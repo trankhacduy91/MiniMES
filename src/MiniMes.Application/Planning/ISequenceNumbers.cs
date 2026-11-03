@@ -11,4 +11,7 @@ public interface ISequenceNumbers
 
     // M6: one number per received reel.
     Task<IReadOnlyList<long>> NextLotNumbersAsync(int count, CancellationToken ct);
+
+    // M3b: one number per new carton.
+    Task<long> NextCartonNumberAsync(CancellationToken ct);
 }

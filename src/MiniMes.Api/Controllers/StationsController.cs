@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniMes.Application.Execution;
 using MiniMes.Application.Factory;
+using MiniMes.Application.Packing;
 using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Factory;
+using MiniMes.Contracts.Packing;
 using MiniMes.Domain.Users;
 
 namespace MiniMes.Api.Controllers;
@@ -64,6 +66,17 @@ public class StationsController(ISender sender) : ControllerBase
         await sender.Send(new CloseStationSessionCommand(id, sessionId), ct);
         return NoContent();
     }
+
+    // M3b: scan PACK + put the board in the station's open carton, one transaction. Blocked is 200 + reasonCode;
+    // 404 = no such active station; 422 = not a Pack station or no packing spec for the item.
+    [Authorize(Roles = $"{nameof(Role.Operator)},{nameof(Role.Admin)}")]
+    [HttpPost("{id:int}/pack")]
+    public Task<PackResponse> Pack(int id, PackRequest r, CancellationToken ct) => sender.Send(new PackCommand(id, r.SerialNo), ct);
+
+    // M3b: the open carton of (station, WO) and its serials; woId defaults to the open session's WO.
+    [HttpGet("{id:int}/packing-status")]
+    public Task<PackingStatusDto> PackingStatus(int id, [FromQuery] int? woId, CancellationToken ct)
+        => sender.Send(new GetPackingStatusQuery(id, woId), ct);
 
     // M3: boards waiting at this station (next step here), FIFO by serial number. For the machine simulator (M4),
     // which logs in and opens a session like an operator first. Empty without an open session.
