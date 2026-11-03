@@ -9,6 +9,7 @@ using MiniMes.Domain.Execution;
 using MiniMes.Domain.Factory;
 using MiniMes.Domain.Machines;
 using MiniMes.Domain.Material;
+using MiniMes.Domain.Packing;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.MasterData.DefectCodes;
@@ -69,6 +70,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LotGenealogy> LotGenealogy => Set<LotGenealogy>();
     public DbSet<MaterialVerificationLog> MaterialVerificationLogs => Set<MaterialVerificationLog>();
     public DbSet<IqcRecord> IqcRecords => Set<IqcRecord>();
+    public DbSet<PackingSpec> PackingSpecs => Set<PackingSpec>();
+    public DbSet<Carton> Cartons => Set<Carton>();
+    public DbSet<CartonSerial> CartonSerials => Set<CartonSerial>();
+    public DbSet<Pallet> Pallets => Set<Pallet>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
         => Database.BeginTransactionAsync(ct);
@@ -78,6 +83,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         WorkOrderConfiguration.AddSequences(modelBuilder);
         MaterialLotConfiguration.AddSequences(modelBuilder);
+        CartonConfiguration.AddSequences(modelBuilder);
     }
 
     // The one place that turns save conflicts into 409: a stale RowVersion (lost update), or a unique-index

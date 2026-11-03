@@ -7,6 +7,7 @@ using MiniMes.Domain.Execution;
 using MiniMes.Domain.Factory;
 using MiniMes.Domain.Machines;
 using MiniMes.Domain.Material;
+using MiniMes.Domain.Packing;
 using MiniMes.Domain.MasterData.Boms;
 using MiniMes.Domain.MasterData.Calendar;
 using MiniMes.Domain.MasterData.DefectCodes;
@@ -74,6 +75,12 @@ public interface IAppDbContext
     DbSet<LotGenealogy> LotGenealogy { get; }
     DbSet<MaterialVerificationLog> MaterialVerificationLogs { get; }
     DbSet<IqcRecord> IqcRecords { get; }
+
+    // M3b: packing (serial -> carton -> pallet)
+    DbSet<PackingSpec> PackingSpecs { get; }
+    DbSet<Carton> Cartons { get; }
+    DbSet<CartonSerial> CartonSerials { get; }
+    DbSet<Pallet> Pallets { get; }
 
     // A unique-index violation (two requests racing past the "already exists" check) comes out as
     // ConflictException (409), so handlers never see provider-specific SQL errors.

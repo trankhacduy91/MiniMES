@@ -8,6 +8,7 @@ using MiniMes.Domain.MasterData.Downtime;
 using MiniMes.Domain.MasterData.Equipment;
 using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Routings;
+using MiniMes.Domain.Packing;
 
 namespace MiniMes.Infrastructure.Persistence.Seed;
 
@@ -37,6 +38,24 @@ public class MasterDataSeeder(AppDbContext db, TimeProvider time)
         await SeedCatalogsAsync(ct);
         await SeedMachineTagsAsync(ct);
         await SeedAndonEscalationRulesAsync(ct);
+        await SeedPackingSpecsAsync(ct);
+    }
+
+    // M3b step 1: 10 boards per carton, 20 cartons per pallet. PCB-B comes from the M1 import file, so its spec is added
+    // on the next start after the import (idempotent like the rest).
+    private static readonly (string Item, int QtyPerCarton, int CartonsPerPallet)[] PackingSpecs =
+    [
+        ("PCB-A", 10, 20),
+        ("PCB-B", 10, 20),
+    ];
+
+    private async Task SeedPackingSpecsAsync(CancellationToken ct)
+    {
+        var items = await ItemIdsAsync(ct);
+        var existing = await db.PackingSpecs.Select(s => s.ItemId).ToListAsync(ct);
+        foreach (var s in PackingSpecs.Where(s => items.ContainsKey(s.Item) && !existing.Contains(items[s.Item])))
+            db.PackingSpecs.Add(new PackingSpec(items[s.Item], s.QtyPerCarton, s.CartonsPerPallet));
+        await db.SaveChangesAsync(ct);
     }
 
     // [v2] M4 2.9b: who is told when a call stays Raised. Level 0 = at raise (the line dashboard). Admin stands in for

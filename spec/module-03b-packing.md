@@ -127,6 +127,8 @@ Nhân vật: **Hoa** (operator trạm Pack Line 1), **Tuấn** (Supervisor), **M
 | `CartonSerial` | Id (bigint), CartonNo, SerialNo, PackedAt, PackedBy, UnpackedAt, UnpackedBy, UnpackReason | Insert khi pack; unpack chỉ điền 3 cột cuối |
 | `Pallet` | PalletNo (PK), ItemId, CartonCount, Status (`Open`/`Closed`/`Shipped`), ClosedAt, ShippedAt, ShippedBy, ShipmentRef | |
 
+**Đã chốt khi làm bước 1 (user duyệt, khác bảng trên):** khóa là `Id` như M6 (`Carton.Id int` + `CartonNo` unique, `Pallet.Id int` + `PalletNo` unique); `CartonSerial(CartonId, SerialId)` thay cho `(CartonNo, SerialNo)`; `Carton.PalletId` thay cho `PalletNo`. Filtered unique index vì vậy là `CartonSerial(SerialId) WHERE UnpackedAt IS NULL`. `Pallet` thêm `StationId`, `OpenedAt` và unique `(StationId, ItemId) WHERE Status = 'Open'` (pallet được xếp ở trạm Pack chế độ Palletize; cùng ý với P4).
+
 ```csharp
 // CartonSerialConfiguration
 b.HasIndex(x => x.SerialNo)
@@ -257,10 +259,11 @@ scan PCBA…011 ─────▶  POST /stations/{id}/pack  ──────
 
 Tổng khoảng 10 giờ. Commit sau mỗi bước.
 
-- [ ] **Bước 1 — Entity, migration, seed packing spec (1,5 giờ)**
+- [x] **Bước 1 — Entity, migration, seed packing spec (1,5 giờ)**
   - Việc cần làm: entity `PackingSpec`, `Carton`, `CartonSerial`, `Pallet`; enum lưu chuỗi; filtered unique index như 2.1; SEQUENCE `CartonSeq`, `PalletSeq`; seed `PackingSpec` cho `PCB-A` (10 / 20) và `PCB-B`; thêm station `L1-PACK-01` nếu M0 chưa có. Đăng ký `PackingSpec` vào audit M0.
   - File: `src/MiniMes.Domain/Packing/*.cs`, `src/MiniMes.Infrastructure/Persistence/Configurations/PackingConfigurations.cs`, migration `AddPacking`.
   - Kiểm tra: insert tay 2 dòng `CartonSerial` cùng serial chưa unpack → lỗi unique; điền `UnpackedAt` cho dòng đầu rồi insert lại → được.
+  - Đã làm (03/11/2026): `Domain/Packing/`: `PackingSpec` (`IAudited`, khóa `ItemId`, 1–1.000 con/thùng, 1–200 thùng/pallet, `Change`), `Carton` (+ `CartonStatus`), `CartonSerial`, `Pallet` (+ `PalletStatus`); quy tắc P2–P9 để bước 2. `Persistence/Configurations/PackingConfigurations.cs`: khóa `Id` (xem ghi chú mục 2.1), mã thùng/pallet `varchar(20)` unique, trạng thái lưu chuỗi, `RowVersion` cho `Carton`/`Pallet`, CHECK `Qty >= 0`/`CartonCount >= 0`/spec dương, FK tới WO, Item, Station, Serial; filtered unique `UX_CartonSerials_LivePerSerial` (P3), `UX_Cartons_OpenPerStationWo` (P4), `UX_Pallets_OpenPerStationItem`; index `(CartonId, UnpackedAt) INCLUDE (SerialId)`, `PalletId`, `(WorkOrderId, Status)`; SEQUENCE `CartonSeq`, `PalletSeq`. Migration `M3b_Packing` (Down/Up chạy thử trên DB dev). Seed (`MasterDataSeeder`): `PCB-A` 10/20; `PCB-B` 10/20 khi item đã có (PCB-B đến từ file import M1, nên spec được thêm ở lần khởi động sau khi import). Trạm `L1-PACK-01` đã có từ M0. Test: integration `Packing/PackingSchemaTests.cs` (7: serial ở hai thùng còn hiệu lực → 409, unpack dòng đầu rồi đóng lại → được và giữ lịch sử; hai thùng Open cùng (trạm, WO) → 409, thùng Closed không tính; hai pallet Open cùng (trạm, item) → 409; CHECK `Qty`/spec; seed `PCB-A` 10/20 và hai SEQUENCE; đổi `PackingSpec` → `AuditLog` (dòng `*` khi thêm, đúng một dòng cột đổi)), unit `Packing/PackingEntityTests.cs` (7).
 
 - [ ] **Bước 2 — Domain rules + unit test (1,5 giờ)**
   - Việc cần làm: `Carton.EnsureCanAdd(serial)` (P2), `Carton.ClosePartial(reason, user)` (P6), `Carton.Unpack(...)` (P9), `Pallet.EnsureCanAdd(carton, isOnHold)` (P7), `Pallet.Ship(ref, hasHold)` (P8); `CartonNumberFormat`.

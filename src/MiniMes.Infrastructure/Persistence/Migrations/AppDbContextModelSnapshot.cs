@@ -22,7 +22,11 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("CartonSeq");
+
             modelBuilder.HasSequence("LotSeq");
+
+            modelBuilder.HasSequence("PalletSeq");
 
             modelBuilder.HasSequence("SerialSeq");
 
@@ -1653,6 +1657,227 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.ToTable("OeeSnapshots", (string)null);
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Packing.Carton", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CartonNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("CloseReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClosedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<bool>("IsPartial")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("PalletId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Qty")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("StationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CartonNo")
+                        .IsUnique();
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("PalletId");
+
+                    b.HasIndex("StationId", "WorkOrderId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Cartons_OpenPerStationWo")
+                        .HasFilter("[Status] = 'Open'");
+
+                    b.HasIndex("WorkOrderId", "Status");
+
+                    b.ToTable("Cartons", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Cartons_Qty", "[Qty] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Packing.CartonSerial", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("CartonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PackedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PackedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<long>("SerialId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("UnpackReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UnpackedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UnpackedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SerialId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CartonSerials_LivePerSerial")
+                        .HasFilter("[UnpackedAt] IS NULL");
+
+                    b.HasIndex("CartonId", "UnpackedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CartonId", "UnpackedAt"), new[] { "SerialId" });
+
+                    b.ToTable("CartonSerials", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Packing.PackingSpec", b =>
+                {
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CartonsPerPallet")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QtyPerCarton")
+                        .HasColumnType("int");
+
+                    b.HasKey("ItemId");
+
+                    b.ToTable("PackingSpecs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PackingSpecs_Positive", "[QtyPerCarton] > 0 AND [CartonsPerPallet] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Packing.Pallet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CartonCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PalletNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("ShipmentRef")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("ShippedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ShippedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("StationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("PalletNo")
+                        .IsUnique();
+
+                    b.HasIndex("StationId", "ItemId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Pallets_OpenPerStationItem")
+                        .HasFilter("[Status] = 'Open'");
+
+                    b.ToTable("Pallets", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Pallets_CartonCount", "[CartonCount] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Planning.LabelPrintLog", b =>
                 {
                     b.Property<long>("Id")
@@ -2295,6 +2520,71 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.HasOne("MiniMes.Domain.MasterData.Calendar.Shift", null)
                         .WithMany()
                         .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Packing.Carton", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Packing.Pallet", null)
+                        .WithMany()
+                        .HasForeignKey("PalletId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MiniMes.Domain.Factory.Station", null)
+                        .WithMany()
+                        .HasForeignKey("StationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.WorkOrder", null)
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Packing.CartonSerial", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Packing.Carton", null)
+                        .WithMany()
+                        .HasForeignKey("CartonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.Serial", null)
+                        .WithMany()
+                        .HasForeignKey("SerialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Packing.PackingSpec", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Items.Item", null)
+                        .WithOne()
+                        .HasForeignKey("MiniMes.Domain.Packing.PackingSpec", "ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Packing.Pallet", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Factory.Station", null)
+                        .WithMany()
+                        .HasForeignKey("StationId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
