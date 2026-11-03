@@ -232,3 +232,4 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
   - So sánh `== 0` trên kết quả tính bằng `double` gần như không bao giờ đúng như ý.
   - Trường hợp biên phải được nhận ra từ dữ liệu đầu vào (mọi giá trị bằng nhau), không phải từ kết quả đã tính.
   - Test biên nên dùng số thật của nghiệp vụ: số tròn như `1.0` hay `0.5` biểu diễn chính xác trong nhị phân nên che mất lỗi.
+- **Gặp lại ở bước 4:** điểm 3,422 V nằm **đúng trên** UCL (3,302 + 3 × 0,040), nhưng `(3.422 − 3.302) / 0.040` ra `3.0000000000000027`, nên WE1 sẽ báo một điểm không vượt. Sửa bằng cách làm tròn z tới 9 chữ số trước khi so (số đo lưu `decimal(18,6)`, nên không mất thông tin thật). Có test riêng cho điểm nằm trên đường zone; bỏ làm tròn thì test đó đỏ.
