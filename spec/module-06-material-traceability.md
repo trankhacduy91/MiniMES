@@ -909,19 +909,19 @@ Kết quả mong đợi (đây chính là test oracle): xuôi từ `L-CAP-A` = 1
 
 ### 5.1 Definition of Done
 
-- [ ] Kịch bản demo (spec v2 bước 3–4) chạy đúng: nhập 3 reel → `PendingIqc` → nạp bị chặn → IQC đạt → nạp lên máy, scan xác nhận đúng vật tư.
-- [ ] **[v2]** IQC áp cho cả supplier lot trong một transaction, `IqcRecord` insert-only; lot `IqcRejected` không nạp được, không có override.
-- [ ] Kịch bản demo (spec v2 bước 12) chạy đúng: reel lỗi → truy xuất xuôi → danh sách serial khớp dữ liệu seed, **[v2]** có thùng/pallet/đã giao → Hold lot (Hold serial, pallet khi có M7).
-- [ ] Nạp reel sai item, sai trạm, hết hạn, đang Hold: bị chặn, có dòng trong `MaterialVerificationLog`.
-- [ ] Nạp lot mới khi còn lot cũ: cảnh báo vàng; supervisor override có ghi `FifoOverrideBy` và lý do.
-- [ ] Scan OK ở trạm tiêu thụ vật tư sinh đúng số dòng `SerialComponent`, trừ đúng `RemainingQty`; scan lặp không ghi trùng; chưa nạp lot thì scan bị chặn.
-- [ ] Scan và ghi tiêu hao nằm trong cùng transaction (test rollback).
-- [ ] Truy xuất xuôi và ngược đúng toàn bộ test oracle ở mục 3, gồm genealogy 2 cấp và điểm bắt đầu là supplier lot.
-- [ ] Unit test `MaterialVerifier`/`FifoAdvisor` ≥ 10 case; integration test Testcontainers cho consumption và truy xuất.
-- [ ] Truy xuất < 1 giây với 5 triệu dòng `SerialComponent`; số đo trước/sau index trong `docs/perf.md`.
-- [ ] WPF: cây truy xuất ngược lazy-load, danh sách xuôi nhóm theo Location có **[v2]** Export Excel, màn IQC, chuỗi UI trong `Strings.resx`.
-- [ ] `SerialComponent` và `MaterialVerificationLog` không có đường code nào UPDATE/DELETE.
-- [ ] Viết vào `docs/incidents.md` ít nhất một "sự cố" gặp khi làm module (ví dụ nhầm hướng Parent/Child, lỗi bọc CTE của EF) để kể khi phỏng vấn.
+- [x] Kịch bản demo (spec v2 bước 3–4) chạy đúng: nhập 3 reel → `PendingIqc` → nạp bị chặn → IQC đạt → nạp lên máy, scan xác nhận đúng vật tư. *(`Material/MaterialDemoTests.cs`: cả kịch bản liền một mạch qua HTTP với `wh01`, `qc01`, operator; chạy thật từng phần ở bước 2–5.)*
+- [x] **[v2]** IQC áp cho cả supplier lot trong một transaction, `IqcRecord` insert-only; lot `IqcRejected` không nạp được, không có override. *(`IqcTests` 9; trigger `TR_IqcRecords_BlockModify`; `MaterialVerifier` `LotNotIqcPassed` không có Warning.)*
+- [x] Kịch bản demo (spec v2 bước 12) chạy đúng: reel lỗi → truy xuất xuôi → danh sách serial khớp dữ liệu seed, **[v2]** có thùng/pallet/đã giao → Hold lot (Hold serial, pallet khi có M7). *(Phần M6: `TraceApiTests` demo bước 12 + chạy thật bước 8. **Còn lại:** cột/nhóm thùng, pallet, đã giao làm ở M3b (`LEFT JOIN` ở cuối truy vấn xuôi, ghi ở bước 7); Hold serial/pallet ở M7.)*
+- [x] Nạp reel sai item, sai trạm, hết hạn, đang Hold: bị chặn, có dòng trong `MaterialVerificationLog`. *(`LoadMaterialTests.Wrong_reels_are_refused_and_logged`: 6 ca; ca "on hold" thêm khi rà DoD.)*
+- [x] Nạp lot mới khi còn lot cũ: cảnh báo vàng; supervisor override có ghi `FifoOverrideBy` và lý do. *(`Newer_reel_needs_a_supervisor_when_an_older_one_has_stock`; chạy thật bước 4.)*
+- [x] Scan OK ở trạm tiêu thụ vật tư sinh đúng số dòng `SerialComponent`, trừ đúng `RemainingQty`; scan lặp không ghi trùng; chưa nạp lot thì scan bị chặn. *(`ConsumptionTests` (a)–(f).)*
+- [x] Scan và ghi tiêu hao nằm trong cùng transaction (test rollback). *(`ConsumptionTests` (g) + đột biến dời `Publish` sau commit → đỏ.)*
+- [x] Truy xuất xuôi và ngược đúng toàn bộ test oracle ở mục 3, gồm genealogy 2 cấp và điểm bắt đầu là supplier lot. *(`TraceQueriesTests`, kể cả ca vòng cố ý.)*
+- [x] Unit test `MaterialVerifier`/`FifoAdvisor` ≥ 10 case; integration test Testcontainers cho consumption và truy xuất. *(Bảng 23 ca + 11 ca `VerifyReplacement` + test thứ tự; integration `Material/*`, `Traceability/*`.)*
+- [x] Truy xuất < 1 giây với 5 triệu dòng `SerialComponent`; số đo trước/sau index trong `docs/perf.md`. *(Bước 9: xuôi 12.500 serial 87–120 ms qua API, ngược 3–5 ms.)*
+- [x] WPF: cây truy xuất ngược lazy-load, danh sách xuôi nhóm theo Location có **[v2]** Export Excel, màn IQC, chuỗi UI trong `Strings.resx`. *(Ảnh `docs/images/m6-*.png`.)*
+- [x] `SerialComponent` và `MaterialVerificationLog` không có đường code nào UPDATE/DELETE. *(Rà `src/`: không có `Remove`/`Update`/`ExecuteUpdate`/`ExecuteDelete` trên hai bảng (cả `LotGenealogy`, `IqcRecords`); DB chặn bằng trigger INSTEAD OF, có test `MaterialSchemaTests`.)*
+- [x] Viết vào `docs/incidents.md` ít nhất một "sự cố" gặp khi làm module (ví dụ nhầm hướng Parent/Child, lỗi bọc CTE của EF) để kể khi phỏng vấn. *(4 mục M6: kem hàn làm tròn decimal, DataGrid grouping + cột `*`, tham số `nvarchar`, Down migration va trigger.)*
 
 ### 5.2 Tự kiểm tra
 

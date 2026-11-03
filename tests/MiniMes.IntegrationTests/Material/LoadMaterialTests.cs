@@ -93,6 +93,7 @@ public class LoadMaterialTests(ApiFixture api)
         { "item of another step", nameof(VerifyCode.ItemNotForStation) },
         { "pending IQC", nameof(VerifyCode.LotNotIqcPassed) },
         { "expired", nameof(VerifyCode.LotExpired) },
+        { "on hold", nameof(VerifyCode.LotOnHold) },   // module DoD: Hold (M6 step 8 / M7 containment) is red too
         { "unknown label", nameof(VerifyCode.LotNotFound) },
     };
 
@@ -106,11 +107,17 @@ public class LoadMaterialTests(ApiFixture api)
             "wrong item" => await LotAsync(s.OtherId),
             "item of another step" => await LotAsync(s.McuId),
             "pending IQC" => await LotAsync(s.CapId, pendingIqc: true),
+            "on hold" => await LotAsync(s.CapId),
             "expired" => await LotAsync(s.CapId, expiry: DateTime.UtcNow.AddMinutes(1)),
             _ => ApiFixture.Unique("NO-SUCH-LOT"),
         };
         if (scenario == "expired") await api.WithDbAsync(db => db.MaterialLots.Where(l => l.LotNo == lot)
             .ExecuteUpdateAsync(u => u.SetProperty(l => l.ExpiryAt, DateTime.UtcNow.AddMinutes(-1))));
+        if (scenario == "on hold") await api.WithDbAsync(async db =>
+        {
+            (await db.MaterialLots.SingleAsync(l => l.LotNo == lot)).PutOnHold();
+            return await db.SaveChangesAsync();
+        });
 
         var answer = await LoadAsync(s, lot, badge: "sup01", reason: "line is waiting");   // a supervisor cannot override these
 

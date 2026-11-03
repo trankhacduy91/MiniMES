@@ -15,7 +15,8 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 - **M3 (shop floor) xong:** scan serial tại trạm với route check (chặn nhảy bước, bo NG, bo Hold), chống scan lặp và scan đồng thời, cổng FAI, phiên trạm, Repair/Rework/Scrap; Kiosk WPF toàn màn hình cho máy quét mã vạch (NG + mã lỗi, form sửa chữa, SOP, offline); báo cáo FPY/RTY/WIP; đo hiệu năng trên 10 triệu dòng log (p95 24,8 ms). Xem [mục Shop floor](#shop-floor-m3) và [Performance](#performance).
 - **M4 (kết nối máy) xong:** MQTT (Mosquitto, topic UNS ISA-95) → ingest chống trùng, bộ đếm tích lũy, batch writer; Offline tách khỏi Down (heartbeat + LWT); SignalR realtime có throttle; Andon raise/ack/resolve + tự raise + leo thang; dashboard line WPF và nút Andon trên Kiosk; simulator vai máy + vai trạm tự động. Xem [mục Machine connectivity](#machine-connectivity-m4).
 - **M5 (OEE & downtime) xong:** A×P×Q ở một hàm thuần, khớp tính tay ca mẫu 79,8 %; snapshot theo giờ/ca có job bắt kịp và unique index; phân loại dừng (audit theo cột, đổi lý do thì tính lại ca); Pareto; cờ P > 100 % và `CounterMismatch`; dashboard OxyPlot, Excel, Line TV. Xem [mục OEE](#oee-m5).
-- Các module tiếp theo (M6 → M3b → M7) làm theo [lộ trình](spec/spec-v2.md).
+- **M6 (vật tư & truy xuất) xong:** nhập reel có nhãn ZPL, IQC theo supplier lot, nạp vật tư có kiểm tra đúng item/trạm/hạn/Hold và cảnh báo FIFO (supervisor duyệt có ghi vết); scan OK ghi `SerialComponents` và trừ lot trong cùng transaction (thiếu reel thì chặn scan); linh kiện thay ở Repair cũng vào hồ sơ; truy xuất ngược/xuôi bằng recursive CTE qua genealogy, xuất Excel, Hold lot; đo trên 5 triệu dòng (xuôi 12.500 serial ~100 ms). Xem [mục Material & traceability](#material--traceability-m6).
+- Các module tiếp theo (M3b → M7) làm theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
 
@@ -137,8 +138,8 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | --- | --- | --- | --- |
 | 1 | Admin import Excel Item/BOM/Routing của model mới (file mẫu `PCB-B`) | M1 | xong |
 | 2 | Planner tạo WO 200 pcs → Release → sinh serial, in nhãn ZPL | M2 | xong (in ra file `.zpl`; máy in thật ngoài phạm vi) |
-| 3 | Kho nhập reel → QC làm IQC → lot `Available` | M6 | chưa làm |
-| 4 | Operator nạp reel lên máy SMT, MES kiểm tra đúng vật tư và FIFO | M6 | chưa làm |
+| 3 | Kho nhập reel → QC làm IQC → lot `Available` | M6 | xong |
+| 4 | Operator nạp reel lên máy SMT, MES kiểm tra đúng vật tư và FIFO | M6 | xong |
 | 5 | FAI: serial đầu tiên qua hết các bước → QC duyệt → chạy hàng loạt | M2, M3, M7 | cổng FAI xong (M3); QC duyệt qua endpoint tạm, checklist FAI ở M7 |
 | 6 | Simulator: SMT qua MQTT, lò reflow OPC UA, máy dán keo Modbus (qua gateway) | M4, M4b | MQTT + trạm tự động xong (M4); OPC UA, Modbus ở M4b |
 | 7 | Operator scan trên kiosk, xem SOP; NG → Repair → Test lại → OK | M3 | xong |
@@ -146,7 +147,7 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | 9 | Máy Down → Andon → quá 3 phút chưa Ack thì leo thang → chọn lý do dừng | M4, M5 | xong (M4); Pareto lý do dừng ở M5 |
 | 10 | Nhiệt độ reflow trôi → SPC báo vi phạm → NCR, Hold serial liên quan | M7 | chưa làm |
 | 11 | Trạm Pack: serial vào thùng 10 pcs → nhãn thùng → pallet | M3b | chưa làm |
-| 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M7 | chưa làm |
+| 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M3b, M7 | truy xuất xuôi + Hold lot xong (M6); thùng/pallet ở M3b, Hold serial/pallet ở M7 |
 | 13 | WO Completed → báo cáo sản lượng/FPY/OEE, xuất Excel | M2, M3, M5 | FPY/WIP xong (M3); OEE, Excel ở M5 |
 
 ## Master data (M1)
@@ -309,7 +310,7 @@ Nút **Export OEE / Export Pareto** trên dashboard tải file Excel của ngày
 
 Demo trực tiếp trên ca đang chạy: `docker stop mes-simulator` (hai simulator cùng đóng `L1-SMT-01` sẽ đá nhau) → `dotnet run --project src/MiniMes.MachineSimulator -- --config src/MiniMes.MachineSimulator/sim-oee-demo.json` (chỉ `L1-SMT-01`, cycle 30 s = cycle time của routing, không tự Down, không NG) → gõ `down L1-SMT-01 300` → sau 5 phút, đoạn Down nằm trong *Stops to classify*: chọn `PM` thì Planned giảm đúng 300 s và A tăng; chọn `FDR-JAM` thì A giữ nguyên mức đã mất. Cần một WO có bo đang chờ ở SMT và đã qua FAI (simulator bỏ qua WO đang chờ FAI).
 
-## Material & traceability (M6, đang làm)
+## Material & traceability (M6)
 
 Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md). 1 reel = 1 lot; `SerialComponents` ghi "serial dùng lot nào" lúc scan OK (bước 5).
 
