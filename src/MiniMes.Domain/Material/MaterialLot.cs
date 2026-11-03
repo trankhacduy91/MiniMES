@@ -10,6 +10,8 @@ public enum MaterialLotStatus : byte
     Consumed = 2,      // empty: the end of its life, never deleted (spec 1.5)
     PendingIqc = 3,    // [v2] received, incoming inspection not done yet (R15)
     IqcRejected = 4,   // [v2] failed IQC; only an NCR decision brings it back (R17)
+    Scrapped = 5,      // M7 NCR disposition Scrap: end of life, like Consumed but by decision
+    Returned = 6,      // M7 NCR disposition ReturnToVendor (SCAR/RMA reference on the NCR)
 }
 
 // Spec M6 1.2: one reel = one lot. LotNo is the code printed on the label; SupplierLot groups the reels of one
@@ -29,6 +31,7 @@ public class MaterialLot : IAudited
     public DateTime ReceivedAt { get; private set; }    // UTC; FIFO order
     public DateTime? ExpiryAt { get; private set; }     // UTC; expired = blocked, no override (R3)
     public MaterialLotStatus Status { get; private set; }
+    public MaterialLotStatus? StatusBeforeHold { get; private set; }   // M7: what Release goes back to (spec 2.6 point 2)
     public byte[] RowVersion { get; private set; } = [];
 
     private MaterialLot() { LotNo = string.Empty; }
@@ -72,6 +75,7 @@ public class MaterialLot : IAudited
     public bool PutOnHold()
     {
         if (Status != MaterialLotStatus.Available) return false;
+        StatusBeforeHold = Status;
         Status = MaterialLotStatus.Hold;
         return true;
     }

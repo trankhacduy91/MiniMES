@@ -37,6 +37,7 @@ public class MaterialLotConfiguration : IEntityTypeConfiguration<MaterialLot>
         b.Property(x => x.Qty).HasPrecision(MaterialQty.Precision, MaterialQty.Scale);
         b.Property(x => x.RemainingQty).HasPrecision(MaterialQty.Precision, MaterialQty.Scale);
         b.Property(x => x.Status).HasConversion<byte>();
+        b.Property(x => x.StatusBeforeHold).HasConversion<byte>();   // M7 2.6
         b.Property(x => x.RowVersion).IsRowVersion();
         b.HasOne<Item>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Restrict);
 

@@ -26,6 +26,8 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
             modelBuilder.HasSequence("LotSeq");
 
+            modelBuilder.HasSequence("NcrSeq");
+
             modelBuilder.HasSequence("PalletSeq");
 
             modelBuilder.HasSequence("SerialSeq");
@@ -668,6 +670,8 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .HasColumnType("float");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SpcCharacteristicId");
 
                     b.HasIndex("MachineId", "TagName")
                         .IsUnique();
@@ -1436,6 +1440,9 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint");
 
+                    b.Property<byte?>("StatusBeforeHold")
+                        .HasColumnType("tinyint");
+
                     b.Property<string>("SupplierLot")
                         .HasMaxLength(50)
                         .IsUnicode(false)
@@ -1988,6 +1995,10 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("StatusBeforeHold")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<int>("WorkOrderId")
                         .HasColumnType("int");
 
@@ -2221,6 +2232,668 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Quality.ControlLimitSet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("BaselineFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("BaselineTo")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CalculatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CalculatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("InspectionPlanId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Lcl")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal>("Mean")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("MrBar")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("SampleCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Sigma")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal>("Ucl")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("UclMr")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InspectionPlanId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ControlLimitSets_ActivePerPlan")
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("ControlLimitSets", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ControlLimitSets_Sigma", "[Sigma] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Fai.FaiRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("AutoChecksPassed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ChecklistJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("FaiTemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("InspectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InspectedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<long>("SerialId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FaiTemplateId");
+
+                    b.HasIndex("SerialId");
+
+                    b.HasIndex("WorkOrderId", "InspectedAt");
+
+                    b.ToTable("FaiRecords", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FaiRecords_ChecklistJson", "ISJSON([ChecklistJson]) = 1");
+
+                            t.HasCheckConstraint("CK_FaiRecords_PassNeedsAuto", "[Result] <> 'Pass' OR [AutoChecksPassed] = 1");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Fai.FaiTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_FaiTemplates_ActivePerItem")
+                        .HasFilter("[IsActive] = 1");
+
+                    b.HasIndex("ItemId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("FaiTemplates", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FaiTemplates_ItemsJson", "ISJSON([ItemsJson]) = 1");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.HoldRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("HeldAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HeldBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int?>("NcrId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ReleaseNote")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReleasedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("ScopeRef")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("TargetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NcrId")
+                        .HasFilter("[NcrId] IS NOT NULL");
+
+                    b.HasIndex("TargetType", "TargetId")
+                        .HasDatabaseName("IX_HoldRecords_ActiveTarget")
+                        .HasFilter("[ReleasedAt] IS NULL");
+
+                    b.HasIndex("BatchId", "TargetType", "TargetId")
+                        .IsUnique();
+
+                    b.ToTable("HoldRecords", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_HoldRecords_Release", "([ReleasedAt] IS NULL AND [ReleasedBy] IS NULL AND [ReleaseNote] IS NULL) OR ([ReleasedAt] IS NOT NULL AND [ReleasedBy] IS NOT NULL AND [ReleaseNote] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.InspectionPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("DefectCodeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Frequency")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Lsl")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OperationCode")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SampleSize")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Target")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("Usl")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("DefectCodeId");
+
+                    b.HasIndex("ItemId", "OperationCode")
+                        .HasDatabaseName("IX_InspectionPlans_ItemOperation")
+                        .HasFilter("[IsActive] = 1 AND [ItemId] IS NOT NULL");
+
+                    b.ToTable("InspectionPlans", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InspectionPlans_Limits", "([Usl] IS NOT NULL OR [Lsl] IS NOT NULL) AND ([Lsl] < [Usl] OR [Lsl] IS NULL OR [Usl] IS NULL)");
+
+                            t.HasCheckConstraint("CK_InspectionPlans_Target", "([ItemId] IS NULL AND [OperationCode] IS NULL) OR ([ItemId] IS NOT NULL AND [OperationCode] IS NOT NULL AND [DefectCodeId] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Measurement", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid?>("ClientRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CorrectionReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long?>("CorrectsMeasurementId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("InspectionPlanId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Lsl")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<int?>("MachineTagId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("MeasuredAt")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("MeasuredBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(5)");
+
+                    b.Property<long?>("SerialId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<DateTime?>("SourceTs")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("StationId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Usl")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientRequestId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Measurements_ClientRequestId")
+                        .HasFilter("[ClientRequestId] IS NOT NULL");
+
+                    b.HasIndex("CorrectsMeasurementId")
+                        .HasFilter("[CorrectsMeasurementId] IS NOT NULL");
+
+                    b.HasIndex("SerialId")
+                        .HasFilter("[SerialId] IS NOT NULL");
+
+                    b.HasIndex("StationId");
+
+                    b.HasIndex("MachineTagId", "SourceTs")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Measurements_TagSourceTs")
+                        .HasFilter("[MachineTagId] IS NOT NULL");
+
+                    b.HasIndex("InspectionPlanId", "MeasuredAt", "Id")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("IX_Measurements_Plan_MeasuredAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("InspectionPlanId", "MeasuredAt", "Id"), new[] { "Value", "SerialId", "Result" });
+
+                    b.ToTable("Measurements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Measurements_Correction", "([CorrectsMeasurementId] IS NULL AND [CorrectionReason] IS NULL) OR ([CorrectsMeasurementId] IS NOT NULL AND [CorrectionReason] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Measurements_OneSource", "([Source] = 'Machine' AND [MachineTagId] IS NOT NULL AND [SourceTs] IS NOT NULL AND [SerialId] IS NULL AND [StationId] IS NULL) OR ([Source] <> 'Machine' AND [SerialId] IS NOT NULL AND [StationId] IS NOT NULL AND [MachineTagId] IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Ncr", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CapaReference")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClosedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("ConcessionRef")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("DefectCodeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Disposition")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("DispositionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NcrNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime?>("ProposedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProposedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("Qty")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("SourceRef")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DefectCodeId");
+
+                    b.HasIndex("NcrNo")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("Ncrs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Ncrs_Qty", "[Qty] >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.NcrItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("NcrId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("TargetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetType", "TargetId");
+
+                    b.HasIndex("NcrId", "TargetType", "TargetId")
+                        .IsUnique();
+
+                    b.ToTable("NcrItems", (string)null);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.SpcAlert", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("CloseNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClosedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("InspectionPlanId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("MeasurementId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("NcrId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RaisedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RuleCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MeasurementId");
+
+                    b.HasIndex("NcrId");
+
+                    b.HasIndex("InspectionPlanId", "RaisedAt");
+
+                    b.HasIndex("InspectionPlanId", "RuleCode")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SpcAlerts_OpenPerRule")
+                        .HasFilter("[Status] = 'Open'");
+
+                    b.ToTable("SpcAlerts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SpcAlerts_Point", "[MeasurementId] IS NOT NULL OR [RuleCode] = 'DataGap'");
+                        });
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Users.AppUser", b =>
                 {
                     b.Property<int>("Id")
@@ -2367,6 +3040,11 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .HasForeignKey("MachineId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Quality.InspectionPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SpcCharacteristicId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("MiniMes.Domain.MasterData.Boms.Bom", b =>
@@ -2689,6 +3367,131 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MiniMes.Domain.Quality.ControlLimitSet", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Quality.InspectionPlan", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionPlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Fai.FaiRecord", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Quality.Fai.FaiTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("FaiTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.Serial", null)
+                        .WithMany()
+                        .HasForeignKey("SerialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Planning.WorkOrder", null)
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Fai.FaiTemplate", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.HoldRecord", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Quality.Ncr", null)
+                        .WithMany()
+                        .HasForeignKey("NcrId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.InspectionPlan", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.DefectCodes.DefectCode", null)
+                        .WithMany()
+                        .HasForeignKey("DefectCodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MiniMes.Domain.MasterData.Items.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Measurement", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Quality.Measurement", null)
+                        .WithMany()
+                        .HasForeignKey("CorrectsMeasurementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MiniMes.Domain.Quality.InspectionPlan", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionPlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Machines.MachineTag", null)
+                        .WithMany()
+                        .HasForeignKey("MachineTagId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MiniMes.Domain.Planning.Serial", null)
+                        .WithMany()
+                        .HasForeignKey("SerialId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MiniMes.Domain.Factory.Station", null)
+                        .WithMany()
+                        .HasForeignKey("StationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Ncr", b =>
+                {
+                    b.HasOne("MiniMes.Domain.MasterData.DefectCodes.DefectCode", null)
+                        .WithMany()
+                        .HasForeignKey("DefectCodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.NcrItem", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Quality.Ncr", null)
+                        .WithMany("Items")
+                        .HasForeignKey("NcrId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.SpcAlert", b =>
+                {
+                    b.HasOne("MiniMes.Domain.Quality.InspectionPlan", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionPlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MiniMes.Domain.Quality.Measurement", null)
+                        .WithMany()
+                        .HasForeignKey("MeasurementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MiniMes.Domain.Quality.Ncr", null)
+                        .WithMany()
+                        .HasForeignKey("NcrId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("MiniMes.Domain.Users.UserRole", b =>
                 {
                     b.HasOne("MiniMes.Domain.Users.AppUser", null)
@@ -2728,6 +3531,11 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.Navigation("Materials");
 
                     b.Navigation("Operations");
+                });
+
+            modelBuilder.Entity("MiniMes.Domain.Quality.Ncr", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("MiniMes.Domain.Users.AppUser", b =>

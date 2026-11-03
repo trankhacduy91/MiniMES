@@ -17,6 +17,8 @@ using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Routings;
 using MiniMes.Domain.Oee;
 using MiniMes.Domain.Planning;
+using MiniMes.Domain.Quality;
+using MiniMes.Domain.Quality.Fai;
 using MiniMes.Domain.Users;
 
 namespace MiniMes.Application.Common;
@@ -81,6 +83,16 @@ public interface IAppDbContext
     DbSet<Carton> Cartons { get; }
     DbSet<CartonSerial> CartonSerials { get; }
     DbSet<Pallet> Pallets { get; }
+
+    // M7: quality (inspection, SPC, NCR, Hold, FAI)
+    DbSet<InspectionPlan> InspectionPlans { get; }
+    DbSet<ControlLimitSet> ControlLimitSets { get; }
+    DbSet<Measurement> Measurements { get; }
+    DbSet<SpcAlert> SpcAlerts { get; }
+    DbSet<Ncr> Ncrs { get; }
+    DbSet<HoldRecord> HoldRecords { get; }
+    DbSet<FaiTemplate> FaiTemplates { get; }
+    DbSet<FaiRecord> FaiRecords { get; }
 
     // A unique-index violation (two requests racing past the "already exists" check) comes out as
     // ConflictException (409), so handlers never see provider-specific SQL errors.

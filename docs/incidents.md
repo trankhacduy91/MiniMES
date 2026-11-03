@@ -211,3 +211,14 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Nguyên nhân:** test dùng một client và dựng 210 board / 21 thùng thật trước khi gửi hai request. Hai request không thật sự chồng nhau: request đầu commit xong trước khi request sau đọc pallet, nên nhánh "UPDATE trả 0 dòng" không bao giờ chạy.
 - **Cách sửa:** viết lại như test repack của bước 3: hai client đăng nhập riêng, lặp 5 vòng, dựng trạng thái bằng SQL (pallet `CartonCount = 19`, hai thùng `Closed`) để mỗi vòng chỉ còn hai request. Đột biến lúc này làm pallet thành 21, test đỏ.
 - **Bài học:** test đồng thời xanh chưa chứng minh gì. Phải kiểm bằng đột biến (bỏ code bảo vệ thì test phải đỏ), và giữ phần chuẩn bị ngắn để các request thật sự chạy chồng lên nhau.
+
+## 2026-11-03 — Test chạy riêng thì xanh, chạy chung thì đỏ (M7 bước 2)
+
+- **Triệu chứng:** `QualitySchemaTests` chạy với filter `~QualitySchema` thì 10/10 xanh. Chạy với filter rộng hơn `~Quality` thì 3 test đỏ: `Sequence contains more than one element`. Nhìn qua tưởng test chập chờn (flaky).
+- **Nguyên nhân:** test tìm tag lò bằng `MachineTags.Single(t => t.TagName == "peakTemp")`. `TagName` chỉ duy nhất **trong một máy** (unique `(MachineId, TagName)`). Filter rộng kéo theo test M4 (`...ProcessValue...DataQuality`), và các test đó tạo thêm tag `peakTemp` trên máy riêng của chúng trong cùng DB Testcontainers.
+- **Cách tìm:** chạy lại 2 lần với cùng filter. Kết quả đỏ y hệt cả 2 lần, nên đây không phải flaky mà phụ thuộc vào **tập test chạy cùng**. Stack trace chỉ đúng dòng `SingleAsync`.
+- **Cách sửa:** tìm tag theo khóa thật `(máy L1-REFLOW-01, peakTemp)`. `QualitySeeder` vốn đã tìm như vậy, nên chỉ phải sửa test.
+- **Bài học:**
+  - DB dùng chung giữa các test là trạng thái ẩn. Truy vấn trong test phải dùng đúng khóa duy nhất, không dùng "cái tên chắc chỉ có một".
+  - Chạy cả bộ test, không chỉ filter của bước đang làm.
+  - Đỏ lặp lại y hệt thì không phải flaky; đừng vội gán nhãn đó.

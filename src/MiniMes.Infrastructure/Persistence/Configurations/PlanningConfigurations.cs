@@ -99,6 +99,8 @@ public class SerialConfiguration : IEntityTypeConfiguration<Serial>
         b.Property(x => x.RowVersion).IsRowVersion();
         b.Property(x => x.SerialNo).HasMaxLength(Serial.SerialNoMaxLength).IsUnicode(false);
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        // M7 2.6: same type as Status, so the set-based Hold copies one into the other in SQL.
+        b.Property(x => x.StatusBeforeHold).HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.ScrapReason).HasMaxLength(Serial.ScrapReasonMaxLength);
         // Restrict, not cascade: a serial is traceability history and must never disappear with its WO.
         b.HasOne<WorkOrder>().WithMany().HasForeignKey(x => x.WorkOrderId).OnDelete(DeleteBehavior.Restrict);

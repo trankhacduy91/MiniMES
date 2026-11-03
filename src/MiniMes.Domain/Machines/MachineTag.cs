@@ -16,7 +16,7 @@ public class MachineTag : AuditableEntity, IAudited
     public string Unit { get; private set; }             // "°C"
     public double LowerPlausible { get; private set; }
     public double UpperPlausible { get; private set; }
-    public int? SpcCharacteristicId { get; private set; } // M7: the characteristic this tag feeds (no FK until M7)
+    public int? SpcCharacteristicId { get; private set; } // M7: the InspectionPlan this tag feeds (FK since M7)
     public int? SpcSampleEverySec { get; private set; }   // M7 samples the latest Good value this often
     public bool IsActive { get; private set; } = true;
 
@@ -42,6 +42,18 @@ public class MachineTag : AuditableEntity, IAudited
         => double.IsFinite(value) && value >= LowerPlausible && value <= UpperPlausible ? reported : DataQuality.Bad;
 
     public void SetActive(bool isActive) => IsActive = isActive;
+
+    // M7 2.3b: feed a characteristic. Sampling every few seconds would give points that follow each other (the run
+    // rule fires on noise); the sampler ticks every 10 s, so a shorter period means nothing.
+    public const int MinSpcSampleSec = 10, MaxSpcSampleSec = 3_600;
+
+    public void LinkSpc(int inspectionPlanId, int sampleEverySec)
+    {
+        if (sampleEverySec is < MinSpcSampleSec or > MaxSpcSampleSec)
+            throw new DomainException($"The SPC sampling period must be between {MinSpcSampleSec} and {MaxSpcSampleSec} seconds.");
+        SpcCharacteristicId = inspectionPlanId;
+        SpcSampleEverySec = sampleEverySec;
+    }
 }
 
 // One reading of a tag. Insert-only, the biggest table if read densely (30 days kept, step 4b), not audited.

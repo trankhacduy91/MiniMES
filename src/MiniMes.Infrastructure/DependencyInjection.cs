@@ -96,6 +96,7 @@ public static class DependencyInjection
         services.AddScoped<MasterDataSeeder>();
         services.AddScoped<OeeDemoSeeder>();
         services.AddScoped<TraceabilitySeeder>();   // M6
+        services.AddScoped<QualitySeeder>();        // M7
         return services;
     }
 }

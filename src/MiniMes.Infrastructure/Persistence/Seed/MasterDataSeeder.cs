@@ -20,6 +20,7 @@ namespace MiniMes.Infrastructure.Persistence.Seed;
 public class MasterDataSeeder(AppDbContext db, TimeProvider time)
 {
     public const string SeedLineCode = "L1";
+    public const string OutOfSpecDefect = "MEAS-OOS";   // M7 Q1: the NG code of a board measured out of spec
 
     public async Task SeedAsync(CancellationToken ct = default)
     {
@@ -265,6 +266,9 @@ public class MasterDataSeeder(AppDbContext db, TimeProvider time)
         ("INC-WRONG-VALUE", "Wrong component value", "Incoming"),
         ("INC-DAMAGED-REEL", "Damaged reel or packaging", "Incoming"),
         ("INC-WRONG-LABEL", "Supplier label does not match", "Incoming"),
+        // M7: a measured value outside USL/LSL (Q1), and the sample board of a failed FAI (2.5b).
+        (OutOfSpecDefect, "Measurement out of specification", "Functional"),
+        ("FAI-FAIL", "First article inspection failed", "Quality"),
     ];
 
     // CountsAgainstAvailability false = excluded from planned production time; true = an Availability loss (M5).

@@ -4,6 +4,7 @@ using MiniMes.Domain.Andon;
 using MiniMes.Domain.Machines;
 using MiniMes.Domain.MasterData.Downtime;
 using MiniMes.Domain.MasterData.Equipment;
+using MiniMes.Domain.Quality;
 
 namespace MiniMes.Infrastructure.Persistence.Configurations;
 
@@ -53,6 +54,7 @@ public class MachineTagConfiguration : IEntityTypeConfiguration<MachineTag>
         b.Property(x => x.Unit).HasMaxLength(MachineTag.UnitMaxLength);   // nvarchar: "°C", "µm"
         b.Property(x => x.CreatedBy).HasMaxLength(100);
         b.HasOne<Machine>().WithMany().HasForeignKey(x => x.MachineId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<InspectionPlan>().WithMany().HasForeignKey(x => x.SpcCharacteristicId).OnDelete(DeleteBehavior.Restrict);   // M7
         b.HasIndex(x => new { x.MachineId, x.TagName }).IsUnique();
         b.ToTable(t => t.HasCheckConstraint("CK_MachineTags_Plausible", "[LowerPlausible] < [UpperPlausible]"));
     }

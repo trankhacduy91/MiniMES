@@ -19,8 +19,11 @@ using MiniMes.Domain.MasterData.Items;
 using MiniMes.Domain.MasterData.Routings;
 using MiniMes.Domain.Oee;
 using MiniMes.Domain.Planning;
+using MiniMes.Domain.Quality;
+using MiniMes.Domain.Quality.Fai;
 using MiniMes.Domain.Users;
 using MiniMes.Infrastructure.Persistence.Configurations;
+using MiniMes.Infrastructure.Persistence.Configurations.Quality;
 
 namespace MiniMes.Infrastructure.Persistence;
 
@@ -74,6 +77,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Carton> Cartons => Set<Carton>();
     public DbSet<CartonSerial> CartonSerials => Set<CartonSerial>();
     public DbSet<Pallet> Pallets => Set<Pallet>();
+    public DbSet<InspectionPlan> InspectionPlans => Set<InspectionPlan>();
+    public DbSet<ControlLimitSet> ControlLimitSets => Set<ControlLimitSet>();
+    public DbSet<Measurement> Measurements => Set<Measurement>();
+    public DbSet<SpcAlert> SpcAlerts => Set<SpcAlert>();
+    public DbSet<Ncr> Ncrs => Set<Ncr>();
+    public DbSet<HoldRecord> HoldRecords => Set<HoldRecord>();
+    public DbSet<FaiTemplate> FaiTemplates => Set<FaiTemplate>();
+    public DbSet<FaiRecord> FaiRecords => Set<FaiRecord>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
         => Database.BeginTransactionAsync(ct);
@@ -84,6 +95,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         WorkOrderConfiguration.AddSequences(modelBuilder);
         MaterialLotConfiguration.AddSequences(modelBuilder);
         CartonConfiguration.AddSequences(modelBuilder);
+        NcrConfiguration.AddSequences(modelBuilder);
     }
 
     // The one place that turns save conflicts into 409: a stale RowVersion (lost update), or a unique-index
