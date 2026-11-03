@@ -27,6 +27,9 @@ public sealed class SequenceNumbers(AppDbContext db) : ISequenceNumbers
     public async Task<long> NextCartonNumberAsync(CancellationToken ct)
         => (await NextNumbersAsync(CartonConfiguration.CartonSequence, 1, ct))[0];
 
+    public async Task<long> NextPalletNumberAsync(CancellationToken ct)
+        => (await NextNumbersAsync(CartonConfiguration.PalletSequence, 1, ct))[0];
+
     // NEXT VALUE FOR ... OVER (ORDER BY): one number per row of a generated 1..count list, in that order.
     // Allowed here because NEXT VALUE FOR is in the outer SELECT (the derived table only supplies row numbers).
     private async Task<IReadOnlyList<long>> NextNumbersAsync(string sequence, int count, CancellationToken ct)

@@ -1,7 +1,7 @@
 # M3b · Bước 4 — Nhãn thùng và pallet: kiến thức cần nắm
 
 > Tài liệu học cho bước 4 của [module-03b](../../spec/module-03b-packing.md) (spec mục **1.4** P6, P11; **2.2** bẫy 2).
-> Bước trước: [M3b-step03](M3b-step03-pack-use-case.md).
+> Bước trước: [M3b-step03](M3b-step03-pack-use-case.md). Bước sau: [M3b-step05](M3b-step05-pallet-ship.md).
 > Code: `src/MiniMes.Application/Labels/PackingLabelBuilder.cs`, `Application/Packing/PackingLabels.cs`, `Packing/Pack.cs` (`WithLabelAsync`),
 > `src/MiniMes.Domain/Planning/LabelPrintLog.cs`, `Api/Controllers/CartonsController.cs`, `PalletsController.cs`, migration `M3b_PackingLabels`.
 > Test: `tests/MiniMes.UnitTests/Packing/PackingLabelTests.cs` (12), `tests/MiniMes.IntegrationTests/Packing/PackingLabelApiTests.cs` (6).

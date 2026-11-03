@@ -204,3 +204,10 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Cách tìm:** test kiểm cả lời từ chối **lẫn** trạng thái sau đó (`Assert.Equal(status, carton.Status)` ngay sau `Assert.Throws`), không chỉ kiểm có lỗi.
 - **Cách sửa:** mỗi phương thức Domain kiểm **hết** điều kiện trước, rồi mới đổi bất cứ thứ gì ("validate, then mutate").
 - **Bài học:** phương thức của entity nên "nguyên tử": hoặc đổi trọn vẹn, hoặc không đổi gì. Test cho đường từ chối phải kiểm cả trạng thái sau lời từ chối.
+
+## 2026-11-03 — Test đồng thời xanh nhưng không chạm race (M3b bước 5)
+
+- **Triệu chứng:** test "pallet 19/20, hai thùng được palletize cùng lúc, không bao giờ 21" xanh. Đột biến bỏ `CartonCount < @n` khỏi câu `UPDATE` có điều kiện: test **vẫn xanh** cả 3 lần.
+- **Nguyên nhân:** test dùng một client và dựng 210 board / 21 thùng thật trước khi gửi hai request. Hai request không thật sự chồng nhau: request đầu commit xong trước khi request sau đọc pallet, nên nhánh "UPDATE trả 0 dòng" không bao giờ chạy.
+- **Cách sửa:** viết lại như test repack của bước 3: hai client đăng nhập riêng, lặp 5 vòng, dựng trạng thái bằng SQL (pallet `CartonCount = 19`, hai thùng `Closed`) để mỗi vòng chỉ còn hai request. Đột biến lúc này làm pallet thành 21, test đỏ.
+- **Bài học:** test đồng thời xanh chưa chứng minh gì. Phải kiểm bằng đột biến (bỏ code bảo vệ thì test phải đỏ), và giữ phần chuẩn bị ngắn để các request thật sự chạy chồng lên nhau.

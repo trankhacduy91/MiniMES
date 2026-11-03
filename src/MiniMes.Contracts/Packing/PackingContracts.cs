@@ -40,3 +40,43 @@ public sealed record PackingStatusDto(int StationId, int? WorkOrderId, string? W
 public sealed record OpenCartonDto(string CartonNo, int Qty, DateTime OpenedAt, IReadOnlyList<PackedSerialDto> Serials);
 
 public sealed record PackedSerialDto(string SerialNo, DateTime PackedAt, string PackedBy);
+
+// ---------- step 5: palletize, partial close, unpack, remove from pallet, ship ----------
+
+// POST /api/stations/{id}/palletize: a closed carton onto the station's open pallet of its item. Always 200 for a
+// business answer, like PackResponse: Result "Ok" | "Blocked"; Duplicate = already on this pallet.
+// PalletClosed = this carton filled the pallet: it closed itself and LabelZpl is its label (null if not made).
+public sealed record PalletizeRequest(string CartonNo);
+
+public sealed record PalletizeResponse(
+    string Result,
+    string Message,
+    string? ReasonCode,
+    bool Duplicate,
+    string? PalletNo,
+    int CartonCount,
+    int CartonsPerPallet,
+    bool PalletClosed,
+    string? LabelZpl = null);
+
+// POST /api/cartons/{no}/close-partial, /api/pallets/{no}/close-partial (Supervisor): the short last one, with why.
+public sealed record ClosePartialRequest(string Reason);
+
+// POST /api/cartons/{no}/unpack (Supervisor): one serial out of the carton; the carton opens again to be filled up.
+public sealed record UnpackRequest(string SerialNo, string Reason);
+
+// POST /api/pallets/{no}/ship (Supervisor): the delivery order number the pallet leaves with.
+public sealed record ShipPalletRequest(string ShipmentRef);
+
+// GET /api/cartons/{no}; also the answer of the carton actions. OnHold is derived: a live serial inside is on Hold
+// (P10). LabelZpl = the label printed by this action (partial close), else null. Serials newest first.
+public sealed record CartonDto(string CartonNo, string WoNo, string ItemCode, int Qty, string Status, bool IsPartial,
+    string? PalletNo, bool OnHold, DateTime OpenedAt, DateTime? ClosedAt, string? ClosedBy, string? CloseReason,
+    IReadOnlyList<PackedSerialDto> Serials, string? LabelZpl = null);
+
+// GET /api/pallets/{no}; also the answer of the pallet actions. TotalQty = boards on the pallet.
+public sealed record PalletDto(string PalletNo, string ItemCode, int CartonCount, int TotalQty, string Status, bool IsPartial,
+    bool OnHold, DateTime? ClosedAt, string? ShipmentRef, DateTime? ShippedAt, string? ShippedBy,
+    IReadOnlyList<PalletCartonDto> Cartons, string? LabelZpl = null);
+
+public sealed record PalletCartonDto(string CartonNo, string WoNo, int Qty, bool IsPartial, bool OnHold);

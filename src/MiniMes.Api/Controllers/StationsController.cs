@@ -73,6 +73,13 @@ public class StationsController(ISender sender) : ControllerBase
     [HttpPost("{id:int}/pack")]
     public Task<PackResponse> Pack(int id, PackRequest r, CancellationToken ct) => sender.Send(new PackCommand(id, r.SerialNo), ct);
 
+    // M3b step 5: a closed carton onto the station's open pallet of its item (P7). Blocked is 200 + reasonCode;
+    // 422 = not a Pack station or no packing spec for the item.
+    [Authorize(Roles = $"{nameof(Role.Operator)},{nameof(Role.Admin)}")]
+    [HttpPost("{id:int}/palletize")]
+    public Task<PalletizeResponse> Palletize(int id, PalletizeRequest r, CancellationToken ct)
+        => sender.Send(new PalletizeCommand(id, r.CartonNo), ct);
+
     // M3b: the open carton of (station, WO) and its serials; woId defaults to the open session's WO.
     [HttpGet("{id:int}/packing-status")]
     public Task<PackingStatusDto> PackingStatus(int id, [FromQuery] int? woId, CancellationToken ct)

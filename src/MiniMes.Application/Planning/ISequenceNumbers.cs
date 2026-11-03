@@ -14,4 +14,7 @@ public interface ISequenceNumbers
 
     // M3b: one number per new carton.
     Task<long> NextCartonNumberAsync(CancellationToken ct);
+
+    // M3b: one number per new pallet.
+    Task<long> NextPalletNumberAsync(CancellationToken ct);
 }
