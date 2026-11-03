@@ -102,9 +102,10 @@ public class MeasurementConfiguration : IEntityTypeConfiguration<Measurement>
         // 2.3b: the sampler running twice for one machine value stores one point.
         b.HasIndex(x => new { x.MachineTagId, x.SourceTs }).IsUnique().HasFilter("[MachineTagId] IS NOT NULL")
             .HasDatabaseName("UX_Measurements_TagSourceTs");
-        // 2.3 trap 3: a station retrying the same request stores one value.
-        b.HasIndex(x => x.ClientRequestId).IsUnique().HasFilter("[ClientRequestId] IS NOT NULL")
-            .HasDatabaseName("UX_Measurements_ClientRequestId");
+        // 2.3 trap 3: a station retrying the same request stores one value per characteristic (a request carries
+        // several characteristics, all with the request's id: step 5).
+        b.HasIndex(x => new { x.ClientRequestId, x.InspectionPlanId }).IsUnique().HasFilter("[ClientRequestId] IS NOT NULL")
+            .HasDatabaseName("UX_Measurements_ClientRequestPlan");
         b.HasIndex(x => x.CorrectsMeasurementId).HasFilter("[CorrectsMeasurementId] IS NOT NULL");
     }
 }

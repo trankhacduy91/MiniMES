@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<Material.IMaterialGate, Material.MaterialGate>();   // M6: asked by the scan (M3)
         services.AddScoped<Execution.ScanExecutor>();                           // M3b: the scan core, shared by Scan and Pack
         services.AddScoped<Packing.PackingLabels>();                            // M3b: carton/pallet labels and their print log
+        services.AddScoped<Quality.Spc.ISpcEvaluator, Quality.Spc.SpcEvaluator>(); // M7: rules at a new point, inspection + sampler
         return services;
     }
 }

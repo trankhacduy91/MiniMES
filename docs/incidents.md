@@ -233,3 +233,20 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
   - Trường hợp biên phải được nhận ra từ dữ liệu đầu vào (mọi giá trị bằng nhau), không phải từ kết quả đã tính.
   - Test biên nên dùng số thật của nghiệp vụ: số tròn như `1.0` hay `0.5` biểu diễn chính xác trong nhị phân nên che mất lỗi.
 - **Gặp lại ở bước 4:** điểm 3,422 V nằm **đúng trên** UCL (3,302 + 3 × 0,040), nhưng `(3.422 − 3.302) / 0.040` ra `3.0000000000000027`, nên WE1 sẽ báo một điểm không vượt. Sửa bằng cách làm tròn z tới 9 chữ số trước khi so (số đo lưu `decimal(18,6)`, nên không mất thông tin thật). Có test riêng cho điểm nằm trên đường zone; bỏ làm tròn thì test đó đỏ.
+
+## 2026-11-03 — Lại một test đua không chạm race, lần này vì cách SQL Server khóa khi đọc (M7 bước 5)
+
+- **Triệu chứng:** test "hai số đo cùng lúc chỉ mở một alert WE1" xanh, chạy 5 vòng, có hai client. Đột biến bỏ `catch (ConflictException)` quanh lệnh insert alert: test **vẫn xanh**.
+- **Nguyên nhân:**
+  - DB không bật `READ_COMMITTED_SNAPSHOT`, nên READ COMMITTED đọc bằng khóa.
+  - Request thứ hai, khi lấy 7 điểm gần nhất của plan, quét qua dòng `Measurement` chưa commit của request thứ nhất và **phải chờ** request đó commit. Tới lúc đọc được, alert của request thứ nhất đã có, nên bước kiểm "đã có alert mở?" trả về true.
+  - Hai request vì vậy tự xếp hàng; nhánh "cả hai cùng thấy chưa có" không bao giờ xảy ra qua HTTP.
+- **Cách tìm:** thử đột biến (đã thành thói quen từ M3b bước 5). Thêm vào đó, assert hook đua **thật sự được kích hoạt**, không chỉ assert kết quả.
+- **Cách sửa:**
+  - Thêm test ép race ở mức `SpcEvaluator`: hai số đo commit trước (để không ai chờ ai khi đọc), rồi `QueryBarrier` (interceptor EF) giữ câu `SELECT … FROM SpcAlerts` của cả hai lần đánh giá cho tới khi cả hai cùng chạy tới đó.
+  - Test assert `QueryBarrier.WasReleased`. Bỏ `catch` thì test đỏ với `ConflictException`.
+  - Giữ test HTTP, kèm comment nói rõ nó không chạm race.
+- **Lỗi kèm theo:** chạy riêng test mới thì đỏ (`Sequence contains no elements`), vì test lấy "serial bất kỳ" mà DB mới chưa có serial nào. Test đang phụ thuộc thứ tự chạy. Đã sửa để test tự tạo serial.
+- **Bài học:**
+  - Mức cô lập của DB quyết định race có tồn tại hay không. Không bật RCSI thì đọc cũng chờ, các request tự xếp hàng; bật RCSI (rất phổ biến) thì race sẽ xuất hiện, nên unique index + `catch` vẫn bắt buộc phải có.
+  - Test ép race phải tự kiểm chứng rằng hook đã chạy. Nếu không, chính nó cũng có thể xanh mà không chứng minh gì.

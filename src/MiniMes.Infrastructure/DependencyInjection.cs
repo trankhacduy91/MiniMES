@@ -7,6 +7,7 @@ using MiniMes.Application.Common;
 using MiniMes.Application.Execution;
 using MiniMes.Application.Machines;
 using MiniMes.Application.Material;
+using MiniMes.Application.Quality.Spc;
 using MiniMes.Application.Oee;
 using MiniMes.Application.MasterData.Boms;
 using MiniMes.Application.Planning;
@@ -61,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<ITraceQueries, TraceQueries>();   // M6
         services.Configure<OeeOptions>(config.GetSection(OeeOptions.SectionName));   // M5
         services.Configure<MaterialOptions>(config.GetSection(MaterialOptions.SectionName));   // M6
+        services.Configure<SpcOptions>(config.GetSection(SpcOptions.SectionName));             // M7
         services.AddScoped<IOeeInputReader, OeeInputReader>();
         services.AddScoped<OeeSnapshotService>();
         // Off in Testing: the tests call the service with a FakeTimeProvider (and one thin test drives the worker).

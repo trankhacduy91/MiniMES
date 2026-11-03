@@ -34,7 +34,7 @@ public sealed class ApiFactory(SqlServerFixture sql, int? mqttPort = null) : Web
         {
             services.AddSingleton<ILabelPreview>(LabelPreview);
             // Added to the interceptors of the real configuration (EF Core 8+), production wiring unchanged.
-            services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(ScanGate));
+            services.ConfigureDbContext<AppDbContext>(o => o.AddInterceptors(ScanGate, QueryBarrier));
             // M5: the MQTT host announces stops of 5 s or more, so its test does not wait a real minute.
             if (mqttPort is not null) services.Configure<OeeOptions>(o => o.MicroStopThresholdSec = 5);
             // M6: the M3-M5 tests scan boards without loading reels, the case the flag exists for. Consumption
@@ -50,6 +50,9 @@ public sealed class ApiFactory(SqlServerFixture sql, int? mqttPort = null) : Web
 
     // Replays scan races in a fixed order (see ScanGate).
     public ScanGate ScanGate { get; } = new();
+
+    // Forces check-then-insert races (M7 alert dedupe, see QueryBarrier).
+    public QueryBarrier QueryBarrier { get; } = new();
 
     public ConsumptionFault ConsumptionFault { get; } = new();
 }

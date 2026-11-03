@@ -128,7 +128,7 @@ erDiagram
 | N điểm gần nhất của plan (chart, rule engine) | `Measurements (InspectionPlanId, MeasuredAt DESC) INCLUDE (Value, SerialId, Result)` |
 | Số đo của một serial (FAI, truy xuất) | `Measurements (SerialId) WHERE SerialId IS NOT NULL` |
 | Mẫu máy không ghi đôi (2.3b) | Filtered unique `Measurements (MachineTagId, SourceTs) WHERE MachineTagId IS NOT NULL` |
-| Trạm gửi lại không ghi đôi | Filtered unique `Measurements (ClientRequestId) WHERE ClientRequestId IS NOT NULL` |
+| Trạm gửi lại không ghi đôi | Filtered unique `Measurements (ClientRequestId, InspectionPlanId) WHERE ClientRequestId IS NOT NULL` (bước 5: một request mang nhiều đặc tính) |
 | Đúng một nguồn cho số đo | CHECK: `Source = 'Machine'` thì có `MachineTagId`, không `SerialId`; ngược lại có `SerialId` |
 | Q16 số đo insert-only | Trigger `INSTEAD OF UPDATE, DELETE` (như `ScanLogs`, ADR-004); `FaiRecords` cũng vậy |
 | Q5 một alert mở mỗi (plan, rule) | Filtered unique `SpcAlerts (InspectionPlanId, RuleCode) WHERE Status = 'Open'` |

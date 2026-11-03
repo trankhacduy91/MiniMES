@@ -2646,11 +2646,6 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientRequestId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Measurements_ClientRequestId")
-                        .HasFilter("[ClientRequestId] IS NOT NULL");
-
                     b.HasIndex("CorrectsMeasurementId")
                         .HasFilter("[CorrectsMeasurementId] IS NOT NULL");
 
@@ -2658,6 +2653,11 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .HasFilter("[SerialId] IS NOT NULL");
 
                     b.HasIndex("StationId");
+
+                    b.HasIndex("ClientRequestId", "InspectionPlanId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Measurements_ClientRequestPlan")
+                        .HasFilter("[ClientRequestId] IS NOT NULL");
 
                     b.HasIndex("MachineTagId", "SourceTs")
                         .IsUnique()
