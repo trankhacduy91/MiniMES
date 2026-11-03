@@ -2,8 +2,8 @@ namespace MiniMes.Contracts.Traceability;
 
 // Spec M6 step 8. Instants in UTC; the client shows plant time.
 
-// Location: Wip, CompletedUnpacked, Scrapped; M3b adds InCarton, OnPallet, Shipped (spec 2.2b) and fills
-// CartonNo, PalletNo, ShipmentRef (null until then).
+// Location: Shipped, OnPallet, InCarton, CompletedUnpacked, Wip, Scrapped (spec 2.2b). CartonNo, PalletNo, ShipmentRef:
+// the board's current carton, pallet and delivery order (M3b); null while it is not packed.
 public sealed record ForwardTraceDto(string SerialNo, string SerialStatus, string WoNo, int Depth, string LotNo, string? StationCode,
     DateTime ConsumedAt, string? OperatorCode, string Location, string? CartonNo, string? PalletNo, string? ShipmentRef);
 

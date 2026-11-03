@@ -56,7 +56,7 @@ internal static class ForwardTraceRules
             .OrderBy(g => Array.IndexOf(LocationOrder, g.Key) is var i and >= 0 ? i : int.MaxValue)
             .Select(g => new LocationCountDto(g.Key, g.Count())).ToList();
         var serials = rows.Select(r => new ForwardTraceDto(r.SerialNo, r.SerialStatus, r.WoNo, r.Depth, r.LotNo, r.StationCode,
-            r.ConsumedAt, r.OperatorCode, r.Location, null, null, null)).ToList();
+            r.ConsumedAt, r.OperatorCode, r.Location, r.CartonNo, r.PalletNo, r.ShipmentRef)).ToList();
         return new ForwardTraceResultDto(start, byLocation, serials);
     }
 }

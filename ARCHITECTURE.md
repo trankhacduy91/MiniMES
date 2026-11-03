@@ -13,6 +13,7 @@ Mỗi quyết định ghi theo khung ADR (Architecture Decision Record): bối c
 | [ADR-007](#adr-007-nguồn-dữ-liệu-oee-total-count-từ-máy-goodng-từ-scan-theo-serial) | Nguồn dữ liệu OEE: Total Count từ máy, Good/NG từ scan theo serial | 10/2026 |
 | [ADR-008](#adr-008-dữ-liệu-máy-đi-qua-mqtt-hợp-đồng-chung-cho-mọi-giao-thức) | Dữ liệu máy đi qua MQTT, hợp đồng chung cho mọi giao thức | 10/2026 |
 | [ADR-009](#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật) | Edge Gateway tự viết: OPC UA subscription, Modbus polling, outbox SQLite luôn bật | 10/2026 |
+| [ADR-010](#adr-010-đóng-gói-đi-qua-route-check-đếm-thùng-bằng-update-có-điều-kiện-hold-của-thùngpallet-là-suy-ra) | Đóng gói đi qua route check, đếm thùng bằng UPDATE có điều kiện, Hold của thùng/pallet là suy ra | 11/2026 |
 
 ---
 
@@ -215,3 +216,26 @@ PLC ──OPC UA subscription / Modbus FC03 polling──▶ driver ─▶ Chann
 - *`Guid.NewGuid()` làm msgId:* bản phát lại thành message "mới", đếm trùng.
 
 **Đánh đổi / giới hạn.** Một lần ghi đĩa mỗi message (không đáng kể với WAL và ghi theo lô). Bảo mật OPC UA ở dev là `None` + auto-accept chứng chỉ; production phải `SignAndEncrypt` (Basic256Sha256) và trust chứng chỉ thủ công, theo dõi ngày hết hạn. Modbus không có bảo mật: cô lập mạng OT, gateway chỉ đọc. Một gateway cho một nhóm máy; hai gateway đọc cùng một máy sẽ gửi đôi. Hàng đợi tràn mất chi tiết của khoảng bị bỏ (tổng sản lượng vẫn đúng nhờ bộ đếm tích lũy).
+
+---
+
+## ADR-010: Đóng gói đi qua route check, đếm thùng bằng UPDATE có điều kiện, Hold của thùng/pallet là suy ra
+
+**Bối cảnh.** Thành phẩm được xếp vào thùng (10 con), thùng lên pallet (20 thùng), pallet được giao (M3b). Khách đối chiếu theo thùng/pallet, nên một thùng "10" có 11 con, hay một board chưa qua Test nằm trong thùng, là lỗi giao hàng. Recall (M6) phải biết board đang ở đâu. Trạm Pack có thể scan rất nhanh; hai request có thể đến cùng lúc.
+
+**Quyết định.**
+
+1. **Pack = scan bước PACK qua route check của M3 + thêm vào thùng, trong một transaction.** Lõi của use case Scan được tách thành `ScanExecutor`: nó dùng transaction của người gọi, không tự mở. `ScanHandler` (M3) và `PackHandler` (M3b) cùng gọi nó. Không có đường tắt cho board chưa Test, đang Hold hay khác WO, và không bao giờ có trạng thái "scan OK mà không ở thùng nào".
+2. **Số lượng thùng/pallet chỉ đổi bằng `UPDATE … SET Qty = Qty + 1 WHERE Status = 'Open' AND Qty < @capacity`**, rồi kiểm số dòng bị ảnh hưởng. Trả về 0 nghĩa là người khác vừa lấy chỗ cuối: đọc lại và mở thùng mới. Dòng `CartonSerial` chỉ được insert khi tăng thành công. Đóng thùng cũng là `UPDATE` có điều kiện.
+3. **Lưới an toàn ở DB bằng filtered unique index.** Mỗi serial có tối đa một dòng `CartonSerial` chưa unpack. Mỗi trạm có tối đa một thùng Open cho mỗi WO, và một pallet Open cho mỗi item. Unpack **không xóa** dòng mà điền `UnpackedAt/By/Reason`, nên lịch sử "từng ở thùng nào" còn nguyên.
+4. **Hold của thùng/pallet không lưu cột.** Nó được tính bằng `EXISTS` serial đang Hold trên các dòng còn hiệu lực. Ship kiểm điều này trong cùng lần lưu, có `RowVersion` của pallet và từng thùng: pallet thay đổi giữa chừng thì trả 409, không ship.
+5. **Nhãn in sau commit.** In lỗi không hoàn tác việc đóng thùng; in lại có log `PrintNo` và lý do.
+
+**Phương án đã loại.**
+- *Kiosk gọi `/scan` rồi `/cartons/add`:* hai transaction, nên sẽ có board `Completed` mà không ở thùng nào.
+- *PackHandler gửi `ScanCommand` qua MediatR:* handler Scan tự mở transaction, khó lồng transaction qua MediatR.
+- *Đọc `Qty`, tăng trong C#, rồi lưu; hoặc `COUNT(*)` các dòng:* hai request cùng thấy 9 thì cùng ghi 10, thùng thực tế có 11 con. Test đồng thời chứng minh điều này: bỏ điều kiện `Qty < @capacity` thì test đỏ.
+- *Khóa bi quan (`UPDLOCK`) cho cả thao tác:* giữ khóa lâu hơn cần thiết. `UPDATE` có điều kiện đã được SQL Server tuần tự hóa theo dòng.
+- *Cột `IsOnHold` trên thùng/pallet:* thành hai nguồn sự thật. Mỗi lần Hold, Release hay unpack đều phải đồng bộ, và sẽ có lúc lệch.
+
+**Đánh đổi / giới hạn.** `EXISTS` tốn hơn đọc một cột. Ở quy mô vài nghìn thùng mỗi ngày, có index `CartonSerials(CartonId, UnpackedAt)`, thì không đáng kể. Một serial bị Hold đúng vào khoảnh khắc ship thì không được chặn (Hold nằm trên dòng `Serial`); M7 xử lý trường hợp này bằng NCR. Mỗi thùng chỉ thuộc một WO; nếu muốn gom thùng lẻ của nhiều WO thì bỏ ràng buộc WO, giữ ràng buộc Item. Số thùng/pallet dùng SEQUENCE riêng; khi khách yêu cầu nhãn GS1 SSCC thì chỉ cần thay `PackingNumberFormat`.

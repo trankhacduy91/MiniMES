@@ -14,7 +14,11 @@ public sealed class ForwardTraceRow
     public string? StationCode { get; init; }
     public DateTime ConsumedAt { get; init; }                   // UTC
     public string? OperatorCode { get; init; }                  // from the scan that consumed it, or the repair technician
-    // Wip / CompletedUnpacked / Scrapped. M3b adds InCarton, OnPallet, Shipped (spec 2.2b).
+    // The current carton / pallet / delivery order (M3b, spec 2.2b); null while the board is not packed.
+    public string? CartonNo { get; init; }
+    public string? PalletNo { get; init; }
+    public string? ShipmentRef { get; init; }
+    // Shipped / OnPallet / InCarton / CompletedUnpacked / Wip / Scrapped.
     public string Location { get; init; } = string.Empty;
 }
 

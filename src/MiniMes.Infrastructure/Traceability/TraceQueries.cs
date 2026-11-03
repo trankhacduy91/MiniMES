@@ -63,7 +63,14 @@ public sealed class TraceQueries(AppDbContext db) : ITraceQueries
         )
         SELECT s.SerialNo, s.Status AS SerialStatus, w.WoNo, h.Depth, l.LotNo, st.Code AS StationCode, h.ConsumedAt,
                COALESCE(sl.OperatorCode, rl.RepairedBy) AS OperatorCode,
-               CASE s.Status WHEN 'Completed' THEN 'CompletedUnpacked' WHEN 'Scrapped' THEN 'Scrapped' ELSE 'Wip' END AS Location
+               c.CartonNo, p.PalletNo, p.ShipmentRef,
+               -- spec 2.2b: where the board is now, from the M3b packing hierarchy
+               CASE WHEN p.Status = 'Shipped'   THEN 'Shipped'
+                    WHEN p.Id IS NOT NULL       THEN 'OnPallet'
+                    WHEN c.Id IS NOT NULL       THEN 'InCarton'
+                    WHEN s.Status = 'Completed' THEN 'CompletedUnpacked'
+                    WHEN s.Status = 'Scrapped'  THEN 'Scrapped'
+                    ELSE 'Wip' END AS Location
         FROM   Hit h
         JOIN   dbo.Serials s       ON s.Id = h.SerialId
         JOIN   dbo.WorkOrders w    ON w.Id = s.WorkOrderId
@@ -71,6 +78,11 @@ public sealed class TraceQueries(AppDbContext db) : ITraceQueries
         LEFT JOIN dbo.Stations st  ON st.Id = h.StationId      -- no FK on SerialComponents (hot insert)
         LEFT JOIN dbo.ScanLogs sl  ON sl.Id = h.ScanLogId
         LEFT JOIN dbo.RepairLogs rl ON rl.Id = h.RepairLogId   -- a part replaced at Repair (step 10b)
+        -- LEFT, never INNER: a board still on the line has no carton and must stay in the result (spec 2.2b trap).
+        -- Only the live row: a board unpacked from carton A and packed into B shows B.
+        LEFT JOIN dbo.CartonSerials cs ON cs.SerialId = s.Id AND cs.UnpackedAt IS NULL
+        LEFT JOIN dbo.Cartons c        ON c.Id = cs.CartonId
+        LEFT JOIN dbo.Pallets p        ON p.Id = c.PalletId
         WHERE  h.rn = 1
         ORDER BY s.SerialNo
         OPTION (MAXRECURSION 20)

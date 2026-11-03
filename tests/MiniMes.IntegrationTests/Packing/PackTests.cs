@@ -221,4 +221,19 @@ public class PackTests(ApiFixture api)
         Assert.Equal((HttpStatusCode.UnprocessableEntity, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.BadRequest),
             (notPack.StatusCode, notFound.StatusCode, planner.StatusCode, empty.StatusCode));
     }
+
+    // Module DoD: a board of another work order (same model) never goes into this WO's carton. The station packs the WO of
+    // its session; the route check answers WrongWo before any carton is touched (P1, P2).
+    [Fact]
+    public async Task Board_of_another_work_order_goes_in_no_carton()
+    {
+        var (woA, boardsA) = await PassedTestAsync(1);
+        var (woB, _) = await PassedTestAsync(1);   // the Pack station's session is now WO B
+
+        var answer = await PackAsync(await api.LoginOperatorAsync(stationCode: Pack), boardsA[0]);
+
+        Assert.Equal(("Blocked", "WrongWo", (string?)null), (answer.Result, answer.ReasonCode, answer.CartonNo));
+        Assert.Empty(await CartonsAsync(woA));
+        Assert.Empty(await CartonsAsync(woB));
+    }
 }

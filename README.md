@@ -16,7 +16,7 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 - **M4 (kết nối máy) xong:** MQTT (Mosquitto, topic UNS ISA-95) → ingest chống trùng, bộ đếm tích lũy, batch writer; Offline tách khỏi Down (heartbeat + LWT); SignalR realtime có throttle; Andon raise/ack/resolve + tự raise + leo thang; dashboard line WPF và nút Andon trên Kiosk; simulator vai máy + vai trạm tự động. Xem [mục Machine connectivity](#machine-connectivity-m4).
 - **M5 (OEE & downtime) xong:** A×P×Q ở một hàm thuần, khớp tính tay ca mẫu 79,8 %; snapshot theo giờ/ca có job bắt kịp và unique index; phân loại dừng (audit theo cột, đổi lý do thì tính lại ca); Pareto; cờ P > 100 % và `CounterMismatch`; dashboard OxyPlot, Excel, Line TV. Xem [mục OEE](#oee-m5).
 - **M6 (vật tư & truy xuất) xong:** nhập reel có nhãn ZPL, IQC theo supplier lot, nạp vật tư có kiểm tra đúng item/trạm/hạn/Hold và cảnh báo FIFO (supervisor duyệt có ghi vết); scan OK ghi `SerialComponents` và trừ lot trong cùng transaction (thiếu reel thì chặn scan); linh kiện thay ở Repair cũng vào hồ sơ; truy xuất ngược/xuôi bằng recursive CTE qua genealogy, xuất Excel, Hold lot; đo trên 5 triệu dòng (xuôi 12.500 serial ~100 ms). Xem [mục Material & traceability](#material--traceability-m6).
-- **M3b (đóng gói) đang làm:** đủ 6 bước (thùng/pallet, pack qua route check, nhãn, palletize, ship, Kiosk Packing), còn rà Definition of Done. Xem [mục Packing](#packing-m3b).
+- **M3b (đóng gói) xong:** board → thùng → pallet → giao hàng; pack đi qua route check trong cùng transaction với việc vào thùng; số lượng thùng/pallet đúng cả khi đồng thời (UPDATE có điều kiện + filtered unique index, có test đột biến); Hold của thùng/pallet suy ra từ serial, pallet có hàng Hold không ship được; nhãn thùng/pallet ZPL; Kiosk Packing hai chế độ, supervisor duyệt bằng quẹt thẻ; truy xuất xuôi (M6) cho biết board đang ở thùng/pallet nào, đã giao chưa. Xem [mục Packing](#packing-m3b) và [ADR-010](ARCHITECTURE.md).
 - Module tiếp theo (M7) làm theo [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
@@ -148,7 +148,7 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | 9 | Máy Down → Andon → quá 3 phút chưa Ack thì leo thang → chọn lý do dừng | M4, M5 | xong (M4); Pareto lý do dừng ở M5 |
 | 10 | Nhiệt độ reflow trôi → SPC báo vi phạm → NCR, Hold serial liên quan | M7 | chưa làm |
 | 11 | Trạm Pack: serial vào thùng 10 pcs → nhãn thùng → pallet | M3b | xong (Kiosk màn Packing) |
-| 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M3b, M7 | truy xuất xuôi + Hold lot xong (M6); thùng/pallet ở M3b, Hold serial/pallet ở M7 |
+| 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M3b, M7 | truy xuất xuôi tới thùng/pallet/đã giao + Hold lot xong (M6, M3b); Hold serial/pallet ở M7 |
 | 13 | WO Completed → báo cáo sản lượng/FPY/OEE, xuất Excel | M2, M3, M5 | FPY/WIP xong (M3); OEE, Excel ở M5 |
 
 ## Master data (M1)
@@ -351,7 +351,7 @@ Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md
 
 **Dữ liệu truy xuất mẫu** (Development, tự seed khi khởi động, spec M6 mục 3): WO `WO-TRACE` đã đóng, 200 board `TRACE-0001`…`TRACE-0200` ở `L1-SMT-01`. Tụ `CAP-100NF`: board 1–120 từ `L-CAP-A`, 121–200 từ `L-CAP-B` (tách từ reel `L-CAP-P`); cả hai reel gốc thuộc supplier lot `SUP-S1`. Điện trở `RES-100K`: cả 200 board từ `L-RES-A` (`SUP-R1`).
 
-**Truy xuất** (BackOffice, menu **Traceability**, role `QC`/`Supervisor`/`Admin`): *Serial (backward)* → cây board → lot đã dùng (trạm, giờ, operator, người nạp reel) → lot cha, mở nhánh nào tải nhánh đó. *Lot* hoặc *Supplier lot + mã hàng (forward)* → mọi board đã dùng, nhóm theo vị trí hiện tại, **Export Excel**, **Hold lot** (lot đó, các reel cùng lô giao hàng và lot tách ra từ chúng; chỉ M7 mới gỡ được). Thử với dữ liệu mẫu: `TRACE-0150`, `L-CAP-B`, `SUP-S1` + `CAP-100NF`.
+**Truy xuất** (BackOffice, menu **Traceability**, role `QC`/`Supervisor`/`Admin`): *Serial (backward)* → cây board → lot đã dùng (trạm, giờ, operator, người nạp reel) → lot cha, mở nhánh nào tải nhánh đó. *Lot* hoặc *Supplier lot + mã hàng (forward)* → mọi board đã dùng, nhóm theo vị trí hiện tại (đã giao kèm số phiếu giao / trên pallet / trong thùng / chưa đóng gói / đang trên line / đã hủy, M3b), **Export Excel**, **Hold lot** (lot đó, các reel cùng lô giao hàng và lot tách ra từ chúng; chỉ M7 mới gỡ được). Thử với dữ liệu mẫu: `TRACE-0150`, `L-CAP-B`, `SUP-S1` + `CAP-100NF`.
 
 | Endpoint | Nội dung |
 | --- | --- |

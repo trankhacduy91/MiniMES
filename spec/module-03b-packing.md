@@ -325,15 +325,15 @@ Tổng khoảng 10 giờ. Commit sau mỗi bước.
 
 ### 5.1 Definition of Done
 
-- [ ] 200 serial → 20 thùng → 1 pallet đầy (20 thùng); WO 197 con → 19 thùng đủ + 1 thùng lẻ 7 con do Supervisor đóng kèm lý do.
-- [ ] Serial chưa qua Test, serial Hold, serial khác WO/Item không vào được thùng; scan lặp không làm sai số lượng.
-- [ ] Test đồng thời: không thùng nào vượt `QtyPerCarton`; không serial nào ở 2 thùng hiệu lực.
-- [ ] Thùng đầy tự đóng và sinh nhãn ZPL; reprint có `PrintNo` và lý do.
-- [ ] Pallet chứa serial Hold không Ship được; pallet đã Ship không unpack/sửa được.
-- [ ] Unpack giữ lịch sử (`UnpackedAt/By/Reason`); serial unpack có thể đóng vào thùng khác.
-- [ ] Test của M3 vẫn xanh sau khi tách `ScanExecutor`.
-- [ ] Kiosk Packing hai chế độ chạy được; chuỗi UI trong `.resx`.
-- [ ] Ghi vào `ARCHITECTURE.md`: pack qua route check, Hold suy ra, cập nhật có điều kiện.
+- [x] 200 serial → 20 thùng → 1 pallet đầy (20 thùng); WO 197 con → 19 thùng đủ + 1 thùng lẻ 7 con do Supervisor đóng kèm lý do. *(`PalletTests`: `Two_hundred_boards_fill_twenty_cartons_and_one_pallet`, `Last_carton_of_a_work_order_is_closed_short_by_a_supervisor`.)*
+- [x] Serial chưa qua Test, serial Hold, serial khác WO/Item không vào được thùng; scan lặp không làm sai số lượng. *(`PackTests`: SkippedStep, SerialHold, `Board_of_another_work_order_goes_in_no_carton` (thêm khi rà DoD), repack sai WO, pack lặp; khác Item: `Carton.CheckAdd` unit test (WO chỉ có một Item nên route check WrongWo chặn trước).)*
+- [x] Test đồng thời: không thùng nào vượt `QtyPerCarton`; không serial nào ở 2 thùng hiệu lực. *(`PackTests` hai pack/repack cùng lúc ở 9/10, hai board đầu cùng mở một thùng; `PalletTests` hai thùng cùng vào chỗ cuối pallet, 5 vòng, có đột biến; filtered unique `PackingSchemaTests`.)*
+- [x] Thùng đầy tự đóng và sinh nhãn ZPL; reprint có `PrintNo` và lý do. *(`PackingLabelApiTests`.)*
+- [x] Pallet chứa serial Hold không Ship được; pallet đã Ship không unpack/sửa được. *(`Held_serial_blocks_the_shipment_and_a_shipped_pallet_is_frozen`.)*
+- [x] Unpack giữ lịch sử (`UnpackedAt/By/Reason`); serial unpack có thể đóng vào thùng khác. *(`Unpack_from_a_palletized_carton_and_refill`, `Unpacked_board_is_repacked_without_a_second_scan`, `PackingSchemaTests`; M6 `TraceLocationTests`: board từng ở thùng D, nay ở thùng C, truy xuất chỉ hiện C.)*
+- [x] Test của M3 vẫn xanh sau khi tách `ScanExecutor`. *(Toàn bộ integration xanh sau bước 3 và mọi bước sau.)*
+- [x] Kiosk Packing hai chế độ chạy được; chuỗi UI trong `.resx`. *(Bước 6: chạy thật bằng UI Automation, ảnh `docs/images/m3b-*.png`.)*
+- [x] Ghi vào `ARCHITECTURE.md`: pack qua route check, Hold suy ra, cập nhật có điều kiện. *(ADR-010.)*
 
 ### 5.2 Tự kiểm tra
 
