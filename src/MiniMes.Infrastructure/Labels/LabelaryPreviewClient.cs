@@ -11,10 +11,10 @@ public sealed class LabelaryPreviewClient(HttpClient http) : ILabelPreview
 {
     public const string BaseAddress = "https://api.labelary.com/";
 
-    public async Task<byte[]> RenderPngAsync(string zpl, CancellationToken ct)
+    public async Task<byte[]> RenderPngAsync(string zpl, string labelaryInches, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post,
-            $"v1/printers/{ZplLabelBuilder.LabelaryDensity}/labels/{ZplLabelBuilder.LabelaryInches}/0/")
+            $"v1/printers/{ZplLabelBuilder.LabelaryDensity}/labels/{labelaryInches}/0/")
         {
             // Raw ZPL as the body, declared as a form post (what curl --data sends); text/plain -> 415.
             Content = new StringContent(zpl, Encoding.ASCII, "application/x-www-form-urlencoded"),

@@ -110,10 +110,20 @@ public class LabelPrintLogConfiguration : IEntityTypeConfiguration<LabelPrintLog
 {
     public void Configure(EntityTypeBuilder<LabelPrintLog> b)
     {
-        b.ToTable("LabelPrintLogs", t => t.HasCheckConstraint("CK_LabelPrintLogs_PrintNo", "[PrintNo] >= 1"));
-        // One number per print of a serial: two reprints racing for "PrintNo 3" -> one of them gets 409.
-        b.HasIndex(x => new { x.SerialId, x.PrintNo }).IsUnique();
+        b.ToTable("LabelPrintLogs", t =>
+        {
+            t.HasCheckConstraint("CK_LabelPrintLogs_PrintNo", "[PrintNo] >= 1");
+            // M3b: a serial label points to its serial (and WO); carton and pallet labels do not.
+            t.HasCheckConstraint("CK_LabelPrintLogs_SerialTarget",
+                "([LabelType] = 'Serial' AND [SerialId] IS NOT NULL AND [SerialNo] = [TargetKey] AND [WorkOrderId] IS NOT NULL)"
+                + " OR ([LabelType] <> 'Serial' AND [SerialId] IS NULL AND [SerialNo] IS NULL)");
+        });
+        // One number per print of a label: two reprints racing for "PrintNo 3" -> one of them gets 409.
+        b.HasIndex(x => new { x.LabelType, x.TargetKey, x.PrintNo }).IsUnique();
+        b.HasIndex(x => x.SerialId);
         b.HasIndex(x => x.WorkOrderId);
+        b.Property(x => x.LabelType).HasConversion<string>().HasMaxLength(10).IsUnicode(false);
+        b.Property(x => x.TargetKey).HasMaxLength(LabelPrintLog.TargetKeyMaxLength).IsUnicode(false);
         b.Property(x => x.SerialNo).HasMaxLength(Serial.SerialNoMaxLength).IsUnicode(false);
         b.Property(x => x.PrintedBy).HasMaxLength(100);
         b.Property(x => x.Reason).HasMaxLength(LabelPrintLog.ReasonMaxLength);

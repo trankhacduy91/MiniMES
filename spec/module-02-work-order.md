@@ -760,7 +760,7 @@ public async Task<byte[]> PreviewAsync(string zpl, CancellationToken ct)
 
 **In thật ra máy in mạng** (không làm trong MVP, chỉ để biết): nhiều máy Zebra nhận ZPL thô qua TCP cổng 9100. Vì vậy bạn có thể thay `LabelaryPreviewClient` bằng `ZebraTcpPrinter` mà không đổi phần sinh ZPL: tách interface `ILabelPreview` và `ILabelPrinter`.
 
-**`LabelPrintLog`**: mỗi lần in một serial ghi một dòng: `SerialNo`, `PrintedAt` (UTC), `PrintedBy`, `PrintNo` (lần in thứ mấy; lần > 1 là reprint), `Reason` (bắt buộc khi reprint). Tại thời điểm Release chưa in gì; in là hành động riêng sau Release.
+**`LabelPrintLog`**: mỗi lần in một serial ghi một dòng: `SerialNo`, `PrintedAt` (UTC), `PrintedBy`, `PrintNo` (lần in thứ mấy; lần > 1 là reprint), `Reason` (bắt buộc khi reprint). Tại thời điểm Release chưa in gì; in là hành động riêng sau Release. **[M3b bước 4]** Bảng dùng chung cho nhãn thùng/pallet: thêm `LabelType` + `TargetKey`, `PrintNo` đếm theo `(LabelType, TargetKey)`; `SerialId`/`SerialNo`/`WorkOrderId` nullable (xem module-03b bước 4).
 
 **Bẫy thường gặp.**
 - Labelary là dịch vụ ngoài: **giới hạn tốc độ và số nhãn mỗi lần gọi**; có thể lỗi hoặc chậm. Dùng nó để xem **một** nhãn mẫu, không dùng gọi 200 lần cho 200 serial. Tránh gửi dữ liệu thật của khách vào dịch vụ công cộng.

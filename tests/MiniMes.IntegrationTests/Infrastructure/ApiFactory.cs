@@ -71,10 +71,12 @@ public sealed class FakeLabelPreview : ILabelPreview
     public static readonly byte[] Png = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
 
     public string? LastZpl { get; private set; }
+    public string? LastInches { get; private set; }
 
-    public Task<byte[]> RenderPngAsync(string zpl, CancellationToken ct)
+    public Task<byte[]> RenderPngAsync(string zpl, string labelaryInches, CancellationToken ct)
     {
         LastZpl = zpl;
+        LastInches = labelaryInches;
         return Task.FromResult(Png);
     }
 }

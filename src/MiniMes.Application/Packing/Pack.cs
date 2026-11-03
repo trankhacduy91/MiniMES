@@ -27,7 +27,7 @@ public sealed class PackValidator : AbstractValidator<PackCommand>
 }
 
 public sealed class PackHandler(IAppDbContext db, ScanExecutor scans, ISequenceNumbers sequences, PlantTimeZone plant,
-    ICurrentUser user, TimeProvider time, ILogger<PackHandler> log)
+    PackingLabels labels, ICurrentUser user, TimeProvider time, ILogger<PackHandler> log)
     : IRequestHandler<PackCommand, PackResponse>
 {
     // Losing the race for a carton (filled or opened by another pack meanwhile) means: read again and retry.
@@ -43,9 +43,13 @@ public sealed class PackHandler(IAppDbContext db, ScanExecutor scans, ISequenceN
         var station = await db.LoadStationAsync(cmd.StationId, ct);   // 404
         if (station.Type != StationType.Pack) throw new DomainException($"Station {station.Code} is not a Pack station.");
 
-        await using var tx = await db.BeginTransactionAsync(ct);
-        var response = await PackAsync(tx, station.Id, serialNo, ct);
-        if (response.Result == "Ok" && !response.Duplicate) await tx.CommitAsync(ct);   // anything else wrote nothing
+        PackResponse response;
+        await using (var tx = await db.BeginTransactionAsync(ct))
+        {
+            response = await PackAsync(tx, station.Id, serialNo, ct);
+            if (response.Result == "Ok" && !response.Duplicate) await tx.CommitAsync(ct);   // anything else wrote nothing
+        }
+        if (response.CartonClosed) response = await WithLabelAsync(response, ct);
 
         log.LogInformation("Pack {SerialNo} at station {StationId}: {PackResult} {ReasonCode} carton {CartonNo} {CartonQty}/{QtyPerCarton} closed={CartonClosed} duplicate={Duplicate} repacked={Repacked} in {ElapsedMs} ms",
             serialNo, station.Id, response.Result, response.ReasonCode, response.CartonNo, response.CartonQty, response.QtyPerCarton,
@@ -86,6 +90,22 @@ public sealed class PackHandler(IAppDbContext db, ScanExecutor scans, ISequenceN
             return Blocked(scan.Response.ReasonCode ?? "Duplicate", scan.Response.Message, qtyPerCarton);
         }
         return await AddToCartonAsync(stationId, board!, qtyPerCarton, repacked: false, ct);
+    }
+
+    // Step 4, after the commit (spec 2.2 trap 2): the carton exists for sure before its label does. A failure here does
+    // not undo the pack: the carton is closed, the answer says so and the label is printed again from its endpoint.
+    private async Task<PackResponse> WithLabelAsync(PackResponse response, CancellationToken ct)
+    {
+        try
+        {
+            var label = await labels.PrintCartonAsync(response.CartonNo!, reason: null, automatic: true, ct);
+            return response with { LabelZpl = label.Zpl };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            log.LogWarning(ex, "Carton {CartonNo} closed but its label was not made", response.CartonNo);
+            return response with { Message = response.Message + " Label NOT printed: print it again." };
+        }
     }
 
     // Spec 2.3: Qty goes up by a conditional UPDATE (never read-increment-write), and the CartonSerial row is only

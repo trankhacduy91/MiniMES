@@ -37,7 +37,7 @@ public sealed class PreviewLabelHandler(IAppDbContext db, ILabelPreview preview)
                            .Select(s => s.SerialNo).FirstOrDefaultAsync(ct)
                        ?? throw new ValidationException([new ValidationFailure("SerialNo",
                            q.SerialNo is null ? $"Work order {wo.WoNo} has no serials." : $"Serial {q.SerialNo} is not in work order {wo.WoNo}.")]);
-        return await preview.RenderPngAsync(LabelData.Zpl(wo, itemCode, serialNo), ct);   // one label: no print log
+        return await preview.RenderPngAsync(LabelData.Zpl(wo, itemCode, serialNo), ZplLabelBuilder.LabelaryInches, ct);   // one label: no print log
     }
 }
 
@@ -78,8 +78,8 @@ public sealed class PrintLabelsHandler(IAppDbContext db, ICurrentUser user, Time
         if (serials.Count == 0) throw new ValidationException([new ValidationFailure("SerialNos", $"Work order {wo.WoNo} has no labels to print.")]);
 
         var ids = serials.Select(s => s.Id).ToList();
-        var lastPrint = await db.LabelPrintLogs.Where(l => ids.Contains(l.SerialId))
-            .GroupBy(l => l.SerialId).Select(g => new { SerialId = g.Key, Last = g.Max(l => l.PrintNo) })
+        var lastPrint = await db.LabelPrintLogs.Where(l => l.SerialId != null && ids.Contains(l.SerialId.Value))
+            .GroupBy(l => l.SerialId!.Value).Select(g => new { SerialId = g.Key, Last = g.Max(l => l.PrintNo) })
             .ToDictionaryAsync(x => x.SerialId, x => x.Last, ct);
 
         var now = time.GetUtcNow().UtcDateTime;

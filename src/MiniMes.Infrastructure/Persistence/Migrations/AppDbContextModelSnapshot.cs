@@ -1898,6 +1898,12 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("LabelType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
                     b.Property<int>("PrintNo")
                         .HasColumnType("int");
 
@@ -1913,28 +1919,37 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<long>("SerialId")
+                    b.Property<long?>("SerialId")
                         .HasColumnType("bigint");
 
                     b.Property<string>("SerialNo")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("TargetKey")
                         .IsRequired()
                         .HasMaxLength(30)
                         .IsUnicode(false)
                         .HasColumnType("varchar(30)");
 
-                    b.Property<int>("WorkOrderId")
+                    b.Property<int?>("WorkOrderId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SerialId");
+
                     b.HasIndex("WorkOrderId");
 
-                    b.HasIndex("SerialId", "PrintNo")
+                    b.HasIndex("LabelType", "TargetKey", "PrintNo")
                         .IsUnique();
 
                     b.ToTable("LabelPrintLogs", null, t =>
                         {
                             t.HasCheckConstraint("CK_LabelPrintLogs_PrintNo", "[PrintNo] >= 1");
+
+                            t.HasCheckConstraint("CK_LabelPrintLogs_SerialTarget", "([LabelType] = 'Serial' AND [SerialId] IS NOT NULL AND [SerialNo] = [TargetKey] AND [WorkOrderId] IS NOT NULL) OR ([LabelType] <> 'Serial' AND [SerialId] IS NULL AND [SerialNo] IS NULL)");
                         });
                 });
 
@@ -2606,14 +2621,12 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.HasOne("MiniMes.Domain.Planning.Serial", null)
                         .WithMany()
                         .HasForeignKey("SerialId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("MiniMes.Domain.Planning.WorkOrder", null)
                         .WithMany()
                         .HasForeignKey("WorkOrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("MiniMes.Domain.Planning.Serial", b =>

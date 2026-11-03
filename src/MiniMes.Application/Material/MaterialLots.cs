@@ -158,5 +158,5 @@ public sealed class PreviewLotLabelHandler(IAppDbContext db, PlantTimeZone plant
     : IRequestHandler<PreviewLotLabelQuery, byte[]>
 {
     public async Task<byte[]> Handle(PreviewLotLabelQuery q, CancellationToken ct)
-        => await preview.RenderPngAsync((await GetLotLabelHandler.LoadAsync(db, q.LotId, ct)).Label(plant), ct);
+        => await preview.RenderPngAsync((await GetLotLabelHandler.LoadAsync(db, q.LotId, ct)).Label(plant), ZplLabelBuilder.LabelaryInches, ct);
 }

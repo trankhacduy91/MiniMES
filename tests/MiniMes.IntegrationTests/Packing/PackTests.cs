@@ -14,10 +14,10 @@ namespace MiniMes.IntegrationTests.Packing;
 [Collection(ApiCollection.Name)]
 public class PackTests(ApiFixture api)
 {
-    private const string Pack = "L1-PACK-01";
+    internal const string Pack = "L1-PACK-01";
     private readonly ScanTests scan = new(api);
 
-    private async Task<(int WoId, List<string> Serials)> PassedTestAsync(int qty)
+    internal async Task<(int WoId, List<string> Serials)> PassedTestAsync(int qty)
     {
         var (wo, serials) = await scan.ReleasedAsync(qty);
         await api.WithDbAsync(db => db.Database.ExecuteSqlAsync(
@@ -26,7 +26,7 @@ public class PackTests(ApiFixture api)
         return (wo.Id, serials);
     }
 
-    private async Task<PackResponse> PackAsync(HttpClient client, string serialNo)
+    internal async Task<PackResponse> PackAsync(HttpClient client, string serialNo)
     {
         var response = await client.PostAsJsonAsync($"/api/stations/{await scan.StationIdAsync(Pack)}/pack", new PackRequest(serialNo));
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
