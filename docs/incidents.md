@@ -196,3 +196,11 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Nguyên nhân:** khi đổi cột về NOT NULL, `AlterColumn` của EF tự sinh thêm một câu `UPDATE SerialComponents SET ScanLogId = 0 WHERE ScanLogId IS NULL` trước `ALTER COLUMN`. Trigger R11 chạy theo **câu lệnh**, không theo dòng: câu `UPDATE` nào cũng bị từ chối, kể cả câu không chạm dòng nào. Migration chạy trong transaction nên rollback sạch.
 - **Cách sửa:** lần đầu chỉ bỏ `defaultValue: 0L` → vẫn lỗi: `dotnet ef migrations script` cho thấy EF **vẫn** sinh `UPDATE … SET ScanLogId = CAST(0 AS bigint)` và cả `ADD DEFAULT` (cột CLR `long` không NULL). Sửa thật: thay `AlterColumn` bằng `migrationBuilder.Sql("ALTER TABLE … ALTER COLUMN [ScanLogId] bigint NOT NULL")`. Down/Up chạy được khi chưa có dòng Repair. Có dòng Repair thì Down **phải** thất bại (không xóa được bằng chứng), đã ghi chú trong migration.
 - **Bài học:** đọc SQL mà migration sinh ra (`dotnet ef migrations script`), đừng chỉ đọc code C# của nó. Bảng có trigger chặn UPDATE/DELETE thì mọi thao tác schema "tiện tay" của EF (điền giá trị mặc định, dựng lại bảng) đều có thể va vào trigger. Chạy thử cả Down chứ không chỉ Up.
+
+## 2026-11-03 — Lời từ chối vẫn làm đổi entity (M3b bước 2)
+
+- **Triệu chứng:** unit test "đóng thùng lẻ không có lý do bị từ chối" đỏ: phương thức có ném `DomainException`, nhưng thùng đã thành `Closed`. Test "ship với danh sách thùng sai" cũng đỏ: lỗi ném ra đúng, nhưng 2 thùng đầu đã thành `Shipped`.
+- **Nguyên nhân:** code gán trạng thái trước rồi mới kiểm tra phần còn lại (`CloseReason = RequireReason(reason)` nằm sau `Status = Closed`; `Ship` kiểm từng thùng **trong** vòng lặp đánh dấu). Request trả 422 thì `SaveChanges` không chạy, nên DB không sai. Nhưng entity trong bộ nhớ đã ở trạng thái nửa vời: một handler bắt lỗi rồi lưu tiếp, hoặc gọi thêm một thao tác khác trên cùng `DbContext`, sẽ ghi trạng thái sai xuống DB.
+- **Cách tìm:** test kiểm cả lời từ chối **lẫn** trạng thái sau đó (`Assert.Equal(status, carton.Status)` ngay sau `Assert.Throws`), không chỉ kiểm có lỗi.
+- **Cách sửa:** mỗi phương thức Domain kiểm **hết** điều kiện trước, rồi mới đổi bất cứ thứ gì ("validate, then mutate").
+- **Bài học:** phương thức của entity nên "nguyên tử": hoặc đổi trọn vẹn, hoặc không đổi gì. Test cho đường từ chối phải kiểm cả trạng thái sau lời từ chối.

@@ -80,6 +80,8 @@ public class PalletConfiguration : IEntityTypeConfiguration<Pallet>
         b.ToTable("Pallets", t => t.HasCheckConstraint("CK_Pallets_CartonCount", "[CartonCount] >= 0"));
         b.Property(x => x.PalletNo).HasMaxLength(Pallet.NumberMaxLength).IsUnicode(false);
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(10).IsUnicode(false);
+        b.Property(x => x.ClosedBy).HasMaxLength(50).IsUnicode(false);
+        b.Property(x => x.CloseReason).HasMaxLength(Carton.ReasonMaxLength);
         b.Property(x => x.ShippedBy).HasMaxLength(50).IsUnicode(false);
         b.Property(x => x.ShipmentRef).HasMaxLength(Pallet.ShipmentRefMaxLength).IsUnicode(false);
         b.Property(x => x.RowVersion).IsRowVersion();

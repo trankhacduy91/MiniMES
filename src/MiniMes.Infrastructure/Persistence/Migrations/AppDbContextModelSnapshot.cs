@@ -1817,8 +1817,20 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.Property<int>("CartonCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("CloseReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("ClosedBy")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<bool>("IsPartial")
+                        .HasColumnType("bit");
 
                     b.Property<int>("ItemId")
                         .HasColumnType("int");

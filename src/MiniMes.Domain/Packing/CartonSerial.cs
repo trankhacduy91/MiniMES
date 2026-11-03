@@ -23,4 +23,13 @@ public class CartonSerial
         PackedBy = packedBy;
         PackedAt = utcNow;
     }
+
+    // Only through Carton.Unpack, which checks the carton (P8, P9) and keeps its Qty right.
+    internal void MarkUnpacked(string by, string reason, DateTime utcNow)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(by);
+        UnpackedAt = utcNow;
+        UnpackedBy = by;
+        UnpackReason = reason;
+    }
 }
