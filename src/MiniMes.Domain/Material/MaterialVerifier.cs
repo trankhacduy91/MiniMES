@@ -50,6 +50,22 @@ public static class MaterialVerifier
             ? new VerifyResult(VerifyOutcome.Warning, VerifyCode.FifoOlderLotAvailable, older.LotNo)
             : VerifyResult.Ok;
     }
+
+    // M6 step 10b: the lot of a part a technician solders on at Repair. The quality checks of a load, minus what does
+    // not apply to one part taken by hand: no station (Repair is off the routing), no FIFO, and an empty/Consumed
+    // lot passes like at the scan gate (RemainingQty is theoretical; the part is in the technician's hand).
+    public static VerifyResult VerifyReplacement(LotFacts? lot, IReadOnlyCollection<WoMaterialRequirement> requirements, DateTime utcNow)
+    {
+        if (lot is null) return VerifyResult.Reject(VerifyCode.LotNotFound);
+        if (requirements.All(r => r.ItemId != lot.ItemId)) return VerifyResult.Reject(VerifyCode.ItemNotInBom);
+        return lot.Status switch
+        {
+            MaterialLotStatus.Hold => VerifyResult.Reject(VerifyCode.LotOnHold),
+            MaterialLotStatus.PendingIqc or MaterialLotStatus.IqcRejected => VerifyResult.Reject(VerifyCode.LotNotIqcPassed),
+            _ when lot.ExpiryAt is { } expiry && expiry <= utcNow => VerifyResult.Reject(VerifyCode.LotExpired),
+            _ => VerifyResult.Ok,
+        };
+    }
 }
 
 // FIFO by ReceivedAt (for FEFO, order by ExpiryAt instead). Only lots someone could actually load instead: Available,

@@ -1,7 +1,7 @@
 # M6 · Bước 9 — Đo hiệu năng truy xuất và chi phí ghi tiêu hao: kiến thức cần nắm
 
 > Tài liệu học cho bước 9 của [module-06](../../spec/module-06-material-traceability.md) (spec mục **2.3**, **2.7**).
-> Bước trước: [M6-step08](M6-step08-trace-screen.md).
+> Bước trước: [M6-step08](M6-step08-trace-screen.md). Bước sau: [M6-step10](M6-step10-repair-parts.md).
 > Số đo đầy đủ: [`docs/perf.md`](../perf.md) mục "Hiệu năng truy xuất". Script: `scripts/seed-trace.sql`, `scripts/perf-trace.sql`, `scripts/scan-bench.cs`.
 
 ## A. Vì sao phải đo truy xuất

@@ -63,6 +63,37 @@ public class MaterialVerifierTests
         Assert.True(new VerifyResult(outcome, code, suggested) == result, $"{scenario}: got {result}");
     }
 
+    // Step 10b: the lot of a part soldered on at Repair. Quality as at loading; no station, no FIFO, empty passes.
+    public static TheoryData<string, LotFacts?, VerifyCode> ReplacementCases() => new()
+    {
+        { "lot of the WO's BOM", NewCap, VerifyCode.Ok },
+        { "item consumed at another step: Repair is off the routing", NewCap with { ItemId = Mcu }, VerifyCode.Ok },
+        { "label of no lot", null, VerifyCode.LotNotFound },
+        { "item not in the BOM (RES-10K for RES-100K)", NewCap with { ItemId = Res10K }, VerifyCode.ItemNotInBom },
+        { "lot on hold", NewCap with { Status = MaterialLotStatus.Hold }, VerifyCode.LotOnHold },
+        { "lot pending IQC", NewCap with { Status = MaterialLotStatus.PendingIqc }, VerifyCode.LotNotIqcPassed },
+        { "lot rejected by IQC", NewCap with { Status = MaterialLotStatus.IqcRejected }, VerifyCode.LotNotIqcPassed },
+        { "expires exactly now (boundary)", NewCap with { ExpiryAt = Now }, VerifyCode.LotExpired },
+        { "expires in one second", NewCap with { ExpiryAt = Now.AddSeconds(1) }, VerifyCode.Ok },
+        // RemainingQty is theoretical: the part is in the technician's hand (same reasoning as the scan gate).
+        { "lot consumed on paper", NewCap with { Status = MaterialLotStatus.Consumed, RemainingQty = 0 }, VerifyCode.Ok },
+        { "wrong item and on hold: what it is first", NewCap with { ItemId = Res10K, Status = MaterialLotStatus.Hold }, VerifyCode.ItemNotInBom },
+    };
+
+    [Theory]
+    [MemberData(nameof(ReplacementCases))]
+    public void Verify_replacement_table(string scenario, LotFacts? lot, VerifyCode code)
+    {
+        var result = MaterialVerifier.VerifyReplacement(lot, Bom, Now);
+
+        Assert.True(result == (code == VerifyCode.Ok ? VerifyResult.Ok : VerifyResult.Reject(code)), $"{scenario}: got {result}");
+    }
+
+    // An older reel never matters for one part taken by hand.
+    [Fact]
+    public void Replacement_ignores_fifo()
+        => Assert.Equal(VerifyResult.Ok, MaterialVerifier.VerifyReplacement(NewCap, Bom, Now));
+
     // The scanned reel itself is in the candidate list (the handler loads all reels of the item): never "older than itself".
     [Fact]
     public void Chosen_lot_among_the_candidates_is_ignored()

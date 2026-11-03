@@ -161,7 +161,7 @@ public sealed class GetBackwardTraceHandler(ITraceQueries trace) : IRequestHandl
     public async Task<IReadOnlyList<BackwardTraceDto>> Handle(GetBackwardTraceQuery q, CancellationToken ct)
         => (await trace.BackwardAsync(q.SerialNo.Trim().ToUpperInvariant(), ct))
             .Select(r => new BackwardTraceDto(r.Depth, r.LotNo, r.ChildLotNo, r.ItemCode, r.SupplierLot, r.StationCode, r.ConsumedAt,
-                r.OperatorCode, r.LoadedBy)).ToList();
+                r.OperatorCode, r.LoadedBy, r.FromRepair)).ToList();
 }
 
 // ---------- GET /api/trace/nodes/{kind}/{key}/children : one level of the backward tree (lazy, spec 2.6) ----------
@@ -188,7 +188,7 @@ public sealed class GetTraceChildrenHandler(IAppDbContext db, ITraceQueries trac
             var rows = await trace.BackwardAsync(key, ct);
             return rows.Where(r => r.Depth == 0)
                 .Select(r => new TraceNodeDto(TraceNodeKind.Lot, r.LotNo, r.ItemCode, r.SupplierLot, r.StationCode, r.ConsumedAt,
-                    r.OperatorCode, r.LoadedBy, null, rows.Any(a => a.ChildLotNo == r.LotNo)))
+                    r.OperatorCode, r.LoadedBy, null, rows.Any(a => a.ChildLotNo == r.LotNo), r.FromRepair))
                 .ToList();
         }
 

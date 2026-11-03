@@ -345,6 +345,8 @@ Bảng dữ liệu và ràng buộc: [docs/erd-material.md](docs/erd-material.md
 
 **Tiêu hao khi scan OK**: mỗi scan OK ở bước có vật tư quản lý theo lot ghi `SerialComponents` (board dùng lot nào) và trừ số lý thuyết của lot, trong **cùng transaction** với lần scan. Trạm chưa nạp đủ reel, hoặc reel đang nạp bị Hold/hết hạn → scan bị chặn `MaterialNotLoaded` (kể cả scan của máy qua MQTT). Tắt bằng `Material__EnforceLoadedMaterial=false` khi muốn chạy demo M3–M5 mà không nạp reel.
 
+**Linh kiện thay ở Repair** (M6 bước 10b): khi Action là "Replace…", kỹ thuật viên scan nhãn reel của linh kiện mới vào ô *Lot of the new part* (bắt buộc khi cờ trên bật). Lot được kiểm như lúc nạp (thuộc BOM của WO, không Hold, đã qua IQC, còn hạn), ghi thành `SerialComponents` của board (nguồn `RepairLogId`) và trừ 1 khỏi lot, cùng transaction với hồ sơ sửa. Truy xuất ngược hiện "replaced at repair by …"; truy xuất xuôi từ lot đó ra cả board đã sửa.
+
 **Dữ liệu truy xuất mẫu** (Development, tự seed khi khởi động, spec M6 mục 3): WO `WO-TRACE` đã đóng, 200 board `TRACE-0001`…`TRACE-0200` ở `L1-SMT-01`. Tụ `CAP-100NF`: board 1–120 từ `L-CAP-A`, 121–200 từ `L-CAP-B` (tách từ reel `L-CAP-P`); cả hai reel gốc thuộc supplier lot `SUP-S1`. Điện trở `RES-100K`: cả 200 board từ `L-RES-A` (`SUP-R1`).
 
 **Truy xuất** (BackOffice, menu **Traceability**, role `QC`/`Supervisor`/`Admin`): *Serial (backward)* → cây board → lot đã dùng (trạm, giờ, operator, người nạp reel) → lot cha, mở nhánh nào tải nhánh đó. *Lot* hoặc *Supplier lot + mã hàng (forward)* → mọi board đã dùng, nhóm theo vị trí hiện tại, **Export Excel**, **Hold lot** (lot đó, các reel cùng lô giao hàng và lot tách ra từ chúng; chỉ M7 mới gỡ được). Thử với dữ liệu mẫu: `TRACE-0150`, `L-CAP-B`, `SUP-S1` + `CAP-100NF`.

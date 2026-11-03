@@ -78,7 +78,9 @@ public class SerialComponentConfiguration : IEntityTypeConfiguration<SerialCompo
 {
     public void Configure(EntityTypeBuilder<SerialComponent> b)
     {
-        b.ToTable("SerialComponents");
+        // Step 10b: a row comes from a scan OK or from a repair, never both or neither (the trace joins one of them).
+        b.ToTable("SerialComponents", t => t.HasCheckConstraint("CK_SerialComponents_OneSource",
+            "([ScanLogId] IS NULL AND [RepairLogId] IS NOT NULL) OR ([ScanLogId] IS NOT NULL AND [RepairLogId] IS NULL)"));
         b.Property(x => x.Qty).HasPrecision(MaterialQty.Precision, MaterialQty.Scale);
         b.HasOne<MaterialLot>().WithMany().HasForeignKey(x => x.LotId).OnDelete(DeleteBehavior.Restrict);
 

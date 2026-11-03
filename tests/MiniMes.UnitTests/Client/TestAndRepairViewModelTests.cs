@@ -183,11 +183,13 @@ public class TestAndRepairViewModelTests
 
         vm.SelectedDefect = FakeExecution.Missing;
         vm.Action = "Replace U3";
-        vm.ComponentReplaced = "U3 IC-MCU-QFN lot L2610-07";
+        vm.ComponentReplaced = "U3";
+        vm.ReplacementLotNo = "  l-261101-000003 ";
         vm.SelectedReturn = vm.ReturnOptions.Single(o => o.Seq == 10);
         await vm.SubmitCommand.ExecuteAsync(null);
 
-        Assert.Equal(new RepairRequest(Board, "CMP-MIS", "Replace U3", "U3 IC-MCU-QFN lot L2610-07", 10), Assert.Single(kiosk.Fake.Repairs));
+        // The lot is trimmed only: the server normalizes case, like every code it receives.
+        Assert.Equal(new RepairRequest(Board, "CMP-MIS", "Replace U3", "U3", 10, "l-261101-000003"), Assert.Single(kiosk.Fake.Repairs));
         Assert.Equal(string.Format(Strings.Scan_Next, "10 SMT"), vm.Message);
     }
 

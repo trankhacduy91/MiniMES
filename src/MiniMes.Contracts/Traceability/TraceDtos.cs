@@ -14,7 +14,7 @@ public sealed record ForwardTraceResultDto(IReadOnlyList<string> StartLots, IRea
     IReadOnlyList<ForwardTraceDto> Serials);
 
 public sealed record BackwardTraceDto(int Depth, string LotNo, string? ChildLotNo, string ItemCode, string? SupplierLot,
-    string? StationCode, DateTime ConsumedAt, string? OperatorCode, string? LoadedBy);
+    string? StationCode, DateTime ConsumedAt, string? OperatorCode, string? LoadedBy, bool FromRepair = false);
 
 public static class TraceNodeKind
 {
@@ -23,9 +23,10 @@ public static class TraceNodeKind
 }
 
 // One node of the backward tree, loaded when its parent is opened (spec 2.6). Under a serial: the lots it consumed
-// (station, time, operator, who loaded the reel). Under a lot: the lots it was split from (Qty taken from each).
+// (station, time, operator, who loaded the reel; FromRepair = a part replaced at Repair, OperatorCode = the technician).
+// Under a lot: the lots it was split from (Qty taken from each).
 public sealed record TraceNodeDto(string Kind, string Key, string ItemCode, string? SupplierLot, string? StationCode, DateTime? ConsumedAt,
-    string? OperatorCode, string? LoadedBy, decimal? Qty, bool HasChildren);
+    string? OperatorCode, string? LoadedBy, decimal? Qty, bool HasChildren, bool FromRepair = false);
 
 public sealed record HoldLotRequest(string LotNo);
 

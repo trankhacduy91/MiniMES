@@ -12,14 +12,24 @@ public class SerialComponent
     public long SerialId { get; private set; }
     public int LotId { get; private set; }
     public int ItemId { get; private set; }
-    public decimal Qty { get; private set; }             // QtyPerUnit of the WO material snapshot
+    public decimal Qty { get; private set; }             // QtyPerUnit of the WO material snapshot; 1 for a repaired part
     public int StationId { get; private set; }
-    public long ScanLogId { get; private set; }          // the scan that produced it: operator, time, result
+    public long? ScanLogId { get; private set; }         // the scan that produced it: operator, time, result
+    public long? RepairLogId { get; private set; }       // or the repair that put a new part on the board (exactly one is set)
     public DateTime ConsumedAt { get; private set; }
 
     private SerialComponent() { }
 
     public SerialComponent(long serialId, int lotId, int itemId, decimal qty, int stationId, long scanLogId, DateTime consumedAt)
+        : this(serialId, lotId, itemId, qty, stationId, consumedAt)
+        => ScanLogId = scanLogId;
+
+    // M6 step 10b: a part replaced at Repair is consumption too. Without it the backward trace of a repaired board
+    // misses the new part's lot, and a recall of that lot misses the board.
+    public static SerialComponent FromRepair(long serialId, int lotId, int itemId, decimal qty, int stationId, long repairLogId, DateTime repairedAt)
+        => new(serialId, lotId, itemId, qty, stationId, repairedAt) { RepairLogId = repairLogId };
+
+    private SerialComponent(long serialId, int lotId, int itemId, decimal qty, int stationId, DateTime consumedAt)
     {
         if (qty <= 0) throw new DomainException("Consumed quantity must be greater than 0.");
         SerialId = serialId;
@@ -27,7 +37,6 @@ public class SerialComponent
         ItemId = itemId;
         Qty = qty;
         StationId = stationId;
-        ScanLogId = scanLogId;
         ConsumedAt = consumedAt;
     }
 }

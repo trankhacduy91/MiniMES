@@ -32,6 +32,15 @@ internal static class Consumption
     public static async Task<List<(int ItemId, decimal QtyPer)>> LinesAtStepAsync(this IAppDbContext db, int woId, int seq, CancellationToken ct)
         => (await db.RequirementsAsync(woId, ct)).Where(r => r.OperationSeq == seq)
             .GroupBy(r => r.ItemId).Select(g => (g.Key, g.Sum(r => r.QtyPerUnit))).ToList();
+
+    // One UPDATE, never read-subtract-write: two boards at once would both read 100 and both write 96.
+    // SQL evaluates every SET on the old row, so both CASEs see the RemainingQty before this subtraction.
+    // Floors at 0 (R10, CHECK constraint); runs out -> Consumed, but Hold stays Hold.
+    public static Task<int> SubtractAsync(this IAppDbContext db, int lotId, decimal qty, CancellationToken ct)
+        => db.MaterialLots.Where(l => l.Id == lotId).ExecuteUpdateAsync(s => s
+            .SetProperty(l => l.RemainingQty, l => l.RemainingQty >= qty ? l.RemainingQty - qty : 0m)
+            .SetProperty(l => l.Status, l => l.Status == MaterialLotStatus.Available && l.RemainingQty <= qty
+                ? MaterialLotStatus.Consumed : l.Status), ct);
 }
 
 public sealed class MaterialGate(IAppDbContext db, IOptions<MaterialOptions> options) : IMaterialGate
@@ -93,14 +102,7 @@ public sealed class RecordConsumptionHandler(IAppDbContext db, IOptions<Material
                 continue;
             }
             db.SerialComponents.Add(new SerialComponent(e.SerialId, lotId, itemId, qtyPer, e.StationId, e.ScanLogId, e.At));
-
-            // One UPDATE, never read-subtract-write: two boards at once would both read 100 and both write 96.
-            // SQL evaluates every SET on the old row, so both CASEs see the RemainingQty before this scan.
-            // Floors at 0 (R10, CHECK constraint); runs out -> Consumed, but Hold stays Hold.
-            await db.MaterialLots.Where(l => l.Id == lotId).ExecuteUpdateAsync(s => s
-                .SetProperty(l => l.RemainingQty, l => l.RemainingQty >= qtyPer ? l.RemainingQty - qtyPer : 0m)
-                .SetProperty(l => l.Status, l => l.Status == MaterialLotStatus.Available && l.RemainingQty <= qtyPer
-                    ? MaterialLotStatus.Consumed : l.Status), ct);
+            await db.SubtractAsync(lotId, qtyPer, ct);
         }
         await db.SaveChangesAsync(ct);
     }

@@ -845,7 +845,10 @@
     <value>Action taken</value>
   </data>
   <data name="Repair_Component" xml:space="preserve">
-    <value>Component replaced (reference and lot)</value>
+    <value>Component replaced (reference, e.g. U3)</value>
+  </data>
+  <data name="Repair_ReplacementLot" xml:space="preserve">
+    <value>Lot of the new part (scan the reel label)</value>
   </data>
   <data name="Repair_Return" xml:space="preserve">
     <value>Then the board goes to</value>
@@ -1572,6 +1575,10 @@
   </data>
   <data name="Trace_ConsumedDetail" xml:space="preserve">
     <value>{0}  ·  {1}  ·  scanned by {2}  ·  reel loaded by {3}</value>
+  </data>
+  <data name="Trace_RepairDetail" xml:space="preserve">
+    <value>{0}  ·  {1}  ·  replaced at repair by {2}</value>
+    <comment>{0} = repair station, {1} = time, {2} = technician</comment>
   </data>
   <data name="Trace_ParentDetail" xml:space="preserve">
     <value>parent lot, {0:N0} taken</value>

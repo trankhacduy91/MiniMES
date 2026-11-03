@@ -96,6 +96,22 @@ public class TraceViewModelTests
         Assert.StartsWith("parent lot, 2,000 taken", capB.Children[0].Detail);
     }
 
+    // Step 10b: a part replaced at Repair names the technician, and no reel loader (nothing went on a machine).
+    [Fact]
+    public async Task Part_replaced_at_repair_says_so()
+    {
+        var api = new FakeTraceApi();
+        api.Children[(TraceNodeKind.Serial, "TRACE-0150")] =
+            [Consumed("L-CAP-A", "CAP-100NF", false) with { StationCode = "L1-REPAIR", OperatorCode = "EMP00321", LoadedBy = null, FromRepair = true }];
+        var vm = Vm(api);
+        vm.SearchText = "TRACE-0150";
+
+        await vm.TraceCommand.ExecuteAsync(null);
+
+        Assert.Equal("L1-REPAIR  ·  2026-10-20 09:15:00  ·  replaced at repair by EMP00321  ·  supplier lot SUP-S1",
+            Assert.Single(Assert.Single(vm.RootNodes).Children).Detail);
+    }
+
     [Fact]
     public async Task Opening_and_closing_fast_calls_the_api_once()
     {

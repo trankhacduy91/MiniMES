@@ -13,7 +13,7 @@ public sealed class ForwardTraceRow
     public string LotNo { get; init; } = string.Empty;          // the lot consumed by the board
     public string? StationCode { get; init; }
     public DateTime ConsumedAt { get; init; }                   // UTC
-    public string? OperatorCode { get; init; }                  // from the scan that consumed it
+    public string? OperatorCode { get; init; }                  // from the scan that consumed it, or the repair technician
     // Wip / CompletedUnpacked / Scrapped. M3b adds InCarton, OnPallet, Shipped (spec 2.2b).
     public string Location { get; init; } = string.Empty;
 }
@@ -30,8 +30,9 @@ public sealed class BackwardTraceRow
     public string? SupplierLot { get; init; }
     public string? StationCode { get; init; }
     public DateTime ConsumedAt { get; init; }
-    public string? OperatorCode { get; init; }
+    public string? OperatorCode { get; init; }                  // the scan's operator, or the repair technician
     public string? LoadedBy { get; init; }
+    public bool FromRepair { get; init; }                       // a part replaced at Repair, not consumed by a scan (step 10b)
 }
 
 public interface ITraceQueries

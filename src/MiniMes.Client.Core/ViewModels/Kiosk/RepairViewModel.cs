@@ -46,6 +46,10 @@ public partial class RepairViewModel(IExecutionApi execution, IWorkOrderApi work
     [ObservableProperty]
     private string _componentReplaced = string.Empty;
 
+    // M6: the reel label of the new part, so the board's trace includes it.
+    [ObservableProperty]
+    private string _replacementLotNo = string.Empty;
+
     [ObservableProperty]
     private ReturnOption? _selectedReturn;
 
@@ -92,7 +96,7 @@ public partial class RepairViewModel(IExecutionApi execution, IWorkOrderApi work
         Flash(ScanState.Ok, Strings.Repair_CheckedIn, Strings.Repair_FillForm, serialNo);
         Board = serialNo;
         SelectedDefect = null;
-        Action = ComponentReplaced = FormError = string.Empty;
+        Action = ComponentReplaced = ReplacementLotNo = FormError = string.Empty;
         SelectedReturn = ReturnOptions.FirstOrDefault();
     }
 
@@ -106,7 +110,8 @@ public partial class RepairViewModel(IExecutionApi execution, IWorkOrderApi work
         try
         {
             var done = await Execution.RepairAsync(station.Id, new RepairRequest(board, defect.Code, Action.Trim(),
-                string.IsNullOrWhiteSpace(ComponentReplaced) ? null : ComponentReplaced.Trim(), SelectedReturn?.Seq));
+                string.IsNullOrWhiteSpace(ComponentReplaced) ? null : ComponentReplaced.Trim(), SelectedReturn?.Seq,
+                string.IsNullOrWhiteSpace(ReplacementLotNo) ? null : ReplacementLotNo.Trim()));
             Board = null;
             var next = done.NextStepName is { } name ? string.Format(Strings.Scan_Next, $"{done.NextStep} {name}") : string.Empty;
             Flash(ScanState.Ok, Strings.Repair_Done, next, board);
@@ -118,7 +123,7 @@ public partial class RepairViewModel(IExecutionApi execution, IWorkOrderApi work
         }
         catch (ApiException ex)
         {
-            FormError = ex.Message;   // 400 (e.g. replaced part missing) or 422 (rework step after the failed one)
+            FormError = ex.Message;   // 400 (e.g. replaced part or its lot missing) or 422 (rework step after the failed one, lot on hold)
         }
     }
 

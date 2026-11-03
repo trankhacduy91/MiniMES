@@ -1543,7 +1543,10 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)");
 
-                    b.Property<long>("ScanLogId")
+                    b.Property<long?>("RepairLogId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("ScanLogId")
                         .HasColumnType("bigint");
 
                     b.Property<long>("SerialId")
@@ -1562,7 +1565,10 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_SerialComponents_SerialStationItemLot");
 
-                    b.ToTable("SerialComponents", (string)null);
+                    b.ToTable("SerialComponents", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SerialComponents_OneSource", "([ScanLogId] IS NULL AND [RepairLogId] IS NOT NULL) OR ([ScanLogId] IS NOT NULL AND [RepairLogId] IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("MiniMes.Domain.Oee.OeeSnapshot", b =>

@@ -120,7 +120,7 @@ public class ConsumptionTests : IDisposable
         Assert.DoesNotContain(rows, r => r.ItemId == s.McuId);   // consumed at ASSY, not here
         Assert.Equal(10, rows.Select(r => r.SerialId).Distinct().Count());
         var scanIds = await api.WithDbAsync(db => db.ScanLogs.Where(l => s.Boards.Contains(l.SerialNo)).Select(l => l.Id).ToListAsync());
-        Assert.All(rows, r => Assert.Contains(r.ScanLogId, scanIds));
+        Assert.All(rows, r => Assert.Contains(r.ScanLogId!.Value, scanIds));
         Assert.Equal((960m, MaterialLotStatus.Available), await LotAsync(cap));
         Assert.Equal((980m, MaterialLotStatus.Available), await LotAsync(res));
     }

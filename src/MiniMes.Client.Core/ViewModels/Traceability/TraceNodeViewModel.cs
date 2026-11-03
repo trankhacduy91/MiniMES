@@ -75,8 +75,10 @@ public partial class TraceNodeViewModel : ObservableObject
     {
         var supplier = d.SupplierLot is null ? string.Empty : string.Format(CultureInfo.InvariantCulture, Strings.Trace_SupplierLot, d.SupplierLot);
         var detail = d.ConsumedAt is { } at
+            // A part replaced at Repair: where, when, which technician (no reel was loaded on a machine).
+            ? d.FromRepair ? string.Format(CultureInfo.InvariantCulture, Strings.Trace_RepairDetail, d.StationCode, Local(at), d.OperatorCode) + supplier
             // A lot the board consumed: where, when, who scanned, who loaded the reel.
-            ? string.Format(CultureInfo.InvariantCulture, Strings.Trace_ConsumedDetail, d.StationCode, Local(at), d.OperatorCode, d.LoadedBy ?? "-") + supplier
+            : string.Format(CultureInfo.InvariantCulture, Strings.Trace_ConsumedDetail, d.StationCode, Local(at), d.OperatorCode, d.LoadedBy ?? "-") + supplier
             // A lot it was split from.
             : string.Format(CultureInfo.InvariantCulture, Strings.Trace_ParentDetail, d.Qty) + supplier;
         return new TraceNodeViewModel(_api!, d.Kind, d.Key, $"{d.Key}   {d.ItemCode}", detail, d.HasChildren, _zone);

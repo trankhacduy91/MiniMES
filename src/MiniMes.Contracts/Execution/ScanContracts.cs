@@ -21,9 +21,10 @@ public sealed record ScanResponse(
 
 // POST /api/stations/{id}/repair: the technician finishes a board checked in at this Repair station.
 // ReturnToSeq null = retest the failed step; an earlier routing step = rework from there.
-// ComponentReplaced required when Action starts with "Replace".
+// ComponentReplaced required when Action starts with "Replace". ReplacementLotNo (M6): the lot label of the new part,
+// recorded as the board's material; required with "Replace" while material is enforced.
 public sealed record RepairRequest(string SerialNo, string DefectCode, string Action, string? ComponentReplaced = null,
-    int? ReturnToSeq = null);
+    int? ReturnToSeq = null, string? ReplacementLotNo = null);
 
 // NextStep = the step route check now expects (the failed test, or the rework step).
 public sealed record RepairResponse(string SerialNo, string Status, int? NextStep, string? NextStepName);

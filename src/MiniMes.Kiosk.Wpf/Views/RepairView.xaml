@@ -128,6 +128,9 @@
                         <TextBlock Text="{x:Static res:Strings.Repair_Component}" />
                         <TextBox AutomationProperties.AutomationId="Component"
                                  Text="{Binding ComponentReplaced, UpdateSourceTrigger=PropertyChanged}" Padding="8" Margin="0,8,0,16" />
+                        <TextBlock Text="{x:Static res:Strings.Repair_ReplacementLot}" />
+                        <TextBox AutomationProperties.AutomationId="ReplacementLot" CharacterCasing="Upper"
+                                 Text="{Binding ReplacementLotNo, UpdateSourceTrigger=PropertyChanged}" Padding="8" Margin="0,8,0,16" />
                         <TextBlock Text="{x:Static res:Strings.Repair_Return}" />
                         <ComboBox AutomationProperties.AutomationId="ReturnTo" ItemsSource="{Binding ReturnOptions}"
                                   SelectedItem="{Binding SelectedReturn}" DisplayMemberPath="Text" Padding="8" Margin="0,8,0,0" />
