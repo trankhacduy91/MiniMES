@@ -262,3 +262,17 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
   - Một phép tính "kiểm tra" do chính mình làm mà ra đúng con số mình đang nghi thì chưa phải bằng chứng; tôi đã dừng lại ở chỗ "khớp" mà không hỏi tiếp. Kiểm chứng phải đến từ một đường độc lập: viết lại bằng công cụ khác, không dùng code đang kiểm.
   - Khi thấy kết quả lệch spec, nghi code của mình trước rồi mới nghi spec.
   - Thứ tự trả về của một API (theo rule hay theo vị trí) là một phần của hợp đồng: ghi rõ ở comment, và dùng `Min`/`OrderBy` khi cần "sớm nhất".
+
+## 2026-11-04 — Hold đúng lúc scan: board vẫn bị chặn nhưng operator nhận lỗi 422 (M7 bước 9)
+
+- **Triệu chứng:** test đua "Hold và scan cùng lúc" đỏ ngay vòng đầu. Kiosk nhận **422** "Serial … is Hold; it cannot be scanned at a routing step", thay vì 200 + `SerialHold` (nền đỏ, câu dễ hiểu). Dữ liệu không sai: Hold vẫn được giữ, không ghi `ScanLog`.
+- **Nguyên nhân:** scan đọc board **hai lần**.
+  - Lần 1: context cho route check (board `InProcess`), route check cho qua.
+  - Lần 2: nạp entity có tracking để ghi.
+  - Hold commit ngay giữa hai lần đọc (UPDATE set-based), nên lần 2 thấy `Hold`, và `Serial.ApplyScan` ném `DomainException`.
+  - Cơ chế retry của M3 chỉ bắt `ConflictException` (RowVersion lệch lúc `SaveChanges`). Ở đây lỗi xảy ra **trước** `SaveChanges`, nên không có retry.
+- **Cách sửa:** sau khi nạp entity, so `Status`/`CurrentSeq` với giá trị route check đã dùng; khác nhau thì ném `ConflictException`. Vòng retry sẵn có sẽ đánh giá lại và trả `SerialHold`. Đột biến bỏ phép so này thì test đỏ cả hai lần chạy.
+- **Bài học:**
+  - "Đọc để quyết định, rồi đọc lại để ghi" là một khe race, kể cả khi đã có RowVersion: RowVersion chỉ bảo vệ lúc ghi, không bảo vệ khoảng giữa hai lần đọc.
+  - Kết quả tuy đúng (board bị chặn), nhưng **mã lỗi sai** vẫn là bug với người dùng: operator thấy "lỗi hệ thống" thay vì "board đang bị Hold, đưa cho QC".
+  - Test đua hai luồng thật (5 vòng) bắt được lỗi này. Unit test của route check thì không thể bắt được.

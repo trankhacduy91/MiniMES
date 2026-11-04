@@ -6,6 +6,7 @@ using MiniMes.Client.Core.Api;
 using MiniMes.Client.Core.Http;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.Resources;
+using MiniMes.Client.Core.ViewModels.Quality;
 using MiniMes.Contracts.Traceability;
 
 namespace MiniMes.Client.Core.ViewModels.Traceability;
@@ -18,10 +19,12 @@ public enum TraceMode
 }
 
 // Spec M6 step 8, the QC "Trace" screen. Backward = a lazy tree (spec 2.6); forward = a flat list grouped by where the
-// boards are now (the View groups by Location), Excel export, and "Hold lot" for the delivery. Holding serials and
-// pallets belongs to M7: those buttons are shown disabled until then.
-public partial class TraceViewModel(ITraceApi api, IDialogService dialogs, TimeProvider time) : ObservableObject
+// boards are now (the View groups by Location), Excel export, and [M7 step 9] "Hold all": the Hold panel with the
+// lot, its delivery and split lots, and every board made from them (preview, reason, optional NCR).
+public partial class TraceViewModel(ITraceApi api, IDialogService dialogs, TimeProvider time, HoldPanelViewModel holdPanel) : ObservableObject
 {
+    public HoldPanelViewModel HoldPanel { get; } = holdPanel;
+
     private const string ExcelFilter = "Excel workbook (*.xlsx)|*.xlsx";
 
     public ObservableCollection<TraceNodeViewModel> RootNodes { get; } = [];
@@ -41,7 +44,7 @@ public partial class TraceViewModel(ITraceApi api, IDialogService dialogs, TimeP
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowTree), nameof(ShowList))]
-    [NotifyCanExecuteChangedFor(nameof(ExportCommand), nameof(HoldLotCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportCommand), nameof(HoldAllCommand))]
     private ForwardTraceResultDto? _forward;
 
     [ObservableProperty]
@@ -128,25 +131,17 @@ public partial class TraceViewModel(ITraceApi api, IDialogService dialogs, TimeP
         }
     }
 
-    // The delivery of the searched lot (or of the supplier lot) and the lots split from it. Asks first: only an NCR
-    // decision (M7) releases a Hold.
+    // [M7 step 9] Containment: the panel previews what the lot reaches (its delivery, split lots, boards) and holds it.
     [RelayCommand(CanExecute = nameof(HasStartLot))]
-    private async Task HoldLotAsync()
+    private Task HoldAllAsync()
     {
-        var lot = Forward!.StartLots[0];
-        if (!dialogs.Confirm(string.Format(CultureInfo.InvariantCulture, Strings.Trace_ConfirmHold, lot))) return;
-        try
-        {
-            var result = await api.HoldLotAsync(lot);
-            ResultMessage = string.Format(CultureInfo.InvariantCulture, Strings.Trace_Held,
-                result.Held.Count == 0 ? "-" : string.Join(", ", result.Held),
-                result.Skipped.Count == 0 ? "-" : string.Join(", ", result.Skipped.Select(s => $"{s.LotNo} ({s.Status})")));
-        }
-        catch (ApiException ex)
-        {
-            ErrorMessage = ex.Message;
-        }
+        HoldPanel.Held -= OnHeld;   // once, however often the panel is opened
+        HoldPanel.Held += OnHeld;
+        return HoldPanel.OpenAsync("Lot", Forward!.StartLots[0]);
     }
+
+    // The list shows where the boards are and their status: after a hold it is out of date, trace again.
+    private void OnHeld(Contracts.Quality.HoldResultDto result) => _ = TraceCommand.ExecuteAsync(null);
 
     private bool HasStartLot() => Forward is { StartLots.Count: > 0 };
 

@@ -137,18 +137,20 @@ public class ControlChartViewModelTests
     private readonly FakeRealtimeFactory _rt = new();
     private readonly FakeTimeProvider _time = new(T0);
     private readonly RecordingPages _pages = new();
+    private readonly FakeHoldApi Holds = new();
 
     public ControlChartViewModelTests()
     {
         _time.SetLocalTimeZone(TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh"));
         _api.Plans.AddRange([Oven, Rail]);
         _api.Charts[1] = RunChart(alerts: [new(9, 1, "3V3_RAIL", "WE4", 106, T0.AddMinutes(6), "Open", null)]);
-        _api.Charts[2] = RunChart() with { PlanId = 2, PlanCode = "REFLOW_PEAK_TEMP" };
+        _api.Charts[2] = RunChart(alerts: [new(12, 2, "REFLOW_PEAK_TEMP", "WE4", null, T0.AddMinutes(30), "Open", null)])
+            with { PlanId = 2, PlanCode = "REFLOW_PEAK_TEMP" };
     }
 
     private async Task<ControlChartViewModel> LoadedAsync()
     {
-        var vm = new ControlChartViewModel(_api, _rt, new ImmediateDispatcher(), _time, _pages);
+        var vm = new ControlChartViewModel(_api, _rt, new ImmediateDispatcher(), _time, _pages, new HoldPanelViewModel(Holds, _time));
         await vm.LoadAsync();
         await Task.Yield();
         return vm;
@@ -227,6 +229,26 @@ public class ControlChartViewModelTests
         await ((Func<NcrViewModel, Task>)_pages.LastInit!)(ncr);
         Assert.Equal(("SpcAlert", (long?)9, "PCBA6"), (ncr.NewSource, ncr.NewSpcAlertId, ncr.NewSerials));
         Assert.StartsWith("WE4 on 3V3_RAIL", ncr.NewDescription);
+    }
+
+    // [M7 step 9] A machine alert has no serial: "Hold serials in window" opens the Hold panel on the machine, from
+    // 20 min before the alert to 10 min after, in plant time (UTC+7). A station plan (3V3_RAIL) does not offer it.
+    [Fact]
+    public async Task Hold_window_on_a_machine_alert_opens_the_panel_around_the_alert()
+    {
+        var vm = await LoadedAsync();
+        Assert.False(vm.Alerts[0].CanHoldWindow);
+        vm.SelectedPlan = vm.Plans.Single(p => p.Code == "REFLOW_PEAK_TEMP");
+        var alert = Assert.Single(vm.Alerts);
+        Assert.True(alert.CanHoldWindow);
+
+        await vm.HoldWindowCommand.ExecuteAsync(alert);
+
+        Assert.True(vm.HoldPanel.IsOpen);
+        Assert.Equal(("MachineWindow", "L1-REFLOW-01", "2026-11-04 08:10", "2026-11-04 08:40"),
+            (vm.HoldPanel.Scope, vm.HoldPanel.Reference, vm.HoldPanel.FromText, vm.HoldPanel.ToText));
+        var asked = Holds.Previews.Single();
+        Assert.Equal((T0.AddMinutes(10), T0.AddMinutes(40)), (asked.From, asked.To));
     }
 
     [Theory]

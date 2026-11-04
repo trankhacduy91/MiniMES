@@ -4,6 +4,7 @@ using MiniMes.Client.Core.Api;
 using MiniMes.Client.Core.Http;
 using MiniMes.Client.Core.Navigation;
 using MiniMes.Client.Core.Resources;
+using MiniMes.Client.Core.ViewModels.Quality;
 using MiniMes.Client.Core.ViewModels.Traceability;
 using MiniMes.Contracts.Traceability;
 
@@ -23,7 +24,6 @@ public class TraceViewModelTests
         public TaskCompletionSource? Gate { get; set; }
         public ForwardTraceResultDto Forward { get; set; } = new([], [], []);
         public List<(string? Lot, string? Supplier, string? Item)> ForwardCalls { get; } = [];
-        public List<string> Holds { get; } = [];
 
         public async Task<IReadOnlyList<TraceNodeDto>> GetChildrenAsync(string kind, string key, CancellationToken ct = default)
         {
@@ -41,12 +41,6 @@ public class TraceViewModelTests
 
         public Task<byte[]> GetForwardExcelAsync(string? lotNo, string? supplierLot, string? itemCode, CancellationToken ct = default)
             => Task.FromResult(new byte[] { 1, 2, 3 });
-
-        public Task<HoldLotResultDto> HoldLotAsync(string lotNo, CancellationToken ct = default)
-        {
-            Holds.Add(lotNo);
-            return Task.FromResult(new HoldLotResultDto(["L-CAP-A", "L-CAP-B"], [new SkippedLotDto("L-CAP-P", "Consumed")]));
-        }
     }
 
     private sealed class Dialogs(bool confirm, string? savePath = null) : IDialogService
@@ -58,11 +52,11 @@ public class TraceViewModelTests
         public string? AskText(string title, string prompt) => null;
     }
 
-    private static TraceViewModel Vm(FakeTraceApi api, Dialogs? dialogs = null)
+    private static TraceViewModel Vm(FakeTraceApi api, Dialogs? dialogs = null, FakeHoldApi? holds = null)
     {
         var time = new FakeTimeProvider(At);
         time.SetLocalTimeZone(Plant);
-        return new TraceViewModel(api, dialogs ?? new Dialogs(true), time);
+        return new TraceViewModel(api, dialogs ?? new Dialogs(true), time, new HoldPanelViewModel(holds ?? new FakeHoldApi(), time));
     }
 
     private static TraceNodeDto Consumed(string lot, string item, bool hasChildren)
@@ -173,7 +167,7 @@ public class TraceViewModelTests
         Assert.Equal(("Completed, not packed", "2026-10-20 09:15:00"), (vm.Serials[0].LocationText, vm.Serials[0].ConsumedText));
         Assert.Equal("3 serial(s): Completed, not packed 2  ·  In production 1. Start lot(s): L-CAP-B", vm.Summary);
         Assert.True(vm.ExportCommand.CanExecute(null));
-        Assert.True(vm.HoldLotCommand.CanExecute(null));
+        Assert.True(vm.HoldAllCommand.CanExecute(null));
     }
 
     [Fact]
@@ -191,28 +185,31 @@ public class TraceViewModelTests
         Assert.Equal([((string?)null, (string?)"SUP-S1", (string?)"cap-100nf")], api.ForwardCalls);
         Assert.Equal(Strings.Trace_NothingFound, vm.Summary);
         Assert.False(vm.ExportCommand.CanExecute(null));
-        Assert.False(vm.HoldLotCommand.CanExecute(null));   // no start lot: nothing to hold
+        Assert.False(vm.HoldAllCommand.CanExecute(null));   // no start lot: nothing to hold
     }
 
+    // [M7 step 9] "Hold all" opens the Hold panel on the start lot and previews at once; nothing is held until the
+    // user gives a reason and presses Hold.
     [Fact]
-    public async Task Hold_lot_asks_first_and_reports_held_and_unchanged_lots()
+    public async Task Hold_all_opens_the_hold_panel_with_a_preview_of_the_lot()
     {
+        var holds = new FakeHoldApi();
         var api = new FakeTraceApi { Forward = new(["L-CAP-B"], [], []) };
-        var no = Vm(api, new Dialogs(confirm: false));
-        no.IsLotMode = true;
-        no.SearchText = "L-CAP-B";
-        await no.TraceCommand.ExecuteAsync(null);
-        await no.HoldLotCommand.ExecuteAsync(null);
-        Assert.Empty(api.Holds);
+        var vm = Vm(api, holds: holds);
+        vm.IsLotMode = true;
+        vm.SearchText = "L-CAP-B";
+        await vm.TraceCommand.ExecuteAsync(null);
 
-        var yes = Vm(api);
-        yes.IsLotMode = true;
-        yes.SearchText = "L-CAP-B";
-        await yes.TraceCommand.ExecuteAsync(null);
-        await yes.HoldLotCommand.ExecuteAsync(null);
+        await vm.HoldAllCommand.ExecuteAsync(null);
 
-        Assert.Equal(["L-CAP-B"], api.Holds);
-        Assert.Equal("On hold: L-CAP-A, L-CAP-B. Unchanged: L-CAP-P (Consumed).", yes.ResultMessage);
+        Assert.True(vm.HoldPanel.IsOpen);
+        Assert.Equal(("Lot", "L-CAP-B"), (holds.Previews.Single().Scope, holds.Previews.Single().LotNo));
+        Assert.Empty(holds.Holds);
+        Assert.False(vm.HoldPanel.HoldCommand.CanExecute(null));   // no reason yet
+
+        vm.HoldPanel.Reason = "Supplier recall";
+        await vm.HoldPanel.HoldCommand.ExecuteAsync(null);
+        Assert.Equal(2, api.ForwardCalls.Count);   // traced again: the boards now show Hold
     }
 
     [Fact]

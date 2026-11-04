@@ -61,6 +61,7 @@ public static class DependencyInjection
         services.AddScoped<ISequenceNumbers, SequenceNumbers>();
         services.AddScoped<IExecutionReportQueries, ExecutionReportQueries>();
         services.AddScoped<ITraceQueries, TraceQueries>();   // M6
+        services.AddScoped<MiniMes.Application.Quality.Holds.IHoldWriter, Quality.HoldWriter>();   // M7 step 9
         services.Configure<OeeOptions>(config.GetSection(OeeOptions.SectionName));   // M5
         services.Configure<MaterialOptions>(config.GetSection(MaterialOptions.SectionName));   // M6
         services.Configure<SpcOptions>(config.GetSection(SpcOptions.SectionName));             // M7

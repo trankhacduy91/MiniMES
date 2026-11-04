@@ -55,6 +55,9 @@
         <DataTemplate DataType="{x:Type qa:FaiViewModel}">
             <qaviews:FaiView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type qa:HoldsViewModel}">
+            <qaviews:HoldsView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:BackOfficeShellViewModel}">
             <views:ShellView />
         </DataTemplate>

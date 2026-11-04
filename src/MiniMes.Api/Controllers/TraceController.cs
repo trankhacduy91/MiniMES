@@ -33,8 +33,4 @@ public class TraceController(ISender sender) : ControllerBase
     [HttpGet("nodes/{kind}/{key}/children")]
     public Task<IReadOnlyList<TraceNodeDto>> Children(string kind, string key, CancellationToken ct)
         => sender.Send(new GetTraceChildrenQuery(kind, key), ct);
-
-    // The lot, its delivery (same supplier lot) and the lots split from them; 404 unknown lot.
-    [HttpPost("hold-lot")]
-    public Task<HoldLotResultDto> HoldLot(HoldLotRequest r, CancellationToken ct) => sender.Send(new HoldLotCommand(r.LotNo), ct);
 }

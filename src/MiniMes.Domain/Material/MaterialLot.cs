@@ -68,6 +68,26 @@ public class MaterialLot : IAudited
         if (actual == 0 && Status == MaterialLotStatus.Available) Status = MaterialLotStatus.Consumed;
     }
 
+    // M7 step 9: an approved NCR disposition (spec 2.5 effects table), after this NCR's holds were released. Still
+    // held by another NCR (Q8): the effect waits in StatusBeforeHold. UseAsIs / Rework bring an IqcRejected lot back
+    // to Available (the only way, M6 R17; Rework = re-checked, MVP); Scrap empties it; ReturnToVendor sends it back.
+    public void ApplyDisposition(Quality.NcrDisposition disposition)
+    {
+        var current = Status == MaterialLotStatus.Hold ? StatusBeforeHold ?? MaterialLotStatus.Available : Status;
+        if (current is MaterialLotStatus.Scrapped or MaterialLotStatus.Returned)
+            throw new DomainException($"Lot {LotNo} is {current}: its life is over.");
+        var to = disposition switch
+        {
+            Quality.NcrDisposition.UseAsIs or Quality.NcrDisposition.Rework
+                => current == MaterialLotStatus.IqcRejected ? MaterialLotStatus.Available : current,
+            Quality.NcrDisposition.Scrap => MaterialLotStatus.Scrapped,
+            _ => MaterialLotStatus.Returned,
+        };
+        if (to is MaterialLotStatus.Scrapped or MaterialLotStatus.Returned) RemainingQty = 0;
+        if (Status == MaterialLotStatus.Hold) StatusBeforeHold = to;
+        else Status = to;
+    }
+
     // Containment from the trace screen (spec M6 step 8): an Available lot cannot be loaded any more (R4) and a
     // loaded one stops the next scan (step 5 gate). PendingIqc, IqcRejected and Consumed are blocked already, so
     // they are left as they are (Hold over PendingIqc would also hide the lot from IQC). Releasing a Hold is an

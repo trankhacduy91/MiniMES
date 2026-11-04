@@ -28,10 +28,5 @@ public static class TraceNodeKind
 public sealed record TraceNodeDto(string Kind, string Key, string ItemCode, string? SupplierLot, string? StationCode, DateTime? ConsumedAt,
     string? OperatorCode, string? LoadedBy, decimal? Qty, bool HasChildren, bool FromRepair = false);
 
-public sealed record HoldLotRequest(string LotNo);
-
-// Held: the lots now on Hold. Skipped: lots of the same delivery or family left as they were (already Hold,
-// Consumed, waiting for IQC...), with their status.
-public sealed record HoldLotResultDto(IReadOnlyList<string> Held, IReadOnlyList<SkippedLotDto> Skipped);
-
+// A lot of the family a Hold leaves as it is (Consumed, waiting for IQC...), with its status (M7 hold preview).
 public sealed record SkippedLotDto(string LotNo, string Status);

@@ -1,0 +1,38 @@
+<UserControl x:Class="MiniMes.BackOffice.Wpf.Views.Quality.HoldsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:qaviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Quality"
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+    <!-- DataContext = HoldsViewModel (spec M7 step 9): active holds, Release with a note, new hold by serials / carton / pallet. -->
+    <Grid>
+        <DockPanel Margin="12">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Button AutomationProperties.AutomationId="HoldsRefresh" Content="{x:Static res:Strings.Holds_Refresh}"
+                            Command="{Binding RefreshCommand}" Padding="10,3" Margin="0,0,8,0" />
+                    <Button AutomationProperties.AutomationId="HoldsNew" Content="{x:Static res:Strings.Holds_New}" Command="{Binding NewHoldCommand}"
+                            IsEnabled="{Binding CanAct}" Padding="10,3" Margin="0,0,8,0" />
+                    <Button AutomationProperties.AutomationId="HoldsRelease" Content="{x:Static res:Strings.Holds_Release}"
+                            Command="{Binding ReleaseCommand}" Padding="10,3" />
+                </WrapPanel>
+                <TextBlock Text="{x:Static res:Strings.Holds_Title}" FontSize="20" FontWeight="SemiBold" />
+            </DockPanel>
+            <TextBlock DockPanel.Dock="Top" Style="{StaticResource PageError}" Text="{Binding ErrorMessage}" AutomationProperties.AutomationId="HoldsError" />
+            <TextBlock DockPanel.Dock="Top" Style="{StaticResource CollapsedWhenEmpty}" Text="{Binding InfoMessage}"
+                       AutomationProperties.AutomationId="HoldsInfo" Foreground="#FF2E7D32" Margin="0,0,0,6" />
+            <DataGrid AutomationProperties.AutomationId="HoldsList" ItemsSource="{Binding Batches}" SelectedItem="{Binding Selected}"
+                      AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="{x:Static res:Strings.Holds_HeldAt}" Binding="{Binding HeldAt}" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Holds_Scope}" Binding="{Binding Dto.Scope}" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Holds_Ref}" Binding="{Binding Dto.ScopeRef}" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Holds_Active}" Binding="{Binding Targets}" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Holds_Ncr}" Binding="{Binding Dto.NcrNo}" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Holds_HeldBy}" Binding="{Binding Dto.HeldBy}" />
+                    <DataGridTextColumn Header="{x:Static res:Strings.Holds_Reason}" Binding="{Binding Dto.Reason}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+        <qaviews:HoldPanelView DataContext="{Binding Panel}" />
+    </Grid>
+</UserControl>

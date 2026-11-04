@@ -6,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Traceability;
 using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Material;
+using MiniMes.Contracts.Quality;
 using MiniMes.Contracts.Traceability;
 using MiniMes.Domain.Material;
+using MiniMes.Domain.Quality;
 using MiniMes.Domain.Planning;
 using MiniMes.Infrastructure.Persistence.Seed;
 using MiniMes.IntegrationTests.Infrastructure;
@@ -108,33 +110,31 @@ public class TraceApiTests(ApiFixture api)
         Assert.Equal(HttpStatusCode.BadRequest, badKind.StatusCode);
     }
 
-    // The containment: the delivery SUP-S1 (L-CAP-A, L-CAP-P) and the split L-CAP-B, held at once; loading L-CAP-B
-    // on a machine is then refused, with no override.
+    // The containment (M6 step 8, done by the M7 Hold since step 9): the delivery SUP-S1 (L-CAP-A, L-CAP-P) and the
+    // split L-CAP-B, held at once; loading L-CAP-B on a machine is then refused, with no override.
     [Fact]
     public async Task Hold_lot_holds_the_delivery_and_its_splits_and_loading_is_refused()
     {
         var s = await SeedAsync();
         var supervisor = await api.LoginAsync("sup01");
         var (stationId, op) = await StationNeedingCapAsync();
+        var request = new HoldTargetsRequest("Lot", LotNo: s.Code("L-CAP-B"), Reason: "Supplier recall SUP-S1");
 
-        var response = await supervisor.PostAsJsonAsync("/api/trace/hold-lot", new HoldLotRequest(s.Code("L-CAP-B")));
-        var again = await (await supervisor.PostAsJsonAsync("/api/trace/hold-lot", new HoldLotRequest(s.Code("L-CAP-B"))))
-            .Content.ReadFromJsonAsync<HoldLotResultDto>();
+        var preview = (await (await supervisor.PostAsJsonAsync("/api/quality/holds/preview", request)).Content.ReadFromJsonAsync<HoldPreviewDto>())!;
+        var response = await supervisor.PostAsJsonAsync("/api/quality/holds", request);
         var load = await (await op.PostAsJsonAsync($"/api/stations/{stationId}/material-loads", new LoadMaterialRequest(s.Code("L-CAP-B"), null, null, null)))
             .Content.ReadFromJsonAsync<LoadMaterialResponse>();
-        var missing = await supervisor.PostAsJsonAsync("/api/trace/hold-lot", new HoldLotRequest("L-NOPE"));
+        var missing = await supervisor.PostAsJsonAsync("/api/quality/holds/preview", request with { LotNo = "L-NOPE" });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var held = (await response.Content.ReadFromJsonAsync<HoldLotResultDto>())!;
-        Assert.Equal([s.Code("L-CAP-A"), s.Code("L-CAP-B"), s.Code("L-CAP-P")], held.Held);
-        Assert.Empty(held.Skipped);
-        Assert.Equal(3, again!.Skipped.Count(x => x.Status == "Hold"));
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal([s.Code("L-CAP-A"), s.Code("L-CAP-B"), s.Code("L-CAP-P")], preview.Lots);
+        Assert.Empty(preview.SkippedLots);
+        var held = (await response.Content.ReadFromJsonAsync<HoldResultDto>())!;
+        Assert.Equal(3, held.Lots);
         Assert.Equal(MaterialLotStatus.Available, await api.WithDbAsync(db => db.MaterialLots.Where(l => l.Id == s.LotIds["L-RES-A"]).Select(l => l.Status).SingleAsync()));
         Assert.Equal(("Rejected", "LotOnHold"), (load!.Outcome, load.Code));
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
-        var audit = await api.WithDbAsync(db => db.AuditLogs.CountAsync(a => a.TableName == "MaterialLots" && a.ColumnName == "Status"
-            && a.NewValue == "Hold" && a.ChangedBy == "sup01" && s.LotIds.Values.Select(v => v.ToString()).Contains(a.RecordKey)));
-        Assert.Equal(3, audit);
+        Assert.Equal(3, await api.WithDbAsync(db => db.HoldRecords.CountAsync(h => h.BatchId == held.BatchId && h.TargetType == HoldTargetType.Lot && h.HeldBy == "sup01")));
     }
 
     [Fact]

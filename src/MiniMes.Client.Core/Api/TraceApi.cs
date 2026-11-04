@@ -10,7 +10,6 @@ public interface ITraceApi
     Task<ForwardTraceResultDto> GetForwardAsync(string? lotNo, string? supplierLot, string? itemCode, CancellationToken ct = default);
     Task<byte[]> GetForwardExcelAsync(string? lotNo, string? supplierLot, string? itemCode, CancellationToken ct = default);
     Task<IReadOnlyList<TraceNodeDto>> GetChildrenAsync(string kind, string key, CancellationToken ct = default);
-    Task<HoldLotResultDto> HoldLotAsync(string lotNo, CancellationToken ct = default);
 }
 
 public sealed class TraceApi(ApiClient api) : ITraceApi
@@ -25,9 +24,6 @@ public sealed class TraceApi(ApiClient api) : ITraceApi
 
     public Task<IReadOnlyList<TraceNodeDto>> GetChildrenAsync(string kind, string key, CancellationToken ct = default)
         => api.GetAsync<IReadOnlyList<TraceNodeDto>>($"{Base}/nodes/{kind}/{Uri.EscapeDataString(key)}/children", ct);
-
-    public Task<HoldLotResultDto> HoldLotAsync(string lotNo, CancellationToken ct = default)
-        => api.PostAsync<HoldLotRequest, HoldLotResultDto>($"{Base}/hold-lot", new HoldLotRequest(lotNo), ct);
 
     private static string Query(string? lotNo, string? supplierLot, string? itemCode)
     {

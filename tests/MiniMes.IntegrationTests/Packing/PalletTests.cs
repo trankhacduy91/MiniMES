@@ -17,7 +17,7 @@ public class PalletTests(ApiFixture api)
     private readonly PackTests pack = new(api);
     private readonly ScanTests scan = new(api);
 
-    private async Task FreshPalletAsync()
+    internal async Task FreshPalletAsync()
     {
         var stationId = await scan.StationIdAsync(PackTests.Pack);
         await api.WithDbAsync(db => db.Database.ExecuteSqlAsync(
@@ -25,7 +25,7 @@ public class PalletTests(ApiFixture api)
     }
 
     // A WO of `boards` passed Test, all packed: full cartons closed, the rest in an open carton. Returns carton numbers.
-    private async Task<(int WoId, List<string> Serials, List<string> Cartons, HttpClient Op)> PackedAsync(int boards)
+    internal async Task<(int WoId, List<string> Serials, List<string> Cartons, HttpClient Op)> PackedAsync(int boards)
     {
         var (woId, serials) = await pack.PassedTestAsync(boards);
         var op = await api.LoginOperatorAsync(stationCode: PackTests.Pack);
@@ -39,7 +39,7 @@ public class PalletTests(ApiFixture api)
         return (woId, serials, cartons, op);
     }
 
-    private async Task<PalletizeResponse> PalletizeAsync(HttpClient client, string cartonNo)
+    internal async Task<PalletizeResponse> PalletizeAsync(HttpClient client, string cartonNo)
     {
         var response = await client.PostAsJsonAsync($"/api/stations/{await scan.StationIdAsync(PackTests.Pack)}/palletize", new PalletizeRequest(cartonNo));
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");

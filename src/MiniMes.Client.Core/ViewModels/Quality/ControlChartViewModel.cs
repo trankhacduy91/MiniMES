@@ -15,8 +15,10 @@ using OxyPlot;
 namespace MiniMes.Client.Core.ViewModels.Quality;
 
 // One open alert in the list next to the chart. HasNcr: an NCR was opened from it already (step 8).
-public sealed record SpcAlertRow(SpcAlertDto Dto, string Time, string Rule, string Meaning)
+// [M7 step 9] Machine: the alert's plan is a machine tag, so "Hold serials in window" is offered.
+public sealed record SpcAlertRow(SpcAlertDto Dto, string Time, string Rule, string Meaning, string? Machine = null)
 {
+    public bool CanHoldWindow => Machine is not null;
     public bool HasNcr => Dto.NcrId is not null;
     public bool CanCreateNcr => !HasNcr;
 }
@@ -38,8 +40,10 @@ public partial class ControlChartViewModel : ObservableObject, ILoadable, IClosa
     private readonly CancellationTokenSource _stop = new();
     private bool _loaded;
 
-    public ControlChartViewModel(IQualityApi api, IRealtimeClientFactory realtime, IUiDispatcher ui, TimeProvider time, IPageNavigator pages)
+    public ControlChartViewModel(IQualityApi api, IRealtimeClientFactory realtime, IUiDispatcher ui, TimeProvider time, IPageNavigator pages,
+        HoldPanelViewModel holdPanel)
     {
+        HoldPanel = holdPanel;
         _pages = pages;
         _api = api;
         _realtime = realtime.Create();
@@ -49,6 +53,12 @@ public partial class ControlChartViewModel : ObservableObject, ILoadable, IClosa
         _realtime.ConnectionChanged += connected => _ui.Post(() => IsConnected = connected);
         _realtime.Resync += RefreshAsync;
     }
+
+    // [M7 step 9] Default window around an alert: 20 min before (a run of 7 samples at 30 s is 3.5 min, plus the margin
+    // spec 2.6 asks for) to 10 min after. The user widens it in the panel; containment: too many rather than one missing.
+    public static readonly TimeSpan WindowBefore = TimeSpan.FromMinutes(20), WindowAfter = TimeSpan.FromMinutes(10);
+
+    public HoldPanelViewModel HoldPanel { get; }
 
     public ObservableCollection<InspectionPlanDto> Plans { get; } = [];
     public IReadOnlyList<int> Takes { get; } = [25, 50, 100, 200];
@@ -160,7 +170,7 @@ public partial class ControlChartViewModel : ObservableObject, ILoadable, IClosa
 
         Alerts.Clear();
         foreach (var a in chart.OpenAlerts)
-            Alerts.Add(new SpcAlertRow(a, $"{ToPlant(a.RaisedAt):dd/MM HH:mm}", a.Rule, Meaning(a.Rule)));
+            Alerts.Add(new SpcAlertRow(a, $"{ToPlant(a.RaisedAt):dd/MM HH:mm}", a.Rule, Meaning(a.Rule), MachineOf(SelectedPlan)));
     }
 
     // [M7 step 8] "Create NCR" on an alert: the NCR screen opens with the form filled from it (source, description,
@@ -173,6 +183,16 @@ public partial class ControlChartViewModel : ObservableObject, ILoadable, IClosa
         var serial = Chart?.Points.FirstOrDefault(p => p.MeasurementId == row.Dto.MeasurementId)?.SerialNo;
         return _pages.ShowAsync<NcrViewModel>(vm => vm.StartFromAlertAsync(row.Dto, description, serial));
     }
+
+    // [M7 step 9] SPC of a machine has no serial (2.3b): hold the boards that went through it around the alert.
+    [RelayCommand]
+    private Task HoldWindowAsync(SpcAlertRow row)
+        => row.Machine is { } machine
+            ? HoldPanel.OpenAsync("MachineWindow", machine, row.Dto.RaisedAt - WindowBefore, row.Dto.RaisedAt + WindowAfter)
+            : Task.CompletedTask;
+
+    // "L1-REFLOW-01/peakTemp" -> "L1-REFLOW-01"; a station plan has no machine.
+    private static string? MachineOf(InspectionPlanDto? plan) => plan?.MachineTag?.Split('/')[0];
 
     public static string Meaning(string rule) => rule switch
     {

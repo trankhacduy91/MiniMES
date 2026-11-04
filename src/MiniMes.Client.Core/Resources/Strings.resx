@@ -1516,18 +1516,6 @@
   <data name="Trace_Export" xml:space="preserve">
     <value>Export Excel</value>
   </data>
-  <data name="Trace_HoldLot" xml:space="preserve">
-    <value>Hold lot</value>
-  </data>
-  <data name="Trace_HoldSerials" xml:space="preserve">
-    <value>Hold all serials</value>
-  </data>
-  <data name="Trace_HoldPallets" xml:space="preserve">
-    <value>Hold pallets</value>
-  </data>
-  <data name="Trace_NeedsM7" xml:space="preserve">
-    <value>Available with the quality module (M7).</value>
-  </data>
   <data name="Trace_Serial" xml:space="preserve">
     <value>Serial</value>
   </data>
@@ -1591,12 +1579,6 @@
   </data>
   <data name="Trace_Exported" xml:space="preserve">
     <value>Saved to {0}</value>
-  </data>
-  <data name="Trace_ConfirmHold" xml:space="preserve">
-    <value>Put lot {0}, the other reels of its delivery and the lots split from them on Hold? Only a quality decision (NCR) releases them.</value>
-  </data>
-  <data name="Trace_Held" xml:space="preserve">
-    <value>On hold: {0}. Unchanged: {1}.</value>
   </data>
   <data name="Trace_Location_Shipped" xml:space="preserve">
     <value>Shipped</value>
@@ -2011,5 +1993,116 @@
   </data>
   <data name="Fai_Failed" xml:space="preserve">
     <value>{0}: first article failed. Sample {1} went to Repair; the next board becomes the sample.</value>
+  </data>
+  <data name="Menu_Holds" xml:space="preserve">
+    <value>Holds</value>
+  </data>
+  <data name="Hold_Title" xml:space="preserve">
+    <value>Quality hold</value>
+  </data>
+  <data name="Hold_Scope" xml:space="preserve">
+    <value>Hold by</value>
+  </data>
+  <data name="Hold_Ref_Serials" xml:space="preserve">
+    <value>Serial numbers (one per line)</value>
+  </data>
+  <data name="Hold_Ref_Carton" xml:space="preserve">
+    <value>Carton</value>
+  </data>
+  <data name="Hold_Ref_Pallet" xml:space="preserve">
+    <value>Pallet</value>
+  </data>
+  <data name="Hold_Ref_Lot" xml:space="preserve">
+    <value>Lot (its delivery and split lots are included)</value>
+  </data>
+  <data name="Hold_Ref_MachineWindow" xml:space="preserve">
+    <value>Machine</value>
+  </data>
+  <data name="Hold_From" xml:space="preserve">
+    <value>From (plant time)</value>
+  </data>
+  <data name="Hold_To" xml:space="preserve">
+    <value>To (plant time)</value>
+  </data>
+  <data name="Hold_Preview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Hold_PreviewText" xml:space="preserve">
+    <value>{0} boards ({1}). Lots held: {2}. Lots left as they are: {3}.</value>
+  </data>
+  <data name="Hold_ShippedWarning" xml:space="preserve">
+    <value>{0} of them are already shipped: notify the customer.</value>
+  </data>
+  <data name="Hold_ScrappedSkipped" xml:space="preserve">
+    <value>{0} scrapped boards are left out.</value>
+  </data>
+  <data name="Hold_Reason" xml:space="preserve">
+    <value>Reason (required)</value>
+  </data>
+  <data name="Hold_CreateNcr" xml:space="preserve">
+    <value>Open an NCR for this hold</value>
+  </data>
+  <data name="Hold_Hold" xml:space="preserve">
+    <value>Hold</value>
+  </data>
+  <data name="Hold_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Hold_Done" xml:space="preserve">
+    <value>Held: {0} boards, {1} lots. {2}</value>
+  </data>
+  <data name="Hold_NcrOpened" xml:space="preserve">
+    <value>NCR {0} opened.</value>
+  </data>
+  <data name="Hold_BadTime" xml:space="preserve">
+    <value>Times must be written like {0}.</value>
+  </data>
+  <data name="Trace_HoldAll" xml:space="preserve">
+    <value>Hold all…</value>
+  </data>
+  <data name="Spc_HoldWindow" xml:space="preserve">
+    <value>Hold serials in window</value>
+  </data>
+  <data name="Holds_Title" xml:space="preserve">
+    <value>Quality holds</value>
+  </data>
+  <data name="Holds_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Holds_New" xml:space="preserve">
+    <value>New hold…</value>
+  </data>
+  <data name="Holds_Release" xml:space="preserve">
+    <value>Release</value>
+  </data>
+  <data name="Holds_ReleaseNote" xml:space="preserve">
+    <value>Release {0} {1} (held for: {2})? Write why it is safe now.</value>
+  </data>
+  <data name="Holds_Released" xml:space="preserve">
+    <value>Released {0} targets: {1} back to their status before the hold, {2} still held by another hold.</value>
+  </data>
+  <data name="Holds_Targets" xml:space="preserve">
+    <value>{0} boards, {1} lots</value>
+  </data>
+  <data name="Holds_Scope" xml:space="preserve">
+    <value>Held by</value>
+  </data>
+  <data name="Holds_Ref" xml:space="preserve">
+    <value>What</value>
+  </data>
+  <data name="Holds_Reason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="Holds_Ncr" xml:space="preserve">
+    <value>NCR</value>
+  </data>
+  <data name="Holds_HeldBy" xml:space="preserve">
+    <value>Who</value>
+  </data>
+  <data name="Holds_HeldAt" xml:space="preserve">
+    <value>When</value>
+  </data>
+  <data name="Holds_Active" xml:space="preserve">
+    <value>Still held</value>
   </data>
 </root>

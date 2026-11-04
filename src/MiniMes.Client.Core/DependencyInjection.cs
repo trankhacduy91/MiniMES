@@ -103,6 +103,9 @@ public static class DependencyInjection
         services.AddTransient<NcrViewModel>();
         services.AddTransient<IFaiApi, FaiApi>();   // M7 step 8b
         services.AddTransient<FaiViewModel>();
+        services.AddTransient<IHoldApi, HoldApi>();   // M7 step 9
+        services.AddTransient<HoldPanelViewModel>();
+        services.AddTransient<HoldsViewModel>();
         return services;
     }
 

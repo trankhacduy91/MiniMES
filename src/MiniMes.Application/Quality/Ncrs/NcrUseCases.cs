@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MiniMes.Application.Common;
 using MiniMes.Application.Planning;
+using MiniMes.Application.Quality.Holds;
 using MiniMes.Contracts.Quality;
 using MiniMes.Domain.Common;
 using MiniMes.Domain.MasterData;
@@ -173,15 +174,40 @@ public sealed class ProposeDispositionHandler(IAppDbContext db, ICurrentUser use
         }, ct);
 }
 
-// Q11: another person than the proposer. The effects on the serials / lots (release, repair, scrap, return) are
-// applied here in step 9, in this same transaction (user decision M7 step 8): this step records the decision.
+// Q11: another person than the proposer. Step 9: the decision acts on the serials / lots in one transaction with
+// it (spec 2.5 effects table). Only the NCR's own targets (user decision 04/11/2026): their holds placed for this NCR
+// are released (Q8: a target another hold still keeps stays Hold, the effect waits in StatusBeforeHold), then the
+// disposition is applied by the Domain. Other holds of this NCR (the boards of a held lot) stay until someone releases
+// them on purpose: no board is let go silently, and Q12 keeps the NCR open until then.
 public sealed record ApproveNcrCommand(int Id, string RowVersion) : IRequest<NcrDto>, INcrTransition;
 public sealed class ApproveNcrValidator : NcrTransitionValidator<ApproveNcrCommand>;
 
 public sealed class ApproveNcrHandler(IAppDbContext db, ICurrentUser user, TimeProvider time) : IRequestHandler<ApproveNcrCommand, NcrDto>
 {
-    public Task<NcrDto> Handle(ApproveNcrCommand cmd, CancellationToken ct)
-        => new NcrTransition(db, user, time).RunAsync(cmd, (n, by, now) => { n.Approve(by, now); return Task.CompletedTask; }, ct);
+    public async Task<NcrDto> Handle(ApproveNcrCommand cmd, CancellationToken ct)
+    {
+        await using var tx = await db.BeginTransactionAsync(ct);
+        var dto = await new NcrTransition(db, user, time).RunAsync(cmd, async (n, by, now) =>
+        {
+            n.Approve(by, now);   // self-approval, no proposal -> 422, before anything changes
+            var serialIds = n.Items.Where(i => i.TargetType == HoldTargetType.Serial).Select(i => i.TargetId).ToList();
+            var lotIds = n.Items.Where(i => i.TargetType == HoldTargetType.Lot).Select(i => (int)i.TargetId).ToList();
+            var lotLongIds = lotIds.Select(i => (long)i).ToList();
+            var own = db.HoldRecords.Where(h => h.NcrId == n.Id
+                && ((h.TargetType == HoldTargetType.Serial && serialIds.Contains(h.TargetId))
+                    || (h.TargetType == HoldTargetType.Lot && lotLongIds.Contains(h.TargetId))));
+            await db.ReleaseAsync(own, by, $"{n.NcrNo} approved: {n.Disposition}", now, $"NCR {n.NcrNo}", ct);
+
+            // Read after the release (set-based SQL above): the entities carry the restored status.
+            var disposition = n.Disposition!.Value;
+            foreach (var serial in await db.Serials.Where(s => serialIds.Contains(s.Id)).ToListAsync(ct))
+                serial.ApplyDisposition(disposition, n.NcrNo);
+            foreach (var lot in await db.MaterialLots.Where(l => lotIds.Contains(l.Id)).ToListAsync(ct))
+                lot.ApplyDisposition(disposition);
+        }, ct);
+        await tx.CommitAsync(ct);
+        return dto;
+    }
 }
 
 public sealed record RejectNcrProposalCommand(int Id, string RowVersion) : IRequest<NcrDto>, INcrTransition;

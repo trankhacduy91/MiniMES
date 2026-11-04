@@ -95,6 +95,25 @@ public class Serial
         Status = SerialStatus.Ng;
     }
 
+    // M7 step 9: an approved NCR disposition (spec 2.5 effects table). The use case released this NCR's holds first;
+    // if another NCR still holds the board (Q8), the effect waits in StatusBeforeHold and happens at that release.
+    // UseAsIs: nothing more. Rework: to Repair (the M3 flow checks it again). Scrap: final.
+    public void ApplyDisposition(Quality.NcrDisposition disposition, string ncrNo)
+    {
+        if (Status == SerialStatus.Scrapped) throw new DomainException($"Serial {SerialNo} is scrapped (Q10).");
+        SerialStatus? to = disposition switch
+        {
+            Quality.NcrDisposition.UseAsIs => null,
+            Quality.NcrDisposition.Rework => SerialStatus.Repair,
+            Quality.NcrDisposition.Scrap => SerialStatus.Scrapped,
+            _ => throw new DomainException($"{disposition} does not apply to a serial (Q13)."),
+        };
+        if (to is not { } target) return;
+        if (target == SerialStatus.Scrapped) ScrapReason = $"{ncrNo}: scrap";
+        if (Status == SerialStatus.Hold) StatusBeforeHold = target;
+        else Status = target;
+    }
+
     // M3: record a scan that route check allowed at a routing step. OK moves the board to that step (the last
     // step completes it); NG keeps the step (the failed test is done again after Repair) and marks it NG.
     public void ApplyScan(int stepSeq, bool isLastStep, ScanResult result)

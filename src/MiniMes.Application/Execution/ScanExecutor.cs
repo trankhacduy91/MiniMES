@@ -88,6 +88,10 @@ public sealed class ScanExecutor(IAppDbContext db, ICurrentUser user, TimeProvid
         string? defectCode, string operatorCode, ScanSource source, CancellationToken ct)
     {
         var serial = await db.Serials.SingleAsync(s => s.SerialNo == ctx.Serial!.SerialNo, ct);   // tracked, RowVersion
+        // [M7 step 9] The route check judged the board as the context read it; something committed in between (a Hold,
+        // another scan) means that judgement is stale: re-evaluate, like a RowVersion conflict, instead of a 422 here.
+        if (serial.Status != ctx.Serial!.Status || serial.CurrentSeq != ctx.Serial.CurrentSeq)
+            throw new ConflictException($"Serial {serial.SerialNo} changed while it was being scanned.");
         var steps = ctx.Operations.OrderBy(o => o.Seq).ToList();
         var step = decision.Step;
         var isLast = step is not null && step.Seq == steps[^1].Seq;

@@ -1,9 +1,10 @@
 <UserControl x:Class="MiniMes.BackOffice.Wpf.Views.Traceability.TraceView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core">
+             xmlns:res="clr-namespace:MiniMes.Client.Core.Resources;assembly=MiniMes.Client.Core"
+             xmlns:qaviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Quality">
     <!-- DataContext = TraceViewModel (spec M6 step 8). Backward: lazy TreeView (spec 2.6). Forward: grid grouped by
-         where the boards are now, Excel export, Hold lot; Hold serials / pallets wait for M7. -->
+         where the boards are now, Excel export, [M7 step 9] Hold all (the Hold panel over the screen). -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="Visible" />
         <CollectionViewSource x:Key="SerialsByLocation" Source="{Binding Serials}">
@@ -12,123 +13,122 @@
             </CollectionViewSource.GroupDescriptions>
         </CollectionViewSource>
     </UserControl.Resources>
-    <DockPanel>
-        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Trace_Title}" Style="{StaticResource PageTitle}" />
-        <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Trace_Hint}" Style="{StaticResource FieldHint}" Margin="0,0,0,6" />
+    <Grid>
+        <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Trace_Title}" Style="{StaticResource PageTitle}" />
+            <TextBlock DockPanel.Dock="Top" Text="{x:Static res:Strings.Trace_Hint}" Style="{StaticResource FieldHint}" Margin="0,0,0,6" />
 
-        <!-- Search: Enter runs the trace (a scanner ends with Enter). -->
-        <Border DockPanel.Dock="Top" Background="#F7F8FA" BorderBrush="#D0D5DD" BorderThickness="1" Padding="10" Margin="0,0,0,8">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <RadioButton AutomationProperties.AutomationId="ModeSerial" Content="{x:Static res:Strings.Trace_ModeSerial}"
-                                 IsChecked="{Binding IsSerialMode}" Margin="0,0,16,0" />
-                    <RadioButton AutomationProperties.AutomationId="ModeLot" Content="{x:Static res:Strings.Trace_ModeLot}"
-                                 IsChecked="{Binding IsLotMode}" Margin="0,0,16,0" />
-                    <RadioButton AutomationProperties.AutomationId="ModeSupplierLot" Content="{x:Static res:Strings.Trace_ModeSupplierLot}"
-                                 IsChecked="{Binding IsSupplierLotMode}" />
-                </StackPanel>
-                <WrapPanel>
-                    <StackPanel Width="260" Margin="0,0,12,0">
-                        <TextBlock Text="{x:Static res:Strings.Trace_Search}" Style="{StaticResource FieldLabel}" />
-                        <TextBox AutomationProperties.AutomationId="Search" Padding="3"
-                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding TraceCommand}" />
-                            </TextBox.InputBindings>
-                        </TextBox>
+            <!-- Search: Enter runs the trace (a scanner ends with Enter). -->
+            <Border DockPanel.Dock="Top" Background="#F7F8FA" BorderBrush="#D0D5DD" BorderThickness="1" Padding="10" Margin="0,0,0,8">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <RadioButton AutomationProperties.AutomationId="ModeSerial" Content="{x:Static res:Strings.Trace_ModeSerial}"
+                                     IsChecked="{Binding IsSerialMode}" Margin="0,0,16,0" />
+                        <RadioButton AutomationProperties.AutomationId="ModeLot" Content="{x:Static res:Strings.Trace_ModeLot}"
+                                     IsChecked="{Binding IsLotMode}" Margin="0,0,16,0" />
+                        <RadioButton AutomationProperties.AutomationId="ModeSupplierLot" Content="{x:Static res:Strings.Trace_ModeSupplierLot}"
+                                     IsChecked="{Binding IsSupplierLotMode}" />
                     </StackPanel>
-                    <StackPanel Width="200" Margin="0,0,12,0" Visibility="{Binding IsSupplierLotMode, Converter={StaticResource Visible}}">
-                        <TextBlock Text="{x:Static res:Strings.Trace_ItemCode}" Style="{StaticResource FieldLabel}" />
-                        <TextBox AutomationProperties.AutomationId="ItemCode" Padding="3"
-                                 Text="{Binding ItemCode, UpdateSourceTrigger=PropertyChanged}" />
-                    </StackPanel>
-                    <Button AutomationProperties.AutomationId="Trace" Content="{x:Static res:Strings.Trace_Run}"
-                            Command="{Binding TraceCommand}" Padding="18,4" VerticalAlignment="Bottom" />
-                </WrapPanel>
-            </StackPanel>
-        </Border>
-
-        <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
-                   Style="{StaticResource PageError}" />
-        <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Result" Text="{Binding ResultMessage}"
-                   Foreground="#FF2E7D32" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,6,0,0" />
-
-        <Grid>
-            <!-- Backward -->
-            <TreeView AutomationProperties.AutomationId="Tree" ItemsSource="{Binding RootNodes}"
-                      Visibility="{Binding ShowTree, Converter={StaticResource Visible}}"
-                      VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
-                <TreeView.ItemContainerStyle>
-                    <Style TargetType="TreeViewItem">
-                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                        <Setter Property="Padding" Value="2,3" />
-                    </Style>
-                </TreeView.ItemContainerStyle>
-                <TreeView.ItemTemplate>
-                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding Detail}" Margin="12,0,0,0" Foreground="#FF475467" />
+                    <WrapPanel>
+                        <StackPanel Width="260" Margin="0,0,12,0">
+                            <TextBlock Text="{x:Static res:Strings.Trace_Search}" Style="{StaticResource FieldLabel}" />
+                            <TextBox AutomationProperties.AutomationId="Search" Padding="3"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding TraceCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
                         </StackPanel>
-                    </HierarchicalDataTemplate>
-                </TreeView.ItemTemplate>
-            </TreeView>
+                        <StackPanel Width="200" Margin="0,0,12,0" Visibility="{Binding IsSupplierLotMode, Converter={StaticResource Visible}}">
+                            <TextBlock Text="{x:Static res:Strings.Trace_ItemCode}" Style="{StaticResource FieldLabel}" />
+                            <TextBox AutomationProperties.AutomationId="ItemCode" Padding="3"
+                                     Text="{Binding ItemCode, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <Button AutomationProperties.AutomationId="Trace" Content="{x:Static res:Strings.Trace_Run}"
+                                Command="{Binding TraceCommand}" Padding="18,4" VerticalAlignment="Bottom" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
 
-            <!-- Forward -->
-            <DockPanel Visibility="{Binding ShowList, Converter={StaticResource Visible}}">
-                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <Button AutomationProperties.AutomationId="Export" Content="{x:Static res:Strings.Trace_Export}"
-                                Command="{Binding ExportCommand}" Padding="10,3" Margin="0,0,6,0" />
-                        <Button AutomationProperties.AutomationId="HoldLot" Content="{x:Static res:Strings.Trace_HoldLot}"
-                                Command="{Binding HoldLotCommand}" Padding="10,3" Margin="0,0,6,0" Background="#FFFFEBEE" />
-                        <Button Content="{x:Static res:Strings.Trace_HoldSerials}" IsEnabled="False" Padding="10,3" Margin="0,0,6,0"
-                                ToolTip="{x:Static res:Strings.Trace_NeedsM7}" ToolTipService.ShowOnDisabled="True" />
-                        <Button Content="{x:Static res:Strings.Trace_HoldPallets}" IsEnabled="False" Padding="10,3"
-                                ToolTip="{x:Static res:Strings.Trace_NeedsM7}" ToolTipService.ShowOnDisabled="True" />
-                    </StackPanel>
-                    <TextBlock AutomationProperties.AutomationId="Summary" Text="{Binding Summary}" FontWeight="SemiBold"
-                               TextWrapping="Wrap" VerticalAlignment="Center" />
+            <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Error" Text="{Binding ErrorMessage}"
+                       Style="{StaticResource PageError}" />
+            <TextBlock DockPanel.Dock="Bottom" AutomationProperties.AutomationId="Result" Text="{Binding ResultMessage}"
+                       Foreground="#FF2E7D32" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,6,0,0" />
+
+            <Grid>
+                <!-- Backward -->
+                <TreeView AutomationProperties.AutomationId="Tree" ItemsSource="{Binding RootNodes}"
+                          Visibility="{Binding ShowTree, Converter={StaticResource Visible}}"
+                          VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            <Setter Property="Padding" Value="2,3" />
+                        </Style>
+                    </TreeView.ItemContainerStyle>
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Detail}" Margin="12,0,0,0" Foreground="#FF475467" />
+                            </StackPanel>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+
+                <!-- Forward -->
+                <DockPanel Visibility="{Binding ShowList, Converter={StaticResource Visible}}">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button AutomationProperties.AutomationId="Export" Content="{x:Static res:Strings.Trace_Export}"
+                                    Command="{Binding ExportCommand}" Padding="10,3" Margin="0,0,6,0" />
+                            <Button AutomationProperties.AutomationId="HoldAll" Content="{x:Static res:Strings.Trace_HoldAll}"
+                                    Command="{Binding HoldAllCommand}" Padding="10,3" Background="#FFFFEBEE" />
+                        </StackPanel>
+                        <TextBlock AutomationProperties.AutomationId="Summary" Text="{Binding Summary}" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <DataGrid AutomationProperties.AutomationId="Serials" ItemsSource="{Binding Source={StaticResource SerialsByLocation}}"
+                              AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                              VirtualizingPanel.IsVirtualizingWhenGrouping="True">
+                        <!-- Groups by location, each one can be folded. No star (*) column here: with grouping on, a star column
+                             squeezed every other column to a few pixels (found on the real screen, docs/incidents.md). -->
+                        <DataGrid.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.ContainerStyle>
+                                    <Style TargetType="GroupItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="GroupItem">
+                                                    <Expander IsExpanded="True">
+                                                        <Expander.Header>
+                                                            <TextBlock FontWeight="Bold" Margin="2,4,0,4">
+                                                                <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="  (" /><Run Text="{Binding ItemCount, Mode=OneWay}" /><Run Text=")" />
+                                                            </TextBlock>
+                                                        </Expander.Header>
+                                                        <ItemsPresenter />
+                                                    </Expander>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </GroupStyle.ContainerStyle>
+                            </GroupStyle>
+                        </DataGrid.GroupStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{x:Static res:Strings.Trace_Serial}" Binding="{Binding Item.SerialNo}" Width="170" />
+                            <DataGridTextColumn Header="{x:Static res:Strings.Trace_Status}" Binding="{Binding Item.SerialStatus}" Width="90" />
+                            <DataGridTextColumn Header="{x:Static res:Strings.Trace_Wo}" Binding="{Binding Item.WoNo}" Width="130" />
+                            <DataGridTextColumn Header="{x:Static res:Strings.Trace_LotUsed}" Binding="{Binding Item.LotNo}" Width="140" />
+                            <DataGridTextColumn Header="{x:Static res:Strings.Trace_Depth}" Binding="{Binding Item.Depth}" Width="50" />
+                            <DataGridTextColumn Header="{x:Static res:Strings.Trace_Station}" Binding="{Binding Item.StationCode}" Width="100" />
+                            <DataGridTextColumn Header="{x:Static res:Strings.Trace_ConsumedAt}" Binding="{Binding ConsumedText}" Width="140" />
+                            <DataGridTextColumn Header="{x:Static res:Strings.Trace_Operator}" Binding="{Binding Item.OperatorCode}" Width="110" />
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </DockPanel>
-                <DataGrid AutomationProperties.AutomationId="Serials" ItemsSource="{Binding Source={StaticResource SerialsByLocation}}"
-                          AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
-                          VirtualizingPanel.IsVirtualizingWhenGrouping="True">
-                    <!-- Groups by location, each one can be folded. No star (*) column here: with grouping on, a star column
-                         squeezed every other column to a few pixels (found on the real screen, docs/incidents.md). -->
-                    <DataGrid.GroupStyle>
-                        <GroupStyle>
-                            <GroupStyle.ContainerStyle>
-                                <Style TargetType="GroupItem">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="GroupItem">
-                                                <Expander IsExpanded="True">
-                                                    <Expander.Header>
-                                                        <TextBlock FontWeight="Bold" Margin="2,4,0,4">
-                                                            <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="  (" /><Run Text="{Binding ItemCount, Mode=OneWay}" /><Run Text=")" />
-                                                        </TextBlock>
-                                                    </Expander.Header>
-                                                    <ItemsPresenter />
-                                                </Expander>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </GroupStyle.ContainerStyle>
-                        </GroupStyle>
-                    </DataGrid.GroupStyle>
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="{x:Static res:Strings.Trace_Serial}" Binding="{Binding Item.SerialNo}" Width="170" />
-                        <DataGridTextColumn Header="{x:Static res:Strings.Trace_Status}" Binding="{Binding Item.SerialStatus}" Width="90" />
-                        <DataGridTextColumn Header="{x:Static res:Strings.Trace_Wo}" Binding="{Binding Item.WoNo}" Width="130" />
-                        <DataGridTextColumn Header="{x:Static res:Strings.Trace_LotUsed}" Binding="{Binding Item.LotNo}" Width="140" />
-                        <DataGridTextColumn Header="{x:Static res:Strings.Trace_Depth}" Binding="{Binding Item.Depth}" Width="50" />
-                        <DataGridTextColumn Header="{x:Static res:Strings.Trace_Station}" Binding="{Binding Item.StationCode}" Width="100" />
-                        <DataGridTextColumn Header="{x:Static res:Strings.Trace_ConsumedAt}" Binding="{Binding ConsumedText}" Width="140" />
-                        <DataGridTextColumn Header="{x:Static res:Strings.Trace_Operator}" Binding="{Binding Item.OperatorCode}" Width="110" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </DockPanel>
-        </Grid>
-    </DockPanel>
+            </Grid>
+        </DockPanel>
+        <qaviews:HoldPanelView DataContext="{Binding HoldPanel}" />
+    </Grid>
 </UserControl>
