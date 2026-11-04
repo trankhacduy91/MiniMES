@@ -101,6 +101,8 @@ public static class DependencyInjection
         services.AddTransient<ControlChartViewModel>();
         services.AddTransient<INcrApi, NcrApi>();   // M7 step 8
         services.AddTransient<NcrViewModel>();
+        services.AddTransient<IFaiApi, FaiApi>();   // M7 step 8b
+        services.AddTransient<FaiViewModel>();
         return services;
     }
 

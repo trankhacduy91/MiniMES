@@ -84,14 +84,16 @@ public class AndonPanelViewModelTests
         Assert.Contains("mt01", vm.SelectedMachine!.AndonText);
     }
 
+    // No Andon at Pack, but [M7 step 8b] the station still listens to its line for the FAI banner.
     [Fact]
-    public async Task Station_without_machines_has_no_andon()
+    public async Task Station_without_machines_has_no_andon_but_joins_its_line()
     {
         var vm = await StartedAsync(Pack);
 
         Assert.False(vm.HasMachines);
         Assert.Equal(Strings.Andon_NoMachine, vm.Message);
-        Assert.False(Rt.Started);
+        Assert.True(Rt.Started);
+        Assert.Equal(["L1"], Rt.Joined);
     }
 
     // The operator sees that help is coming: Raised -> Acknowledged by -> gone when resolved.

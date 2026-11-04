@@ -18,4 +18,5 @@ public interface IRealtimeNotifier
     Task DowntimeNeedsClassificationAsync(UnclassifiedDowntimeDto dto, CancellationToken ct = default);   // [M5] line group
     Task OeeSnapshotClosedAsync(OeeSnapshotClosedDto dto, CancellationToken ct = default);                // [M5] line group
     Task SpcAlertRaisedAsync(SpcAlertDto dto, CancellationToken ct = default);                            // [M7] role groups
+    Task FaiStatusChangedAsync(FaiStatusChangedDto dto, CancellationToken ct = default);                  // [M7] line group
 }

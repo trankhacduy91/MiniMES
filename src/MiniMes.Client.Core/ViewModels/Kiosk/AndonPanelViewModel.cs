@@ -10,6 +10,7 @@ using MiniMes.Client.Core.Resources;
 using MiniMes.Client.Core.ViewModels.Machines;
 using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Machines;
+using MiniMes.Contracts.Quality;
 
 namespace MiniMes.Client.Core.ViewModels.Kiosk;
 
@@ -78,6 +79,7 @@ public partial class AndonPanelViewModel : ObservableObject, IClosable
         _realtime.MachineStateChanged += d => _ui.Post(() => Find(d.Machine)?.Apply(d.State, d.Since));
         _realtime.AndonChanged += d => _ui.Post(() => Find(d.Machine)?.Apply(d));
         _realtime.ConnectionChanged += connected => _ui.Post(() => IsConnected = connected);
+        _realtime.FaiStatusChanged += d => _ui.Post(() => FaiStatusChanged?.Invoke(d));
         _realtime.Resync += LoadSnapshotAsync;
     }
 
@@ -108,19 +110,25 @@ public partial class AndonPanelViewModel : ObservableObject, IClosable
     [ObservableProperty]
     private string _message = string.Empty;
 
-    // Never throws: the scan screen works without the Andon panel.
+    // [M7 step 8b] A FAI result for the line (QC passed or failed a first article), on the UI thread. The panel owns
+    // the station's only SignalR connection, so the scan screen listens here for its yellow banner.
+    public event Action<FaiStatusChangedDto>? FaiStatusChanged;
+
+    // Never throws: the scan screen works without the Andon panel. A station without machines (Pack) has no Andon
+    // but still joins its line: the FAI banner (M7) comes through the same connection.
     public async Task StartAsync()
     {
-        if (_kiosk.Station is not { WorkCenterId: { } workCenterId } station)
+        if (_kiosk.Station is not { } station)
         {
             Message = Strings.Andon_NoMachine;
             return;
         }
         try
         {
-            var machines = await _api.GetMachinesAsync(workCenterId);
             _line = (await _api.GetLineAsync(station.LineId)).Code;
-            foreach (var m in machines.OrderBy(m => m.Code)) Machines.Add(new StationMachineViewModel(m.Id, m.Code, m.Name));
+            if (station.WorkCenterId is { } workCenterId)
+                foreach (var m in (await _api.GetMachinesAsync(workCenterId)).OrderBy(m => m.Code))
+                    Machines.Add(new StationMachineViewModel(m.Id, m.Code, m.Name));
         }
         catch (ApiException ex)
         {
@@ -129,12 +137,8 @@ public partial class AndonPanelViewModel : ObservableObject, IClosable
         }
         HasMachines = Machines.Count > 0;
         OnPropertyChanged(nameof(MustChooseMachine));
-        if (!HasMachines)
-        {
-            Message = Strings.Andon_NoMachine;
-            return;
-        }
-        if (Machines.Count == 1) SelectedMachine = Machines[0];
+        if (!HasMachines) Message = Strings.Andon_NoMachine;
+        else if (Machines.Count == 1) SelectedMachine = Machines[0];
 
         await _realtime.JoinLineAsync(_line);
         await LoadSnapshotAsync();
@@ -143,7 +147,7 @@ public partial class AndonPanelViewModel : ObservableObject, IClosable
 
     private async Task LoadSnapshotAsync()
     {
-        if (_line is not { } line) return;
+        if (_line is not { } line || Machines.Count == 0) return;
         try
         {
             var status = await _api.GetLineStatusAsync(line);

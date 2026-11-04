@@ -19,7 +19,6 @@ public class WorkOrdersController(ISender sender) : ControllerBase
     private const string Supervisors = $"{nameof(Role.Supervisor)},{nameof(Role.Admin)}";
     private const string Schedulers = $"{nameof(Role.Planner)},{nameof(Role.Supervisor)},{nameof(Role.Admin)}";
     // The planner prints at release; the line supervisor reprints a damaged label on the floor.
-    private const string Inspectors = $"{nameof(Role.QC)},{nameof(Role.Admin)}";
     private const string LabelPrinters = $"{nameof(Role.Planner)},{nameof(Role.Supervisor)},{nameof(Role.Admin)}";
 
     [HttpGet]
@@ -99,13 +98,6 @@ public class WorkOrdersController(ISender sender) : ControllerBase
     [HttpPost("{id:int}/cancel")]
     public Task<WorkOrderDetailDto> Cancel(int id, WorkOrderTransitionRequest r, CancellationToken ct)
         => sender.Send(new CancelWorkOrderCommand(id, r.RowVersion, r.Reason), ct);
-
-    // [v2] Temporary (M3 step 3b): QC judges the first article; passed opens the line for the whole lot.
-    // M7 replaces it with the FAI checklist use case. No sample yet / FAI not pending -> 422.
-    [Authorize(Roles = Inspectors)]
-    [HttpPost("{id:int}/fai/result")]
-    public Task<WorkOrderDetailDto> FaiResult(int id, FaiResultRequest r, CancellationToken ct)
-        => sender.Send(new RecordFaiResultCommand(id, r.Passed), ct);
 
     [Authorize(Roles = Schedulers)]
     [HttpPut("{id:int}/priority")]

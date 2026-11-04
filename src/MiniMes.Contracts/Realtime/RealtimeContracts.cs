@@ -18,6 +18,7 @@ public interface IMachineClient
     Task DowntimeNeedsClassification(UnclassifiedDowntimeDto dto);   // [M5] a stop ended without a reason, to the line
     Task OeeSnapshotClosed(OeeSnapshotClosedDto dto);        // [M5] the job closed hours of a machine: once a minute at most
     Task SpcAlertRaised(SpcAlertDto dto);                    // [M7] a new SPC alert, to the QC / Supervisor / Admin role groups
+    Task FaiStatusChanged(FaiStatusChangedDto dto);          // [M7] a FAI was recorded, to the line: kiosk banner
 }
 
 public static class RealtimeHub

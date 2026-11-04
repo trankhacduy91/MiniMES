@@ -83,6 +83,18 @@ public class Serial
         ScrapReason = reason.Trim();
     }
 
+    // [v2] M7 step 8b: QC failed the first article. The sample goes the NG way (Repair) like a board that failed a
+    // test; CurrentSeq stays, the technician picks the step to redo. No ScanLog: the step counters already counted
+    // its OK scans, and the FaiRecord keeps why. Only before the last step: a Completed board may be in a carton.
+    public void RejectFirstArticle()
+    {
+        if (Status == SerialStatus.Completed)
+            throw new DomainException($"Sample {SerialNo} has already completed the line (packed): judge the first article before packing it.");
+        if (Status != SerialStatus.InProcess)
+            throw new DomainException($"Sample {SerialNo} is {Status}; only a board on the line can fail the first article.");
+        Status = SerialStatus.Ng;
+    }
+
     // M3: record a scan that route check allowed at a routing step. OK moves the board to that step (the last
     // step completes it); NG keeps the step (the failed test is done again after Repair) and marks it NG.
     public void ApplyScan(int stepSeq, bool isLastStep, ScanResult result)

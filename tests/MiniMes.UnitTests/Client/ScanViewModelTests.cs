@@ -4,6 +4,7 @@ using MiniMes.Client.Core.Kiosk;
 using MiniMes.Client.Core.Resources;
 using MiniMes.Client.Core.ViewModels.Kiosk;
 using MiniMes.Contracts.Execution;
+using MiniMes.Contracts.Quality;
 using MiniMes.Contracts.Planning;
 using MiniMes.Domain.Execution;
 
@@ -254,5 +255,23 @@ public class ScanViewModelTests
 
         Assert.True(vm.IsFaiPending);
         Assert.Equal(Strings.Block_FaiNotApproved, vm.Message);
+    }
+
+    // [M7 step 8b] QC passes the first article: the push for this WO drops the banner without a scan; a result for
+    // another WO of the line, or a Fail (still Pending, new sample), keeps it.
+    [Fact]
+    public async Task Fai_push_for_this_work_order_updates_the_banner()
+    {
+        var (kiosk, vm) = Screen();
+        kiosk.Dispatch.Detail = Detail("Pending", asmSop: null);
+        await vm.LoadAsync();
+        var rt = kiosk.Realtime.Client;
+
+        rt.Push(new FaiStatusChangedDto(99, "WO-OTHER", "L1", "Passed", null, "Pass"));
+        Assert.True(vm.IsFaiPending);
+        rt.Push(new FaiStatusChangedDto(5, "WO-2610-00005", "L1", "Pending", null, "Fail"));
+        Assert.True(vm.IsFaiPending);
+        rt.Push(new FaiStatusChangedDto(5, "WO-2610-00005", "L1", "Passed", null, "Pass"));
+        Assert.False(vm.IsFaiPending);
     }
 }

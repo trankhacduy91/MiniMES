@@ -132,7 +132,16 @@ public class QualityEntityTests
     public void Fai_cannot_pass_with_a_red_automatic_check()
     {
         Assert.Throws<DomainException>(() => new FaiRecord(1, 42, 1, "[]", autoChecksPassed: false, FaiResult.Pass, null, "qc01", T0));
-        Assert.Equal(FaiResult.Fail, new FaiRecord(1, 42, 1, "[]", autoChecksPassed: false, FaiResult.Fail, "D3 reversed", "qc01", T0).Result);
+        var fail = new FaiRecord(1, 42, 1, "[]", autoChecksPassed: false, FaiResult.Fail, "D3 reversed", "qc01", T0, " fai-fail ");
+        Assert.Equal((FaiResult.Fail, "FAI-FAIL"), (fail.Result, fail.DefectCode));
+    }
+
+    // [step 8b] a Fail says why the sample went to Repair; a Pass has no defect.
+    [Fact]
+    public void Fai_fail_needs_a_defect_code_and_pass_has_none()
+    {
+        Assert.Throws<DomainException>(() => new FaiRecord(1, 42, 1, "[]", autoChecksPassed: true, FaiResult.Fail, null, "qc01", T0));
+        Assert.Throws<DomainException>(() => new FaiRecord(1, 42, 1, "[]", autoChecksPassed: true, FaiResult.Pass, null, "qc01", T0, "FAI-FAIL"));
     }
 
     [Fact]

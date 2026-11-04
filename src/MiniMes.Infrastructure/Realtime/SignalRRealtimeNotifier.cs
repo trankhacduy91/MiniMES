@@ -54,6 +54,9 @@ public sealed class SignalRRealtimeNotifier(IHubContext<MachineHub, IMachineClie
         catch (Exception ex) { log.LogWarning(ex, "SignalR push for SPC alert {AlertId} failed", dto.Id); }
     }
 
+    public Task FaiStatusChangedAsync(FaiStatusChangedDto dto, CancellationToken ct = default)
+        => SafeAsync(dto.Line, c => c.FaiStatusChanged(dto), dto.WoNo);
+
     private async Task SafeAsync(string line, Func<IMachineClient, Task> push, string machine)
     {
         try { await push(hub.Clients.Group(RealtimeHub.LineGroup(line))); }

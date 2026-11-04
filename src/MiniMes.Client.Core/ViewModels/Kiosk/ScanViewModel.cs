@@ -26,7 +26,18 @@ public partial class ScanViewModel(IExecutionApi execution, IWorkOrderApi workOr
 
     public AndonPanelViewModel Andon { get; } = andon;
 
-    public Task CloseAsync() => Andon.CloseAsync();
+    public Task CloseAsync()
+    {
+        Andon.FaiStatusChanged -= OnFaiStatusChanged;
+        return Andon.CloseAsync();
+    }
+
+    // [M7 step 8b] QC recorded the first article of this WO: Passed drops the yellow banner at once (the route check
+    // reads the WO itself, the banner is only what the operator sees); Failed keeps it, a new sample is needed.
+    private void OnFaiStatusChanged(Contracts.Quality.FaiStatusChangedDto d)
+    {
+        if (Kiosk.WorkOrder?.WorkOrderId == d.WorkOrderId) IsFaiPending = d.FaiStatus == "Pending";
+    }
 
     private string? _sopUrl;
 
@@ -67,6 +78,8 @@ public partial class ScanViewModel(IExecutionApi execution, IWorkOrderApi workOr
     // Never throws: SOP, FAI banner and NG panel of the WO; the screen scans without them.
     public async Task LoadAsync()
     {
+        Andon.FaiStatusChanged -= OnFaiStatusChanged;   // once, even if the screen is loaded again
+        Andon.FaiStatusChanged += OnFaiStatusChanged;
         _ = Andon.StartAsync();   // never throws; independent of the work order
         if (Kiosk.WorkOrder is null) return;
         try

@@ -221,8 +221,12 @@ public class FaiRecordConfiguration : IEntityTypeConfiguration<FaiRecord>
         {
             t.HasCheckConstraint("CK_FaiRecords_PassNeedsAuto", "[Result] <> 'Pass' OR [AutoChecksPassed] = 1");   // Q17
             t.HasCheckConstraint("CK_FaiRecords_ChecklistJson", "ISJSON([ChecklistJson]) = 1");
+            // [step 8b] a Fail says why (the sample went to Repair with it), a Pass has nothing to say
+            t.HasCheckConstraint("CK_FaiRecords_DefectOnFail",
+                "([Result] = 'Fail' AND [DefectCode] IS NOT NULL) OR ([Result] = 'Pass' AND [DefectCode] IS NULL)");
         });
         b.Property(x => x.Result).HasConversion<string>().HasMaxLength(10).IsUnicode(false);
+        b.Property(x => x.DefectCode).HasMaxLength(MasterDataRules.CodeMaxLength).IsUnicode(false);
         b.Property(x => x.Note).HasMaxLength(FaiRecord.NoteMaxLength);
         b.Property(x => x.InspectedBy).HasMaxLength(FaiRecord.ByMaxLength).IsUnicode(false);
         b.HasOne<WorkOrder>().WithMany().HasForeignKey(x => x.WorkOrderId).OnDelete(DeleteBehavior.Restrict);

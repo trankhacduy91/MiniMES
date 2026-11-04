@@ -195,8 +195,14 @@ public class QualitySchemaTests(ApiFixture api)
             VALUES ({s.WorkOrderId}, {s.SerialId}, {template}, N'[]', 0, 'Pass', 'qc01', SYSUTCDATETIME())
             """));
         Assert.Contains("CK_FaiRecords_PassNeedsAuto", pass.Message);
+        // [step 8b] a Fail without the reason the sample went to Repair
+        var noDefect = await Assert.ThrowsAsync<SqlException>(() => SqlAsync($"""
+            INSERT INTO FaiRecords (WorkOrderId, SerialId, FaiTemplateId, ChecklistJson, AutoChecksPassed, Result, InspectedBy, InspectedAt)
+            VALUES ({s.WorkOrderId}, {s.SerialId}, {template}, N'[]', 0, 'Fail', 'qc01', SYSUTCDATETIME())
+            """));
+        Assert.Contains("CK_FaiRecords_DefectOnFail", noDefect.Message);
 
-        var fail = new FaiRecord(s.WorkOrderId, s.SerialId, template, "[]", autoChecksPassed: false, FaiResult.Fail, "Wrong polarity on D3", "qc01", T0);
+        var fail = new FaiRecord(s.WorkOrderId, s.SerialId, template, "[]", autoChecksPassed: false, FaiResult.Fail, "Wrong polarity on D3", "qc01", T0, "FAI-FAIL");
         await AddAsync(fail);
         Assert.Contains("append-only", (await Assert.ThrowsAsync<SqlException>(() =>
             SqlAsync($"UPDATE FaiRecords SET Result = 'Pass', AutoChecksPassed = 1 WHERE Id = {fail.Id}"))).Message);

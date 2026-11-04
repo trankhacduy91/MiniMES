@@ -22,17 +22,22 @@ public class FaiRecord
     public bool AutoChecksPassed { get; private set; }
     public FaiResult Result { get; private set; }
     public string? Note { get; private set; }
+    public string? DefectCode { get; private set; }      // [step 8b] Fail only: why the sample went to Repair (FAI-FAIL by default)
     public string InspectedBy { get; private set; }
     public DateTime InspectedAt { get; private set; }
 
     private FaiRecord() { ChecklistJson = InspectedBy = string.Empty; }
 
     public FaiRecord(int workOrderId, long serialId, int faiTemplateId, string checklistJson, bool autoChecksPassed,
-        FaiResult result, string? note, string inspectedBy, DateTime utcNow)
+        FaiResult result, string? note, string inspectedBy, DateTime utcNow, string? defectCode = null)
     {
         // Q17: a red automatic check cannot be overruled by a person ticking Pass.
         if (result == FaiResult.Pass && !autoChecksPassed)
             throw new DomainException("FAI cannot pass while an automatic check is red.");
+        if (result == FaiResult.Fail && string.IsNullOrWhiteSpace(defectCode))
+            throw new DomainException("A failed FAI needs a defect code.");
+        if (result == FaiResult.Pass && defectCode is not null)
+            throw new DomainException("A passed FAI has no defect code.");
         if (note?.Trim().Length > NoteMaxLength) throw new DomainException($"Note must be at most {NoteMaxLength} characters.");
         ArgumentException.ThrowIfNullOrWhiteSpace(checklistJson);
         ArgumentException.ThrowIfNullOrWhiteSpace(inspectedBy);
@@ -44,6 +49,7 @@ public class FaiRecord
         AutoChecksPassed = autoChecksPassed;
         Result = result;
         Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        DefectCode = defectCode?.Trim().ToUpperInvariant();
         InspectedBy = inspectedBy;
         InspectedAt = utcNow;
     }

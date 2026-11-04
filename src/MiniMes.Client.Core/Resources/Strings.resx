@@ -1928,4 +1928,88 @@
   <data name="Spc_HasNcr" xml:space="preserve">
     <value>NCR opened</value>
   </data>
+  <data name="Menu_Fai" xml:space="preserve">
+    <value>First article (FAI)</value>
+  </data>
+  <data name="Fai_Title" xml:space="preserve">
+    <value>First article inspection (FAI)</value>
+  </data>
+  <data name="Fai_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Fai_Item" xml:space="preserve">
+    <value>Item</value>
+  </data>
+  <data name="Fai_Line" xml:space="preserve">
+    <value>Line</value>
+  </data>
+  <data name="Fai_SampleColumn" xml:space="preserve">
+    <value>Sample</value>
+  </data>
+  <data name="Fai_SampleStatus" xml:space="preserve">
+    <value>Sample status</value>
+  </data>
+  <data name="Fai_Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Fai_Status" xml:space="preserve">
+    <value>FAI status:</value>
+  </data>
+  <data name="Fai_Checklist" xml:space="preserve">
+    <value>Checklist</value>
+  </data>
+  <data name="Fai_Green" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Fai_Red" xml:space="preserve">
+    <value>NG</value>
+  </data>
+  <data name="Fai_Sample" xml:space="preserve">
+    <value>Sample {0} ({1}) · checklist v{2}</value>
+  </data>
+  <data name="Fai_NoSample" xml:space="preserve">
+    <value>No sample yet: the first board scanned at the first step becomes the sample.</value>
+  </data>
+  <data name="Fai_Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="Fai_DefectOnFail" xml:space="preserve">
+    <value>Defect code (Fail)</value>
+  </data>
+  <data name="Fai_Pass" xml:space="preserve">
+    <value>Pass</value>
+  </data>
+  <data name="Fai_Fail" xml:space="preserve">
+    <value>Fail</value>
+  </data>
+  <data name="Fai_History" xml:space="preserve">
+    <value>Earlier attempts</value>
+  </data>
+  <data name="Fai_When" xml:space="preserve">
+    <value>When</value>
+  </data>
+  <data name="Fai_Result" xml:space="preserve">
+    <value>Result</value>
+  </data>
+  <data name="Fai_By" xml:space="preserve">
+    <value>By</value>
+  </data>
+  <data name="Fai_OnlyQc" xml:space="preserve">
+    <value>Only QC records the first article result.</value>
+  </data>
+  <data name="Fai_AutoRed" xml:space="preserve">
+    <value>An automatic check is red: Pass is not possible. Fix the cause, or Fail the sample.</value>
+  </data>
+  <data name="Fai_TickAll" xml:space="preserve">
+    <value>Check every manual item before Pass.</value>
+  </data>
+  <data name="Fai_ConfirmFail" xml:space="preserve">
+    <value>Fail the first article? Sample {0} goes to Repair with defect {1}, and the next board scanned at the first step becomes the new sample.</value>
+  </data>
+  <data name="Fai_Passed" xml:space="preserve">
+    <value>{0}: first article passed (sample {1}). The line can run the whole lot.</value>
+  </data>
+  <data name="Fai_Failed" xml:space="preserve">
+    <value>{0}: first article failed. Sample {1} went to Repair; the next board becomes the sample.</value>
+  </data>
 </root>

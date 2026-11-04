@@ -21,6 +21,7 @@ public interface IRealtimeClient : IAsyncDisposable
     event Action<UnclassifiedDowntimeDto>? DowntimeNeedsClassification;   // [M5]
     event Action<OeeSnapshotClosedDto>? OeeSnapshotClosed;                // [M5]
     event Action<SpcAlertDto>? SpcAlertRaised;                            // [M7] QC / Supervisor / Admin connections only
+    event Action<FaiStatusChangedDto>? FaiStatusChanged;                  // [M7] to the line: kiosk FAI banner
 
     // false = "Reconnecting..." banner; true = live again.
     event Action<bool>? ConnectionChanged;
@@ -66,6 +67,7 @@ public sealed class RealtimeClient : IRealtimeClient
     public event Action<UnclassifiedDowntimeDto>? DowntimeNeedsClassification;
     public event Action<OeeSnapshotClosedDto>? OeeSnapshotClosed;
     public event Action<SpcAlertDto>? SpcAlertRaised;
+    public event Action<FaiStatusChangedDto>? FaiStatusChanged;
     public event Action<bool>? ConnectionChanged;
     public event Func<Task>? Resync;
 
@@ -89,6 +91,7 @@ public sealed class RealtimeClient : IRealtimeClient
         _conn.On<UnclassifiedDowntimeDto>(nameof(IMachineClient.DowntimeNeedsClassification), d => DowntimeNeedsClassification?.Invoke(d));
         _conn.On<OeeSnapshotClosedDto>(nameof(IMachineClient.OeeSnapshotClosed), d => OeeSnapshotClosed?.Invoke(d));
         _conn.On<SpcAlertDto>(nameof(IMachineClient.SpcAlertRaised), d => SpcAlertRaised?.Invoke(d));
+        _conn.On<FaiStatusChangedDto>(nameof(IMachineClient.FaiStatusChanged), d => FaiStatusChanged?.Invoke(d));
 
         _conn.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
         // New ConnectionId: the server forgot our groups (role groups it re-adds itself, line groups we must join).

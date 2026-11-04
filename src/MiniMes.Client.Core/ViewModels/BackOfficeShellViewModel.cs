@@ -55,6 +55,9 @@ public partial class BackOfficeShellViewModel(ITokenStore tokens, IAuthClient au
     private Task ShowNcrsAsync() => pages.ShowAsync<NcrViewModel>();   // M7 step 8
 
     [RelayCommand]
+    private Task ShowFaiAsync() => pages.ShowAsync<FaiViewModel>();   // M7 step 8b
+
+    [RelayCommand]
     private Task ShowItemsAsync() => pages.ShowAsync<ItemListViewModel>();
 
     [RelayCommand]

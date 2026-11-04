@@ -141,7 +141,7 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | 2 | Planner tạo WO 200 pcs → Release → sinh serial, in nhãn ZPL | M2 | xong (in ra file `.zpl`; máy in thật ngoài phạm vi) |
 | 3 | Kho nhập reel → QC làm IQC → lot `Available` | M6 | xong |
 | 4 | Operator nạp reel lên máy SMT, MES kiểm tra đúng vật tư và FIFO | M6 | xong |
-| 5 | FAI: serial đầu tiên qua hết các bước → QC duyệt → chạy hàng loạt | M2, M3, M7 | cổng FAI xong (M3); QC duyệt qua endpoint tạm, checklist FAI ở M7 |
+| 5 | FAI: serial đầu tiên qua hết các bước → QC duyệt → chạy hàng loạt | M2, M3, M7 | xong: cổng FAI (M3) + phiếu FAI có 3 kiểm tự động, QC Pass mở line (M7 bước 8b) |
 | 6 | Simulator: SMT qua MQTT, lò reflow OPC UA, máy dán keo Modbus (qua gateway) | M4, M4b | MQTT + trạm tự động xong (M4); OPC UA, Modbus ở M4b |
 | 7 | Operator scan trên kiosk, xem SOP; NG → Repair → Test lại → OK | M3 | xong |
 | 8 | Ngắt mạng gateway–broker 60 s → đệm → gửi bù, không mất bộ đếm | M4b | chưa làm |
@@ -218,7 +218,7 @@ Những điểm đáng nói khi phỏng vấn:
 | Scan (kiosk và máy dùng chung) | `POST /api/stations/{id}/scan` `{ serialNo, result, defectCode?, source }`, bị chặn vẫn trả 200 + `reasonCode` |
 | Repair, scrap | `POST /api/stations/{id}/repair`, `POST /api/serials/{serialNo}/scrap` (Supervisor) |
 | Máy giả lập | `GET /api/stations/{id}/waiting-serials?take=1` |
-| FAI (tạm, M7 thay) | `POST /api/work-orders/{id}/fai/result` `{ passed }` (QC) |
+| FAI (QC chấm, M7) | xem mục Chất lượng: `POST /api/fai/work-orders/{woId}/result` |
 | SOP, báo cáo | `GET /api/sop/{**path}`, `GET /api/reports/fpy?workOrderId=`, `GET /api/reports/wip?workOrderId=` |
 
 Những điểm đáng nói khi phỏng vấn:
@@ -401,8 +401,13 @@ Trạm `L1-PACK-01` (Kiosk `--StationCode=L1-PACK-01`) có màn **Packing** thay
 | Đặc tính, chart | `GET /api/quality/plans`, `GET /api/quality/spc/{planId}/chart?take=100` |
 | Tính lại baseline (QC, ≥ 20 điểm) | `POST /api/quality/spc/{planId}/limits/recompute` `{ from, to, reason }` |
 | NCR | `GET/POST /api/ncrs`, `POST /api/ncrs/{id}/start-review` · `propose` · `approve` · `reject-proposal` · `close` · `cancel` (mỗi lệnh gửi `rowVersion`) |
+| FAI | `GET /api/fai/queue`, `GET /api/fai/work-orders/{woId}` (phiếu đã điền phần tự động), `POST /api/fai/work-orders/{woId}/result` `{ result, checkedItems, note?, defectCode?, rowVersion }` (QC) |
 
 **NCR** (menu **NCR**): QC mở NCR bằng tay, hoặc bấm **Create NCR** trên một alert của chart để có form điền sẵn. Sau đó QC bắt đầu review và đề xuất xử lý (Use as is / Rework / Scrap / Return to vendor). Một Supervisor **khác người đề xuất** duyệt, rồi đóng. Thử: `qc01` đề xuất, `sup01` duyệt. Nút Approve của chính người đề xuất bị tắt, và API cũng trả 422. Hiệu ứng lên serial/lot khi duyệt làm ở bước Hold (M7 bước 9).
+
+**FAI** (menu **First article (FAI)**): danh sách WO đang chờ duyệt sản phẩm đầu, mẫu đã qua TEST xếp trên cùng. Phiếu FAI tự điền 3 mục từ dữ liệu MES: linh kiện truy xuất trên mẫu khớp BOM của WO (M6), mẫu OK ở mọi bước kiểm tra (M3), số đo của mẫu trong spec (M7). QC tick phần nhìn bằng mắt rồi bấm **Pass**: route check M3 mở cho cả lô ngay, kiosk của line tắt banner vàng qua SignalR. Pass bị khóa khi một mục tự động đỏ hoặc còn mục tay chưa tick, API cũng trả 422. **Fail** đưa mẫu sang NG (đi Repair) và board kế tiếp vào SMT thành mẫu mới.
+
+![Phiếu FAI: ba kiểm tự động xanh, còn hai mục tay chưa tick nên Pass tắt](docs/images/m7-fai-worksheet.png)
 
 ## Edge Gateway (M4b)
 

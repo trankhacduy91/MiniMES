@@ -2321,6 +2321,11 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DefectCode")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<int>("FaiTemplateId")
                         .HasColumnType("int");
 
@@ -2360,6 +2365,8 @@ namespace MiniMes.Infrastructure.Persistence.Migrations
                     b.ToTable("FaiRecords", null, t =>
                         {
                             t.HasCheckConstraint("CK_FaiRecords_ChecklistJson", "ISJSON([ChecklistJson]) = 1");
+
+                            t.HasCheckConstraint("CK_FaiRecords_DefectOnFail", "([Result] = 'Fail' AND [DefectCode] IS NOT NULL) OR ([Result] = 'Pass' AND [DefectCode] IS NULL)");
 
                             t.HasCheckConstraint("CK_FaiRecords_PassNeedsAuto", "[Result] <> 'Pass' OR [AutoChecksPassed] = 1");
                         });
