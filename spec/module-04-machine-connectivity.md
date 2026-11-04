@@ -1252,7 +1252,7 @@ var port = mosquitto.GetMappedPublicPort(1883);      // truyền cho ingest qua 
 - [x] Andon: raise (tay và tự động) → acknowledge → resolve kèm lý do; mỗi (máy, loại) một Andon mở; 403 đúng role; 409 khi ack đua nhau.
 - [ ] Throttle: số đếm ≤ 1 lần/giây/máy tới client; UI không giật với 8 máy chu kỳ 0,2 giây. *(Throttle đạt; UI chỉ thử được 3 máy vì master data có 3 máy MQTT: 1 lần/giây/máy, UI không nghẽn. 8 máy chờ M4b/thêm master data.)*
 - [x] Client SignalR reconnect: join lại group, tải lại snapshot, banner trạng thái kết nối.
-- [ ] Unit test: `CounterMath`, `MachineTopic`, `AndonCall`, `RecentIdCache`, watchdog (FakeTimeProvider). Integration test Testcontainers (SQL Server + Mosquitto) chạy trong CI. *(Đủ test, xanh ở máy dev; chưa push nên chưa thấy CI chạy test Mosquitto.)*
+- [x] Unit test: `CounterMath`, `MachineTopic`, `AndonCall`, `RecentIdCache`, watchdog (FakeTimeProvider). Integration test Testcontainers (SQL Server + Mosquitto) chạy trong CI. *(Đủ test. CI GitHub 04/11/2026 (run 41843120968, `ubuntu-latest`): integration 474/474 xanh, gồm các test Testcontainers SQL Server + Mosquitto.)*
 - [x] **[v2]** Topic theo UNS 6 cấp có `area`; payload có `source`, `quality`; ingest chấp nhận tag `process/{tag}` có trong `MachineTag`, bỏ tag lạ, đánh `Bad` giá trị ngoài khoảng hợp lý.
 - [x] **[v2]** Andon leo thang đúng bảng quy tắc (unit test FakeTimeProvider); Ack dừng leo thang; dashboard hiện level.
 - [x] **[v2]** Dashboard hiện giá trị tag process mới nhất và nguồn dữ liệu (MQTT/OPC UA/Modbus) của từng máy.

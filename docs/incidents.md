@@ -276,3 +276,16 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
   - "Đọc để quyết định, rồi đọc lại để ghi" là một khe race, kể cả khi đã có RowVersion: RowVersion chỉ bảo vệ lúc ghi, không bảo vệ khoảng giữa hai lần đọc.
   - Kết quả tuy đúng (board bị chặn), nhưng **mã lỗi sai** vẫn là bug với người dùng: operator thấy "lỗi hệ thống" thay vì "board đang bị Hold, đưa cho QC".
   - Test đua hai luồng thật (5 vòng) bắt được lỗi này. Unit test của route check thì không thể bắt được.
+
+## 2026-11-04 — Máy dev xanh, CI Linux đỏ vì một đường dẫn `C:\` trong fake (M3b)
+
+- **Triệu chứng:** sau khi push M7 bước 8b, CI fail ngay ở job `unit`. Lỗi nằm ở test `PackingViewModelTests.Full_carton_plays_its_own_sound_and_prints_the_label`: test chờ message "Label printed (C261103000123-1.zpl)" nhưng nhận "Label printed (C:\labels\C261103000123-1.zpl)". Trên Windows test này xanh.
+- **Nguyên nhân:**
+  - Printer giả trong test (`KioskFakes`) trả về đường dẫn cứng `C:\labels\...`.
+  - ViewModel lấy tên file bằng `Path.GetFileName`. Trên Linux `\` không phải dấu phân cách, nên `GetFileName` trả nguyên chuỗi.
+  - Code thật không sai, vì nó luôn nhận đường dẫn do `Path.Combine` tạo trên chính máy đang chạy.
+  - Lỗi có từ M3b nhưng chỉ lộ ra khi push. Các commit M3b/M6/M7 được dồn lại push một lần.
+- **Cách sửa:** fake trả `Path.Combine("labels", ...)`. Tôi cũng grep toàn bộ test để tìm literal `X:\`, không còn chỗ nào khác.
+- **Bài học:**
+  - Fake cũng phải tôn trọng hệ điều hành như code thật: không dùng literal đường dẫn tuyệt đối, chỉ dùng `Path.Combine` hoặc `Path.GetTempPath()`.
+  - "Chạy đúng lệnh của CI trên máy dev" không thay được CI thật khi runner khác hệ điều hành. Push thường xuyên hơn để lỗi lộ ra sớm, gần commit gây lỗi.
