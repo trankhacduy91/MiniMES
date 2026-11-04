@@ -17,7 +17,8 @@ Hệ thống điều hành sản xuất (MES) thu nhỏ cho một nhà máy lắ
 - **M5 (OEE & downtime) xong:** A×P×Q ở một hàm thuần, khớp tính tay ca mẫu 79,8 %; snapshot theo giờ/ca có job bắt kịp và unique index; phân loại dừng (audit theo cột, đổi lý do thì tính lại ca); Pareto; cờ P > 100 % và `CounterMismatch`; dashboard OxyPlot, Excel, Line TV. Xem [mục OEE](#oee-m5).
 - **M6 (vật tư & truy xuất) xong:** nhập reel có nhãn ZPL, IQC theo supplier lot, nạp vật tư có kiểm tra đúng item/trạm/hạn/Hold và cảnh báo FIFO (supervisor duyệt có ghi vết); scan OK ghi `SerialComponents` và trừ lot trong cùng transaction (thiếu reel thì chặn scan); linh kiện thay ở Repair cũng vào hồ sơ; truy xuất ngược/xuôi bằng recursive CTE qua genealogy, xuất Excel, Hold all (M7); đo trên 5 triệu dòng (xuôi 12.500 serial ~100 ms). Xem [mục Material & traceability](#material--traceability-m6).
 - **M3b (đóng gói) xong:** board → thùng → pallet → giao hàng; pack đi qua route check trong cùng transaction với việc vào thùng; số lượng thùng/pallet đúng cả khi đồng thời (UPDATE có điều kiện + filtered unique index, có test đột biến); Hold của thùng/pallet suy ra từ serial, pallet có hàng Hold không ship được; nhãn thùng/pallet ZPL; Kiosk Packing hai chế độ, supervisor duyệt bằng quẹt thẻ; truy xuất xuôi (M6) cho biết board đang ở thùng/pallet nào, đã giao chưa. Xem [mục Packing](#packing-m3b) và [ADR-010](ARCHITECTURE.md).
-- Module tiếp theo (M7) làm theo [lộ trình](spec/spec-v2.md).
+- **M7 (chất lượng) xong:** SPC I-MR (số đo trạm test + tự động từ nhiệt độ lò reflow), 3 rule Western Electric có chống alert trùng, control chart OxyPlot cập nhật qua SignalR; NCR 4 trạng thái có tách người đề xuất/người duyệt; FAI mở cổng chạy hàng loạt sau khi QC chấm phiếu có 3 kiểm tự động; Hold/Release xuyên module (lot + mọi board làm từ nó, thùng/pallet, khoảng thời gian qua máy) ghi set-based trong một transaction, chặn ở scan, nạp reel, giao hàng; test đua Hold với scan. Xem [mục Quality](#quality-m7).
+- M8, M10 (P2) chưa có spec chi tiết; xem [lộ trình](spec/spec-v2.md).
 
 ## Kiến trúc
 
@@ -142,14 +143,14 @@ Kịch bản end-to-end mà toàn dự án hướng tới ([spec-v2 B2](spec/spe
 | 3 | Kho nhập reel → QC làm IQC → lot `Available` | M6 | xong |
 | 4 | Operator nạp reel lên máy SMT, MES kiểm tra đúng vật tư và FIFO | M6 | xong |
 | 5 | FAI: serial đầu tiên qua hết các bước → QC duyệt → chạy hàng loạt | M2, M3, M7 | xong: cổng FAI (M3) + phiếu FAI có 3 kiểm tự động, QC Pass mở line (M7 bước 8b) |
-| 6 | Simulator: SMT qua MQTT, lò reflow OPC UA, máy dán keo Modbus (qua gateway) | M4, M4b | MQTT + trạm tự động xong (M4); OPC UA, Modbus ở M4b |
+| 6 | Simulator: SMT qua MQTT, lò reflow OPC UA, máy dán keo Modbus (qua gateway) | M4, M4b | xong (MQTT ở M4; OPC UA, Modbus qua gateway ở M4b) |
 | 7 | Operator scan trên kiosk, xem SOP; NG → Repair → Test lại → OK | M3 | xong |
-| 8 | Ngắt mạng gateway–broker 60 s → đệm → gửi bù, không mất bộ đếm | M4b | chưa làm |
-| 9 | Máy Down → Andon → quá 3 phút chưa Ack thì leo thang → chọn lý do dừng | M4, M5 | xong (M4); Pareto lý do dừng ở M5 |
+| 8 | Ngắt mạng gateway–broker 60 s → đệm → gửi bù, không mất bộ đếm | M4b | xong (outbox SQLite, có integration test) |
+| 9 | Máy Down → Andon → quá 3 phút chưa Ack thì leo thang → chọn lý do dừng | M4, M5 | xong (Andon + leo thang ở M4; phân loại dừng, Pareto ở M5) |
 | 10 | Nhiệt độ reflow trôi → SPC báo vi phạm → NCR, Hold serial liên quan | M7 | xong: SPC tự động từ lò, chart, NCR từ alert, "Hold serials in window" quanh alert (M7 bước 6–9) |
 | 11 | Trạm Pack: serial vào thùng 10 pcs → nhãn thùng → pallet | M3b | xong (Kiosk màn Packing) |
 | 12 | Reel lỗi → truy xuất xuôi serial → thùng → pallet → Hold | M6, M3b, M7 | xong: truy xuất xuôi tới thùng/pallet/đã giao (M6, M3b) + "Hold all" lot và mọi board, Hold thùng/pallet, Release (M7 bước 9) |
-| 13 | WO Completed → báo cáo sản lượng/FPY/OEE, xuất Excel | M2, M3, M5 | FPY/WIP xong (M3); OEE, Excel ở M5 |
+| 13 | WO Completed → báo cáo sản lượng/FPY/OEE, xuất Excel | M2, M3, M5 | xong (FPY/WIP ở M3; OEE, Excel ở M5) |
 
 ## Master data (M1)
 
@@ -218,7 +219,7 @@ Những điểm đáng nói khi phỏng vấn:
 | Scan (kiosk và máy dùng chung) | `POST /api/stations/{id}/scan` `{ serialNo, result, defectCode?, source }`, bị chặn vẫn trả 200 + `reasonCode` |
 | Repair, scrap | `POST /api/stations/{id}/repair`, `POST /api/serials/{serialNo}/scrap` (Supervisor) |
 | Máy giả lập | `GET /api/stations/{id}/waiting-serials?take=1` |
-| FAI (QC chấm, M7) | xem mục Chất lượng: `POST /api/fai/work-orders/{woId}/result` |
+| FAI (QC chấm, M7) | xem mục [Quality](#quality-m7): `POST /api/fai/work-orders/{woId}/result` |
 | SOP, báo cáo | `GET /api/sop/{**path}`, `GET /api/reports/fpy?workOrderId=`, `GET /api/reports/wip?workOrderId=` |
 
 Những điểm đáng nói khi phỏng vấn:
@@ -386,7 +387,7 @@ Trạm `L1-PACK-01` (Kiosk `--StationCode=L1-PACK-01`) có màn **Packing** thay
 ![Packing: thùng đầy](docs/images/m3b-carton-full.png)
 ![Palletize](docs/images/m3b-palletize.png)
 
-## Quality: SPC (M7, đang làm)
+## Quality (M7)
 
 ![Control chart lò reflow: run rule báo trước khi chạm USL](docs/images/m7-spc-reflow.png)
 
@@ -413,6 +414,15 @@ Trạm `L1-PACK-01` (Kiosk `--StationCode=L1-PACK-01`) có màn **Packing** thay
 **Hold / Release** (menu **Holds**, nút **Hold all…** ở màn truy xuất, nút **Hold serials in window** trên alert của chart máy): QC/Supervisor xem trước ("87 boards: 55 InProcess, 24 Completed…; 3 đã giao, báo khách"), nhập lý do, tùy chọn mở NCR, rồi Hold. Một transaction ghi `HoldRecord` bằng `INSERT … SELECT` và đổi `Status` bằng `UPDATE` set-based. Từ đó scan ở mọi trạm (kể cả Pack) bị chặn `SerialHold`, reel bị chặn khi nạp, pallet không ship được. Release cần ghi chú, trả đúng trạng thái trước Hold (kể cả Completed), và chỉ trả khi không còn Hold nào khác trên target đó (hai NCR cùng nghi một board). Duyệt NCR áp hiệu ứng (Use as is / Rework → Repair / Scrap / Return to vendor) cho target của NCR trong cùng transaction; board bị giữ theo lot chờ QC thả có chủ đích.
 
 ![Hold all từ màn truy xuất: preview, lý do, mở NCR](docs/images/m7-hold-trace.png)
+
+**Thử kịch bản "reel lỗi" (demo bước 12)**, với API, BackOffice và Kiosk đang chạy:
+1. BackOffice, `qc01`, menu **Traceability** → *Lot (forward)* → nhập lot đã dùng trên line (ví dụ `L-CAP-B` của dữ liệu mẫu) → **Trace**: các board nhóm theo nơi đang nằm.
+2. **Hold all…** → xem preview (số board theo trạng thái, các reel cùng lần giao, board đã giao) → nhập lý do, tick *Open an NCR* → **Hold**.
+3. Kiosk ở trạm kế tiếp scan một board trong danh sách: nền đỏ, "Board on HOLD. Put it aside and call QC." Nạp reel cùng lần giao lên máy: bị từ chối `LotOnHold`.
+4. Menu **NCR**: `qc01` review, đề xuất *Use as is*; `sup01` duyệt → reel trở lại Available, các board vẫn bị giữ (chưa ai quyết định cho chúng).
+5. Menu **Holds** → chọn đợt → **Release**, ghi lý do: mọi board về đúng trạng thái trước Hold (board đã xong vẫn là Completed), Kiosk scan lại được; rồi **Close** NCR.
+
+Toàn bộ chuỗi này có trong integration test `Quality/HoldFlowTests` (reel nạp qua API M6 với cổng vật tư bật, board tiêu thụ thật khi scan), kèm test Hold và scan cùng lúc.
 
 ## Edge Gateway (M4b)
 

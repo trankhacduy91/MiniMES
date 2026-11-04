@@ -16,6 +16,7 @@ namespace MiniMes.IntegrationTests.Quality;
 
 // Spec M7 step 9 / DoD 5.1: Hold -> blocked at every gate (route check M3, reel loading M6, shipment M3b) -> Release
 // gives back the old status; overlapping holds (Q8); the NCR decision acts on its targets in the same transaction.
+// The DoD chain end to end (real M6 consumption) and the Hold vs scan race: HoldFlowTests (step 10).
 // Each test has its own WO of its own item (routing SMT-ASSY-TEST-PACK on L1, one traced part at SMT) and its own
 // lots, so holds never touch another test's boards; window holds are released at the end of their test.
 [Collection(ApiCollection.Name)]
@@ -25,9 +26,9 @@ public class HoldApiTests(ApiFixture api)
     private static int _nextSerial;
     private readonly ScanTests scan = new(api);
 
-    private sealed record Setup(int WoId, int PartId, List<string> Boards, HttpClient Op);
+    internal sealed record Setup(int WoId, int PartId, List<string> Boards, HttpClient Op);
 
-    private sealed record Lots(string Used, string Sibling, string Pending);
+    internal sealed record Lots(string Used, string Sibling, string Pending);
 
     // ---------- Hold all by lot -> gates -> Release ----------
 
@@ -236,31 +237,6 @@ public class HoldApiTests(ApiFixture api)
 
     // ---------- race, roles ----------
 
-    // Spec 2.6 point 5: a scan and a hold at the same moment. Whatever the order, the board ends Held, and if the scan
-    // got in first the hold remembers the status after it (no lost update in either direction).
-    [Fact]
-    public async Task Hold_and_scan_at_the_same_time_never_lose_the_hold()
-    {
-        var qc = await api.LoginAsync("qc01");
-        for (var round = 0; round < 5; round++)
-        {
-            var s = await SetupAsync(1);
-            await ThroughAsync(s, s.Boards[0], "L1-SMT-01");
-            Guid batch = default;
-            var scanned = default(Contracts.Execution.ScanResponse);
-            await ScanTests.TogetherAsync(
-                async () => { batch = (await HoldSerialsAsync(qc, "Race", s.Boards[0])).BatchId; return 0; },
-                async () => { scanned = await scan.ScanAsync(s.Op, "L1-ASM-01", s.Boards[0]); return 0; });
-
-            var row = await api.WithDbAsync(db => db.Serials.Where(x => x.SerialNo == s.Boards[0])
-                .Select(x => new { x.Status, x.StatusBeforeHold, x.CurrentSeq }).SingleAsync());
-            Assert.Equal((SerialStatus.Hold, SerialStatus.InProcess), (row.Status, row.StatusBeforeHold));
-            if (scanned!.Result == "Ok") Assert.Equal(20, row.CurrentSeq);
-            else Assert.Equal(("SerialHold", 10), (scanned.ReasonCode, row.CurrentSeq));
-            await ReleaseAsync(qc, batch, "race round done");
-        }
-    }
-
     [Fact]
     public async Task Only_qc_and_supervisors_hold_and_a_hold_needs_a_reason()
     {
@@ -282,7 +258,7 @@ public class HoldApiTests(ApiFixture api)
     // ---------- helpers ----------
 
     // A released WO of a new item with one traced part at SMT, sessions open on SMT/ASSY/TEST/PACK.
-    private async Task<Setup> SetupAsync(int boards)
+    internal async Task<Setup> SetupAsync(int boards)
     {
         var made = await api.WithDbAsync(async db =>
         {
@@ -310,14 +286,14 @@ public class HoldApiTests(ApiFixture api)
         return new Setup(made.Item1, made.Item2, made.Item3, await api.LoginOperatorAsync(stationCode: "L1-SMT-01"));
     }
 
-    private async Task ThroughAsync(Setup s, string board, params string[] stations)
+    internal async Task ThroughAsync(Setup s, string board, params string[] stations)
     {
         foreach (var st in stations) Assert.Equal("Ok", (await scan.ScanAsync(s.Op, st, board)).Result);
     }
 
     // A reel of the WO's part used on the given boards (as the M6 consumption writes it), a second reel of the same
     // delivery (Available), a third still waiting for IQC.
-    private Task<Lots> LotUsedByAsync(Setup s, params string[] boards) => api.WithDbAsync(async db =>
+    internal Task<Lots> LotUsedByAsync(Setup s, params string[] boards) => api.WithDbAsync(async db =>
     {
         var supplierLot = ApiFixture.Unique("SUPH");
         var used = new MaterialLot(ApiFixture.Unique("LH"), s.PartId, 1_000, supplierLot, T0, null, false);
@@ -334,7 +310,7 @@ public class HoldApiTests(ApiFixture api)
         return new Lots(used.LotNo, sibling.LotNo, pending.LotNo);
     });
 
-    private async Task<LoadMaterialResponse> LoadAsync(Setup s, string lotNo)
+    internal async Task<LoadMaterialResponse> LoadAsync(Setup s, string lotNo)
     {
         var response = await s.Op.PostAsJsonAsync($"/api/stations/{await scan.StationIdAsync("L1-SMT-01")}/material-loads", new LoadMaterialRequest(lotNo));
         return await OkAsync<LoadMaterialResponse>(Task.FromResult(response));
@@ -343,7 +319,7 @@ public class HoldApiTests(ApiFixture api)
     private static Task<HoldResultDto> HoldSerialsAsync(HttpClient client, string reason, params string[] serials)
         => OkAsync<HoldResultDto>(client.PostAsJsonAsync("/api/quality/holds", new HoldTargetsRequest("Serials", SerialNos: serials, Reason: reason)));
 
-    private static Task<ReleaseResultDto> ReleaseAsync(HttpClient client, Guid batchId, string note)
+    internal static Task<ReleaseResultDto> ReleaseAsync(HttpClient client, Guid batchId, string note)
         => OkAsync<ReleaseResultDto>(client.PostAsJsonAsync($"/api/quality/holds/{batchId}/release", new ReleaseHoldRequest(note)));
 
     private static Task<NcrDto> CreateNcrAsync(HttpClient qc, params (string Type, string Code)[] targets)
@@ -365,13 +341,13 @@ public class HoldApiTests(ApiFixture api)
     private async Task<HttpResponseMessage> CloseAsync(NcrDto ncr)
         => await (await api.LoginAsync("qc01")).PostAsJsonAsync($"/api/ncrs/{ncr.Id}/close", new CloseNcrRequest(null, ncr.RowVersion));
 
-    private Task<(SerialStatus Status, SerialStatus? Before)> SerialAsync(string serialNo) => api.WithDbAsync(async db =>
+    internal Task<(SerialStatus Status, SerialStatus? Before)> SerialAsync(string serialNo) => api.WithDbAsync(async db =>
         await db.Serials.Where(x => x.SerialNo == serialNo).Select(x => new ValueTuple<SerialStatus, SerialStatus?>(x.Status, x.StatusBeforeHold)).SingleAsync());
 
-    private Task<(MaterialLotStatus Status, MaterialLotStatus? Before)> LotAsync(string lotNo) => api.WithDbAsync(async db =>
+    internal Task<(MaterialLotStatus Status, MaterialLotStatus? Before)> LotAsync(string lotNo) => api.WithDbAsync(async db =>
         await db.MaterialLots.Where(x => x.LotNo == lotNo).Select(x => new ValueTuple<MaterialLotStatus, MaterialLotStatus?>(x.Status, x.StatusBeforeHold)).SingleAsync());
 
-    private static async Task<T> OkAsync<T>(Task<HttpResponseMessage> call)
+    internal static async Task<T> OkAsync<T>(Task<HttpResponseMessage> call)
     {
         var response = await call;
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
