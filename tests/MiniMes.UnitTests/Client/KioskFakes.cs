@@ -266,6 +266,6 @@ internal sealed class FakeLabelPrinter : ILabelPrinter
     {
         if (Fails is not null) return Task.FromException<string>(Fails);
         Printed.Add((labelKey, zpl));
-        return Task.FromResult($@"C:\labels\{labelKey}-1.zpl");
+        return Task.FromResult(Path.Combine("labels", $"{labelKey}-1.zpl"));   // OS-neutral: CI runs on Linux
     }
 }
