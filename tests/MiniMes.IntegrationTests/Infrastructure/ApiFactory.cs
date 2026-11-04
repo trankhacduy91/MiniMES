@@ -26,6 +26,7 @@ public sealed class ApiFactory(SqlServerFixture sql, int? mqttPort = null) : Web
         Environment.SetEnvironmentVariable("Jwt__Key", JwtKey);
         Environment.SetEnvironmentVariable("Mqtt__Enabled", mqttPort is null ? "false" : "true"); // no broker: ingest off
         Environment.SetEnvironmentVariable("Oee__SnapshotJobEnabled", "false");   // M5: tests drive the snapshot service themselves
+        Environment.SetEnvironmentVariable("Spc__SamplerEnabled", "false");       // M7: tests drive the SPC sampler themselves
         Environment.SetEnvironmentVariable("Mqtt__Host", "localhost");
         Environment.SetEnvironmentVariable("Mqtt__Port", (mqttPort ?? 1883).ToString(System.Globalization.CultureInfo.InvariantCulture));
         builder.UseEnvironment("Testing"); // Program.cs: Testing -> MigrateAsync + seed

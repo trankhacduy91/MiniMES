@@ -6,7 +6,9 @@ using MiniMes.Contracts.Auth;
 using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Factory;
 using MiniMes.Contracts.Planning;
+using MiniMes.Contracts.Quality;
 using MiniMes.MachineSimulator.Config;
+using MiniMes.MachineSimulator.Scenarios;
 
 namespace MiniMes.MachineSimulator.Stations;
 
@@ -16,8 +18,11 @@ namespace MiniMes.MachineSimulator.Stations;
 // Session: the first work order of the line's dispatch list that is not waiting for its first article (user decision
 // 27/10/2026); when its boards run out and another order heads the list, the station moves to that one.
 // Never throws: an unreachable API reads as "no board" and the machine starves (Idle), which is what a real line does.
-public sealed class AutoStationClient(HttpClient http, ApiOptions api, StationOptions station, Random rng, ILogger log)
+public sealed class AutoStationClient(HttpClient http, ApiOptions api, StationOptions station, Random rng, ILogger log,
+    DriftScenario? drift = null)
 {
+    // [v2] M7 step 6: a measuring tester; null for stations that only scan.
+    private readonly QualityDrift? _meter = station.Inspection is { } inspection ? new QualityDrift(inspection, drift, rng) : null;
     private string? _token;
     private StationDto? _station;
     private int? _sessionWoId;
@@ -45,6 +50,8 @@ public sealed class AutoStationClient(HttpClient http, ApiOptions api, StationOp
     public async Task<ScanResponse?> ScanAsync(string serialNo, bool ng, CancellationToken ct)
     {
         if (_station is null) return null;
+        // A measuring tester sends the value of a board that powered up; the MES decides OK or NG from it (M7 2.3).
+        if (_meter is not null && !ng) return await InspectAsync(serialNo, ct);
         var (result, defect) = ng && station.Mode == StationMode.AutoTest
             ? ("NG", station.DefectCodes[rng.Next(station.DefectCodes.Length)])
             : ("OK", (string?)null);
@@ -59,6 +66,30 @@ public sealed class AutoStationClient(HttpClient http, ApiOptions api, StationOp
             return answer;
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)   // network, 4xx/5xx, unknown station code
+        {
+            Forget(ex);
+            return null;
+        }
+    }
+
+    private async Task<ScanResponse?> InspectAsync(string serialNo, CancellationToken ct)
+    {
+        var value = _meter!.Next();
+        try
+        {
+            var answer = await SendAsync<InspectionResponse>(HttpMethod.Post, "api/quality/inspections",
+                new RecordInspectionRequest(_station!.Id, serialNo, [new InspectionValue(station.Inspection!.PlanCode, value)], "Machine",
+                    Guid.NewGuid()), ct);
+            if (answer.Result == "Blocked")
+                log.LogWarning("{Station} {SerialNo} blocked: {Reason} {Message}", StationCode, serialNo, answer.ReasonCode, answer.Message);
+            else
+                log.LogInformation("{Station} measured {SerialNo}: {PlanCode} {Value} -> {Result} (board {Board}){Alerts}", StationCode,
+                    serialNo, station.Inspection!.PlanCode, value, answer.Result, _meter.Boards,
+                    answer.Alerts.Count == 0 ? "" : " SPC ALERT " + string.Join(", ", answer.Alerts.Select(a => a.Rule)));
+            // The machine counts like a scan: Ok / Ng / Blocked.
+            return new ScanResponse(answer.Result, answer.Message, answer.ReasonCode, answer.NextStep, answer.NextStepName, answer.Duplicate);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             Forget(ex);
             return null;
@@ -120,5 +151,5 @@ public sealed class AutoStationClient(HttpClient http, ApiOptions api, StationOp
 public sealed class StationClients(HttpClient http, SimulatorOptions options, ILoggerFactory loggers)
 {
     public AutoStationClient Create(StationOptions station, Random rng)
-        => new(http, options.Api!, station, rng, loggers.CreateLogger<AutoStationClient>());
+        => new(http, options.Api!, station, rng, loggers.CreateLogger<AutoStationClient>(), options.Drift);
 }

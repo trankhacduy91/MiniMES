@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
+using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Machines;
 using MiniMes.MachineSimulator.Config;
 using MiniMes.MachineSimulator.Modbus;
@@ -138,10 +139,15 @@ public sealed class SimulatedMachine
 
         bool ng;
         if (_forceNg > 0) { ng = true; _forceNg--; } else ng = _rng.NextDouble() < _cfg.NgProb;
-        if (_station is not null && !await ScanNextBoardAsync(ng, now, ct))
+        if (_station is not null)
         {
-            if (ng) _forceNg++;                               // a forced NG is kept for the next real board
-            return;
+            if (await ScanNextBoardAsync(ng, now, ct) is not { } answer)
+            {
+                if (ng) _forceNg++;                           // a forced NG is kept for the next real board
+                return;
+            }
+            // [v2] M7: a measured board is judged by the MES, so its verdict is the one counted (out of spec = NG).
+            ng = answer.Result == "Ng";
         }
         _counter++;                                           // cumulative: never goes down, except "reset"
         if (ng) { _ng++; _pendingNg++; } else { _good++; _pendingGood++; }
@@ -150,13 +156,13 @@ public sealed class SimulatedMachine
 
     // The board is counted only once the MES accepted the scan: no serial, an unreachable API or a Blocked answer
     // (route check) make no product, so the counter (MQTT) and the scans (Good/NG of OEE) tell the same story.
-    private async Task<bool> ScanNextBoardAsync(bool ng, DateTimeOffset now, CancellationToken ct)
+    private async Task<ScanResponse?> ScanNextBoardAsync(bool ng, DateTimeOffset now, CancellationToken ct)
     {
         if (await _station!.NextSerialAsync(ct) is { } serial
-            && await _station.ScanAsync(serial, ng, ct) is { Result: not "Blocked" })
-            return true;
+            && await _station.ScanAsync(serial, ng, ct) is { Result: not "Blocked" } answer)
+            return answer;
         await StarveAsync(now, ct);
-        return false;
+        return null;
     }
 
     private async Task StarveAsync(DateTimeOffset now, CancellationToken ct)

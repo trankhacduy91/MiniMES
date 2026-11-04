@@ -56,7 +56,9 @@ public class ReleaseWorkOrderTests(ApiFixture api)
 
         var serial = await api.WithDbAsync(db => db.Serials.Where(s => s.WorkOrderId == wo.Id).Select(s => s.SerialNo).SingleAsync());
 
-        var vietnamToday = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(wo.ReleasedAt!.Value, "Asia/Ho_Chi_Minh");
+        // The API sends UTC without "Z", so the client reads Kind = Unspecified, which the conversion takes as the test
+        // machine's local time: on a Vietnamese PC between 00:00 and 07:00 the expected day was off by one.
+        var vietnamToday = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.SpecifyKind(wo.ReleasedAt!.Value, DateTimeKind.Utc), "Asia/Ho_Chi_Minh");
         Assert.Equal($"{vietnamToday:yyMMdd}", serial[4..10]);
     }
 

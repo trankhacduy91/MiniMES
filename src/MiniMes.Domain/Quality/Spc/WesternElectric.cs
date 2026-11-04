@@ -32,7 +32,8 @@ public static class WesternElectric
     ];
 
     // The points, oldest first (by MeasuredAt, 2.3 trap 1), against a FIXED baseline (Q3). Every violation at every
-    // point: a long run reports each point from the 7th on; the use case keeps one open alert per rule (Q5).
+    // point: a long run reports each point from the 7th on; the use case keeps one open alert per rule (Q5). Listed rule
+    // by rule (all WE1, then WE2...), each in point order: "the earliest violation" is Min(Index), not First().
     public static IReadOnlyList<RuleViolation> Evaluate(IReadOnlyList<double> values, double mean, double sigma,
         IEnumerable<WeRule> rules)
     {

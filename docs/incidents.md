@@ -250,3 +250,15 @@ Lỗi đáng nhớ (khó tìm nguyên nhân, có bài học) để dùng khi ph�
 - **Bài học:**
   - Mức cô lập của DB quyết định race có tồn tại hay không. Không bật RCSI thì đọc cũng chờ, các request tự xếp hàng; bật RCSI (rất phổ biến) thì race sẽ xuất hiện, nên unique index + `catch` vẫn bắt buộc phải có.
   - Test ép race phải tự kiểm chứng rằng hook đã chạy. Nếu không, chính nó cũng có thể xanh mà không chứng minh gì.
+
+## 2026-11-04 — Test thống kê "chứng minh" spec sai, và phép tính tay của tôi xác nhận theo (M7 bước 6)
+
+- **Triệu chứng:** spec viết "dịch 0,02 V → run rule báo trong ~10–20 board". Test 200 seed đo được trung vị **35** board. Tôi tính tay "để kiểm" theo công thức chờ 7 lần thành công liên tiếp với p = 0,69, ra ≈ 40, rồi kết luận spec lạc quan. Đo thêm với dịch 0,04 V thì ra trung vị 32 trong khi lý thuyết ≈ 15. Tới đây mới thấy không ổn.
+- **Nguyên nhân (hai lỗi chồng nhau):**
+  1. Helper của test lấy vi phạm đầu tiên bằng `First()`. `WesternElectric.Evaluate` trả danh sách **gom theo rule** (hết WE1 rồi WE2, WE4), không theo thứ tự board, nên `First()` ra vi phạm WE1 đầu tiên (có khi ở board 300) thay vì vi phạm **sớm nhất**. Đúng phải là `Min()`.
+  2. Phép tính tay của tôi chỉ có rule run 7. Tôi quên rằng WE2 cũng bắt được dịch tâm, và đem **trung bình** của phân phối thời gian chờ (lệch phải) so với **trung vị** đo được. Kết quả: lý thuyết sai "khớp" với số đo sai.
+- **Cách tìm:** mô phỏng độc lập bằng Python (`random.gauss` + ba rule viết lại từ đầu, không dùng code C#): trung vị 19 / 7 / 60 cho dịch 0,02 / 0,04 / không dịch. Lệch hẳn so với C#, nên lỗi phải nằm ở phía C#. Đọc lại helper thì thấy `First()`. Sửa xong, C# ra 20 / 7 / 61, khớp Python và khớp spec.
+- **Bài học:**
+  - Một phép tính "kiểm tra" do chính mình làm mà ra đúng con số mình đang nghi thì chưa phải bằng chứng; tôi đã dừng lại ở chỗ "khớp" mà không hỏi tiếp. Kiểm chứng phải đến từ một đường độc lập: viết lại bằng công cụ khác, không dùng code đang kiểm.
+  - Khi thấy kết quả lệch spec, nghi code của mình trước rồi mới nghi spec.
+  - Thứ tự trả về của một API (theo rule hay theo vị trí) là một phần của hợp đồng: ghi rõ ở comment, và dùng `Min`/`OrderBy` khi cần "sớm nhất".

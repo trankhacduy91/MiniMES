@@ -16,6 +16,11 @@ public sealed class SpcOptions
     public int RunLength { get; set; } = WesternElectric.DefaultRunLength;
     public bool EnableWe3 { get; set; }
 
+    // [v2] 2.3b: the machine sampler. Off in Testing (the tests drive it with a FakeTimeProvider).
+    public bool SamplerEnabled { get; set; } = true;
+    public int SamplerTickSec { get; set; } = 10;
+    public int GapPeriods { get; set; } = Domain.Quality.Spc.SpcSampling.DefaultGapPeriods;
+
     public IReadOnlyList<WeRule> Rules()
         => EnableWe3 ? [.. WesternElectric.Default(RunLength), WesternElectric.We3] : WesternElectric.Default(RunLength);
 }
@@ -26,6 +31,10 @@ public interface ISpcEvaluator
 {
     // In the caller's transaction; the point is saved already (it needs its Id). Returns the alerts it opened.
     Task<IReadOnlyList<SpcAlert>> EvaluateAsync(IDbContextTransaction tx, Measurement point, CancellationToken ct);
+
+    // [v2] 2.3b: an alert that is not a Western Electric rule (OutOfSpec of a machine sample, DataGap), with the same
+    // one-open-per-(plan, rule) guarantee. Null = one was open already.
+    Task<SpcAlert?> RaiseAsync(IDbContextTransaction tx, int planId, SpcRuleCode rule, long? measurementId, CancellationToken ct);
 }
 
 public sealed class SpcEvaluator(IAppDbContext db, IOptions<SpcOptions> options, TimeProvider time) : ISpcEvaluator
@@ -54,15 +63,17 @@ public sealed class SpcEvaluator(IAppDbContext db, IOptions<SpcOptions> options,
 
         var opened = new List<SpcAlert>();
         foreach (var rule in fired)
-        {
-            // Q5: while an alert for this rule is open, the 8th and 9th point of the same run add nothing.
-            if (await db.SpcAlerts.AnyAsync(a => a.InspectionPlanId == point.InspectionPlanId && a.RuleCode == rule
-                                                 && a.Status == SpcAlertStatus.Open, ct))
-                continue;
-            if (await TryOpenAsync(tx, new SpcAlert(point.InspectionPlanId, rule, point.Id, time.GetUtcNow().UtcDateTime), ct) is { } alert)
+            if (await RaiseAsync(tx, point.InspectionPlanId, rule, point.Id, ct) is { } alert)
                 opened.Add(alert);
-        }
         return opened;
+    }
+
+    public async Task<SpcAlert?> RaiseAsync(IDbContextTransaction tx, int planId, SpcRuleCode rule, long? measurementId, CancellationToken ct)
+    {
+        // Q5: while an alert for this rule is open, the 8th and 9th point of the same run add nothing.
+        if (await db.SpcAlerts.AnyAsync(a => a.InspectionPlanId == planId && a.RuleCode == rule && a.Status == SpcAlertStatus.Open, ct))
+            return null;
+        return await TryOpenAsync(tx, new SpcAlert(planId, rule, measurementId, time.GetUtcNow().UtcDateTime), ct);
     }
 
     // Two stations measuring at once both see "none open" (2.3 trap 2): the filtered unique index keeps one. The

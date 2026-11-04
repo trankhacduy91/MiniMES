@@ -15,6 +15,13 @@ public sealed class SimulatorOptions
     // Manual stations (Assembly, Pack) scanned by the simulator only with --auto-operator; otherwise people use the kiosk.
     public List<AutoOperatorOptions> AutoOperators { get; set; } = [];
 
+    // [v2] M7 step 6: command-line scenario for the measuring stations (spec: --scenario drift --after 100 --shift 0.02).
+    public string? Scenario { get; set; }
+    public int After { get; set; } = 100;
+    public double Shift { get; set; } = 0.02;
+
+    public DriftScenario? Drift => string.Equals(Scenario, "drift", StringComparison.OrdinalIgnoreCase) ? new(After, Shift) : null;
+
     public IEnumerable<string> Validate()
     {
         if (string.IsNullOrWhiteSpace(Site) || string.IsNullOrWhiteSpace(Area)) yield return "site and area are required.";
@@ -44,12 +51,17 @@ public sealed class SimulatorOptions
                 if (string.IsNullOrWhiteSpace(st.Code)) yield return $"{m.Code}: station.code is required.";
                 if (st.Mode == StationMode.AutoTest && st.DefectCodes.Length == 0)
                     yield return $"{m.Code}: station mode AutoTest needs defectCodes for its NG boards.";
+                if (st.Inspection is { } ins && (st.Mode != StationMode.AutoTest || string.IsNullOrWhiteSpace(ins.PlanCode)
+                                                  || !(ins.Sigma > 0) || ins.Decimals is < 0 or > 6))
+                    yield return $"{m.Code}: station.inspection needs mode AutoTest, planCode, sigma > 0 and decimals 0..6.";
             }
         }
         var ports = Machines.Where(m => m.OpcUa is not null).Select(m => (m.Code, m.OpcUa!.Port))
             .Concat(Machines.Where(m => m.Modbus is not null).Select(m => (m.Code, m.Modbus!.Port)));
         foreach (var dup in ports.GroupBy(p => p.Port).Where(g => g.Count() > 1))
             yield return $"port {dup.Key} is used twice ({string.Join(", ", dup.Select(p => p.Code))}).";
+        if (Scenario is not null && Drift is null) yield return $"unknown scenario '{Scenario}' (known: drift).";
+        if (Drift is { After: < 0 }) yield return "after must be >= 0.";
         foreach (var o in AutoOperators)
             if (string.IsNullOrWhiteSpace(o.Station) || o.CycleTimeSec <= 0) yield return "every autoOperator needs station and cycleTimeSec > 0.";
         if ((Machines.Any(m => m.Station is not null) || AutoOperators.Count > 0)
@@ -81,7 +93,21 @@ public sealed class StationOptions
     public string Code { get; set; } = "";
     public StationMode Mode { get; set; } = StationMode.Auto;
     public string[] DefectCodes { get; set; } = [];     // seeded codes; one is picked for each NG board
+    // [v2] M7 step 6: an AutoTest station that also measures. Its OK boards are sent to POST /quality/inspections with
+    // a value; its NG boards (ngProb, "ng" command) are still functional fails (no power, nothing to measure).
+    public InspectionOptions? Inspection { get; set; }
 }
+
+public sealed class InspectionOptions
+{
+    public string PlanCode { get; set; } = "";
+    public double Mean { get; set; }
+    public double Sigma { get; set; }
+    public int Decimals { get; set; } = 3;
+}
+
+// [v2] M7 step 6: "--scenario drift --after 100 --shift 0.02" on the command line.
+public sealed record DriftScenario(int After, double Shift);
 
 public sealed class AutoOperatorOptions
 {
