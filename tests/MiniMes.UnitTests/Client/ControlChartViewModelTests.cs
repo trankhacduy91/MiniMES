@@ -57,7 +57,7 @@ public class ControlChartViewModelTests
     })!.Cast<ChartPoint>().ToList();
 
     private static LineAnnotation Line(PlotModel m, string prefix)
-        => m.Annotations.OfType<LineAnnotation>().Single(a => a.Text.StartsWith(prefix + " ", StringComparison.Ordinal));
+        => m.Annotations.OfType<LineAnnotation>().Single(a => a.Text?.StartsWith(prefix + " ", StringComparison.Ordinal) == true);
 
     // Spec check: the drift scenario shows a red dot at the 7th point of the run (and at the 8th).
     [Fact]
@@ -99,7 +99,7 @@ public class ControlChartViewModelTests
     public void Without_a_baseline_only_the_spec_limits_are_drawn()
     {
         var chart = RunChart() with { Limits = null, Violations = [] };
-        var texts = ControlChartBuilder.IChart(chart, Plant).Annotations.OfType<LineAnnotation>().Select(a => a.Text.Split(' ')[0]);
+        var texts = ControlChartBuilder.IChart(chart, Plant).Annotations.OfType<LineAnnotation>().Select(a => a.Text!.Split(' ')[0]);
         Assert.Equal(["USL", "LSL"], texts);
     }
 
@@ -136,6 +136,7 @@ public class ControlChartViewModelTests
     private readonly FakeQualityApi _api = new();
     private readonly FakeRealtimeFactory _rt = new();
     private readonly FakeTimeProvider _time = new(T0);
+    private readonly RecordingPages _pages = new();
 
     public ControlChartViewModelTests()
     {
@@ -147,7 +148,7 @@ public class ControlChartViewModelTests
 
     private async Task<ControlChartViewModel> LoadedAsync()
     {
-        var vm = new ControlChartViewModel(_api, _rt, new ImmediateDispatcher(), _time);
+        var vm = new ControlChartViewModel(_api, _rt, new ImmediateDispatcher(), _time, _pages);
         await vm.LoadAsync();
         await Task.Yield();
         return vm;
@@ -208,6 +209,24 @@ public class ControlChartViewModelTests
         _rt.Client.Push(new SpcAlertDto(10, 1, "3V3_RAIL", "WE1", 120, T0, "Open", null));
         await Task.Delay(50);
         Assert.Equal(2, _api.ChartCalls.Count);
+    }
+
+    // [M7 step 8] "Create NCR" on an alert opens the NCR screen with the form filled, the board of that point included.
+    [Fact]
+    public async Task Create_ncr_on_an_alert_opens_the_ncr_screen_filled_from_it()
+    {
+        var vm = await LoadedAsync();
+        Assert.True(vm.Alerts[0].CanCreateNcr);
+
+        await vm.CreateNcrCommand.ExecuteAsync(vm.Alerts[0]);
+
+        Assert.Equal([typeof(NcrViewModel)], _pages.Shown);
+        var tokens = new MiniMes.Client.Core.Auth.TokenStore();
+        tokens.Set(new MiniMes.Contracts.Auth.LoginResponse("t", T0, "qc01", "QC One", ["QC"], null));
+        var ncr = new NcrViewModel(new FakeNcrApi(), new DefectCodesApi(), tokens, new AnswerDialogs());
+        await ((Func<NcrViewModel, Task>)_pages.LastInit!)(ncr);
+        Assert.Equal(("SpcAlert", (long?)9, "PCBA6"), (ncr.NewSource, ncr.NewSpcAlertId, ncr.NewSerials));
+        Assert.StartsWith("WE4 on 3V3_RAIL", ncr.NewDescription);
     }
 
     [Theory]

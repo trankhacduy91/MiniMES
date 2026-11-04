@@ -49,6 +49,9 @@
         <DataTemplate DataType="{x:Type qa:ControlChartViewModel}">
             <qaviews:ControlChartView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type qa:NcrViewModel}">
+            <qaviews:NcrView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:BackOfficeShellViewModel}">
             <views:ShellView />
         </DataTemplate>

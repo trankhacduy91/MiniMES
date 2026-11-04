@@ -55,6 +55,13 @@ public class SpcAlert
         NcrId = ncrId;
     }
 
+    // The NCR opened from it was cancelled (opened by mistake): the alert is free for another NCR again.
+    public void UnlinkNcr(int ncrId)
+    {
+        if (NcrId != ncrId) throw new DomainException($"The alert is not linked to NCR {ncrId}.");
+        NcrId = null;
+    }
+
     // Closed when its NCR closes, or when QC marks it handled and writes what was done (spec 2.5 trap 5).
     public void Close(string by, string note, DateTime utcNow)
     {

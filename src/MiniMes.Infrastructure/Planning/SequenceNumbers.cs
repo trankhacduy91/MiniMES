@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MiniMes.Application.Planning;
 using MiniMes.Infrastructure.Persistence;
 using MiniMes.Infrastructure.Persistence.Configurations;
+using MiniMes.Infrastructure.Persistence.Configurations.Quality;
 
 namespace MiniMes.Infrastructure.Planning;
 
@@ -29,6 +30,9 @@ public sealed class SequenceNumbers(AppDbContext db) : ISequenceNumbers
 
     public async Task<long> NextPalletNumberAsync(CancellationToken ct)
         => (await NextNumbersAsync(CartonConfiguration.PalletSequence, 1, ct))[0];
+
+    public async Task<long> NextNcrNumberAsync(CancellationToken ct)
+        => (await NextNumbersAsync(NcrConfiguration.NcrSequence, 1, ct))[0];
 
     // NEXT VALUE FOR ... OVER (ORDER BY): one number per row of a generated 1..count list, in that order.
     // Allowed here because NEXT VALUE FOR is in the outer SELECT (the derived table only supplies row numbers).

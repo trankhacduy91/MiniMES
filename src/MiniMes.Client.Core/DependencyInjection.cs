@@ -99,6 +99,8 @@ public static class DependencyInjection
         services.AddTransient<TraceViewModel>();
         services.AddTransient<IQualityApi, QualityApi>();   // M7 step 7
         services.AddTransient<ControlChartViewModel>();
+        services.AddTransient<INcrApi, NcrApi>();   // M7 step 8
+        services.AddTransient<NcrViewModel>();
         return services;
     }
 

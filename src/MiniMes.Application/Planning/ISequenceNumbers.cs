@@ -17,4 +17,7 @@ public interface ISequenceNumbers
 
     // M3b: one number per new pallet.
     Task<long> NextPalletNumberAsync(CancellationToken ct);
+
+    // M7: one number per NCR (NCR-000001).
+    Task<long> NextNcrNumberAsync(CancellationToken ct);
 }

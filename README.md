@@ -400,6 +400,9 @@ Trạm `L1-PACK-01` (Kiosk `--StationCode=L1-PACK-01`) có màn **Packing** thay
 | Ghi số đo (kiosk, trạm test) | `POST /api/quality/inspections` `{ stationId, serialNo, values: [{ planCode, value }], source, clientRequestId? }`, bị chặn vẫn trả 200 + `reasonCode` |
 | Đặc tính, chart | `GET /api/quality/plans`, `GET /api/quality/spc/{planId}/chart?take=100` |
 | Tính lại baseline (QC, ≥ 20 điểm) | `POST /api/quality/spc/{planId}/limits/recompute` `{ from, to, reason }` |
+| NCR | `GET/POST /api/ncrs`, `POST /api/ncrs/{id}/start-review` · `propose` · `approve` · `reject-proposal` · `close` · `cancel` (mỗi lệnh gửi `rowVersion`) |
+
+**NCR** (menu **NCR**): QC mở NCR bằng tay, hoặc bấm **Create NCR** trên một alert của chart để có form điền sẵn. Sau đó QC bắt đầu review và đề xuất xử lý (Use as is / Rework / Scrap / Return to vendor). Một Supervisor **khác người đề xuất** duyệt, rồi đóng. Thử: `qc01` đề xuất, `sup01` duyệt. Nút Approve của chính người đề xuất bị tắt, và API cũng trả 422. Hiệu ứng lên serial/lot khi duyệt làm ở bước Hold (M7 bước 9).
 
 ## Edge Gateway (M4b)
 

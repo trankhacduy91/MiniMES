@@ -1811,4 +1811,121 @@
   <data name="Spc_RuleDataGap" xml:space="preserve">
     <value>Data gap: no value from the machine</value>
   </data>
+  <data name="Menu_Ncrs" xml:space="preserve">
+    <value>NCR</value>
+  </data>
+  <data name="Ncr_Title" xml:space="preserve">
+    <value>Nonconformance reports (NCR)</value>
+  </data>
+  <data name="Ncr_New" xml:space="preserve">
+    <value>New NCR</value>
+  </data>
+  <data name="Ncr_StatusFilter" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Ncr_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Ncr_Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Ncr_SourceRef" xml:space="preserve">
+    <value>Reference</value>
+  </data>
+  <data name="Ncr_DefectCode" xml:space="preserve">
+    <value>Defect code</value>
+  </data>
+  <data name="Ncr_Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Ncr_Qty" xml:space="preserve">
+    <value>Quantity</value>
+  </data>
+  <data name="Ncr_Serials" xml:space="preserve">
+    <value>Serials (one per line)</value>
+  </data>
+  <data name="Ncr_Lots" xml:space="preserve">
+    <value>Lots (one per line)</value>
+  </data>
+  <data name="Ncr_Create" xml:space="preserve">
+    <value>Create NCR</value>
+  </data>
+  <data name="Ncr_Targets" xml:space="preserve">
+    <value>Targets</value>
+  </data>
+  <data name="Ncr_StartReview" xml:space="preserve">
+    <value>Start review</value>
+  </data>
+  <data name="Ncr_Disposition" xml:space="preserve">
+    <value>Disposition</value>
+  </data>
+  <data name="Ncr_Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="Ncr_ConcessionRef" xml:space="preserve">
+    <value>Concession reference (use as is)</value>
+  </data>
+  <data name="Ncr_Propose" xml:space="preserve">
+    <value>Propose</value>
+  </data>
+  <data name="Ncr_Approve" xml:space="preserve">
+    <value>Approve</value>
+  </data>
+  <data name="Ncr_RejectProposal" xml:space="preserve">
+    <value>Reject proposal</value>
+  </data>
+  <data name="Ncr_CapaReference" xml:space="preserve">
+    <value>CAPA reference</value>
+  </data>
+  <data name="Ncr_Close" xml:space="preserve">
+    <value>Close NCR</value>
+  </data>
+  <data name="Ncr_Cancel" xml:space="preserve">
+    <value>Cancel NCR</value>
+  </data>
+  <data name="Ncr_CancelReason" xml:space="preserve">
+    <value>Why is this NCR cancelled?</value>
+  </data>
+  <data name="Ncr_CannotApproveOwn" xml:space="preserve">
+    <value>You proposed this disposition: another person must approve it.</value>
+  </data>
+  <data name="Ncr_HoldsActive" xml:space="preserve">
+    <value>{0} hold(s) of this NCR are still active: release them before closing.</value>
+  </data>
+  <data name="Ncr_Created" xml:space="preserve">
+    <value>{0} created.</value>
+  </data>
+  <data name="Ncr_ConfirmApprove" xml:space="preserve">
+    <value>Approve the disposition {1} for {0}?</value>
+  </data>
+  <data name="Ncr_FromAlert" xml:space="preserve">
+    <value>{0} on {1} at {2}: {3}</value>
+  </data>
+  <data name="Ncr_OpenedBy" xml:space="preserve">
+    <value>Opened by</value>
+  </data>
+  <data name="Ncr_ReviewedBy" xml:space="preserve">
+    <value>Reviewed by</value>
+  </data>
+  <data name="Ncr_ProposedBy" xml:space="preserve">
+    <value>Proposed by</value>
+  </data>
+  <data name="Ncr_ApprovedBy" xml:space="preserve">
+    <value>Approved by</value>
+  </data>
+  <data name="Ncr_ClosedBy" xml:space="preserve">
+    <value>Closed / cancelled by</value>
+  </data>
+  <data name="Ncr_ActiveHolds" xml:space="preserve">
+    <value>Active holds</value>
+  </data>
+  <data name="Ncr_Review" xml:space="preserve">
+    <value>Review and decision</value>
+  </data>
+  <data name="Spc_CreateNcr" xml:space="preserve">
+    <value>Create NCR</value>
+  </data>
+  <data name="Spc_HasNcr" xml:space="preserve">
+    <value>NCR opened</value>
+  </data>
 </root>

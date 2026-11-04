@@ -52,6 +52,14 @@
                                 <Run Text="{Binding Rule, Mode=OneWay}" FontWeight="SemiBold" Foreground="#FFC0392B" />
                             </TextBlock>
                             <TextBlock Text="{Binding Meaning}" TextWrapping="Wrap" FontSize="11" />
+                            <!-- [M7 step 8] the alert becomes an NCR: the NCR screen opens with the form filled -->
+                            <Button Content="{x:Static res:Strings.Spc_CreateNcr}" HorizontalAlignment="Left" Padding="8,1" Margin="0,3,0,0"
+                                    AutomationProperties.AutomationId="SpcCreateNcr"
+                                    Command="{Binding DataContext.CreateNcrCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                    CommandParameter="{Binding}"
+                                    Visibility="{Binding CanCreateNcr, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{x:Static res:Strings.Spc_HasNcr}" FontSize="11" Foreground="Gray"
+                                       Visibility="{Binding HasNcr, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </DataTemplate>
                 </ListView.ItemTemplate>

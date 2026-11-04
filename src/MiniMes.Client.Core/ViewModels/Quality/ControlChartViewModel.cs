@@ -14,8 +14,12 @@ using OxyPlot;
 
 namespace MiniMes.Client.Core.ViewModels.Quality;
 
-// One open alert in the list next to the chart.
-public sealed record SpcAlertRow(SpcAlertDto Dto, string Time, string Rule, string Meaning);
+// One open alert in the list next to the chart. HasNcr: an NCR was opened from it already (step 8).
+public sealed record SpcAlertRow(SpcAlertDto Dto, string Time, string Rule, string Meaning)
+{
+    public bool HasNcr => Dto.NcrId is not null;
+    public bool CanCreateNcr => !HasNcr;
+}
 
 // Spec M7 step 7: the control chart of one characteristic. The server sends points, limits, violations and window
 // statistics (one rule engine, on the server); this class only arranges them into two PlotModels and a list.
@@ -30,11 +34,13 @@ public partial class ControlChartViewModel : ObservableObject, ILoadable, IClosa
     private readonly IRealtimeClient _realtime;
     private readonly IUiDispatcher _ui;
     private readonly TimeProvider _time;
+    private readonly IPageNavigator _pages;
     private readonly CancellationTokenSource _stop = new();
     private bool _loaded;
 
-    public ControlChartViewModel(IQualityApi api, IRealtimeClientFactory realtime, IUiDispatcher ui, TimeProvider time)
+    public ControlChartViewModel(IQualityApi api, IRealtimeClientFactory realtime, IUiDispatcher ui, TimeProvider time, IPageNavigator pages)
     {
+        _pages = pages;
         _api = api;
         _realtime = realtime.Create();
         _ui = ui;
@@ -155,6 +161,17 @@ public partial class ControlChartViewModel : ObservableObject, ILoadable, IClosa
         Alerts.Clear();
         foreach (var a in chart.OpenAlerts)
             Alerts.Add(new SpcAlertRow(a, $"{ToPlant(a.RaisedAt):dd/MM HH:mm}", a.Rule, Meaning(a.Rule)));
+    }
+
+    // [M7 step 8] "Create NCR" on an alert: the NCR screen opens with the form filled from it (source, description,
+    // the board measured at that point when there is one); QC checks the targets and saves.
+    [RelayCommand]
+    private Task CreateNcrAsync(SpcAlertRow row)
+    {
+        var plan = SelectedPlan?.Code ?? row.Dto.PlanCode;
+        var description = string.Format(CultureInfo.CurrentCulture, Strings.Ncr_FromAlert, row.Rule, plan, row.Time, row.Meaning);
+        var serial = Chart?.Points.FirstOrDefault(p => p.MeasurementId == row.Dto.MeasurementId)?.SerialNo;
+        return _pages.ShowAsync<NcrViewModel>(vm => vm.StartFromAlertAsync(row.Dto, description, serial));
     }
 
     public static string Meaning(string rule) => rule switch

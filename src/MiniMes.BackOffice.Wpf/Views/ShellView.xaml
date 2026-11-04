@@ -28,6 +28,8 @@
                             Command="{Binding ShowTraceCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Button AutomationProperties.AutomationId="MenuSpcChart" Content="{x:Static res:Strings.Menu_SpcChart}"
                             Command="{Binding ShowSpcChartCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
+                    <Button AutomationProperties.AutomationId="MenuNcrs" Content="{x:Static res:Strings.Menu_Ncrs}"
+                            Command="{Binding ShowNcrsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
                     <Separator Margin="0,6" />
                     <Button AutomationProperties.AutomationId="MenuItems" Content="{x:Static res:Strings.Menu_Items}"
                             Command="{Binding ShowItemsCommand}" Padding="6,4" Margin="0,0,0,4" HorizontalContentAlignment="Left" />
