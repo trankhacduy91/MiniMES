@@ -386,6 +386,21 @@ Trạm `L1-PACK-01` (Kiosk `--StationCode=L1-PACK-01`) có màn **Packing** thay
 ![Packing: thùng đầy](docs/images/m3b-carton-full.png)
 ![Palletize](docs/images/m3b-palletize.png)
 
+## Quality: SPC (M7, đang làm)
+
+![Control chart lò reflow: run rule báo trước khi chạm USL](docs/images/m7-spc-reflow.png)
+
+**Back-office**, menu **SPC chart** (role `QC`/`Supervisor`/`Admin`). Chọn đặc tính và số điểm để xem I chart (UCL/LCL đỏ nét đứt, USL/LSL đen nét liền, điểm vi phạm rule tô đỏ) và MR chart bên dưới. Bên phải: Cp/Cpk của các điểm đang xem, baseline đang dùng và các alert đang mở. Có alert mới thì chart tự nạp lại qua SignalR; điểm mới thì cập nhật mỗi 15 giây.
+
+- **Trạm test** (simulator): `L1-TEST-01` đo rail 3V3 của mỗi board và gửi `POST /api/quality/inspections`. Muốn tâm dịch sau N board: `dotnet run --project src/MiniMes.MachineSimulator -- --auto-operator --scenario drift --after 100 --shift 0.02` (dịch 0,02 V cần trung vị khoảng 20 board mới có alert; `--shift 0.04` thì khoảng 7).
+- **Lò reflow:** `ProcessSpcSampler` lấy mẫu `peakTemp` mỗi 30 giây. Ở simulator gõ `drift L1-REFLOW-01 0.3`: alert run 7 xuất hiện khoảng 5 phút sau, ở khoảng 247 °C, trong khi USL là 255 °C. Gateway hay OPC UA tắt thì có alert "data gap", không bịa điểm.
+
+| Việc | API |
+| --- | --- |
+| Ghi số đo (kiosk, trạm test) | `POST /api/quality/inspections` `{ stationId, serialNo, values: [{ planCode, value }], source, clientRequestId? }`, bị chặn vẫn trả 200 + `reasonCode` |
+| Đặc tính, chart | `GET /api/quality/plans`, `GET /api/quality/spc/{planId}/chart?take=100` |
+| Tính lại baseline (QC, ≥ 20 điểm) | `POST /api/quality/spc/{planId}/limits/recompute` `{ from, to, reason }` |
+
 ## Edge Gateway (M4b)
 
 Máy không nói MQTT thì đi qua **edge gateway** (`MiniMes.EdgeGateway`, .NET Worker): đọc PLC, chuẩn hóa sang đúng hợp đồng MQTT của M4, đệm vào SQLite khi mất mạng. MES không biết máy nói giao thức gì ([ADR-009](ARCHITECTURE.md#adr-009-edge-gateway-tự-viết-opc-ua-subscription-modbus-polling-outbox-sqlite-luôn-bật)).

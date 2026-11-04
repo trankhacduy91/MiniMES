@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MiniMes.Client.Core.Auth;
 using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Oee;
+using MiniMes.Contracts.Quality;
 using MiniMes.Contracts.Realtime;
 
 namespace MiniMes.Client.Core.Realtime;
@@ -19,6 +20,7 @@ public interface IRealtimeClient : IAsyncDisposable
     event Action<GatewayStatusDto>? GatewayStatusChanged;   // [M4b]
     event Action<UnclassifiedDowntimeDto>? DowntimeNeedsClassification;   // [M5]
     event Action<OeeSnapshotClosedDto>? OeeSnapshotClosed;                // [M5]
+    event Action<SpcAlertDto>? SpcAlertRaised;                            // [M7] QC / Supervisor / Admin connections only
 
     // false = "Reconnecting..." banner; true = live again.
     event Action<bool>? ConnectionChanged;
@@ -63,6 +65,7 @@ public sealed class RealtimeClient : IRealtimeClient
     public event Action<GatewayStatusDto>? GatewayStatusChanged;
     public event Action<UnclassifiedDowntimeDto>? DowntimeNeedsClassification;
     public event Action<OeeSnapshotClosedDto>? OeeSnapshotClosed;
+    public event Action<SpcAlertDto>? SpcAlertRaised;
     public event Action<bool>? ConnectionChanged;
     public event Func<Task>? Resync;
 
@@ -85,6 +88,7 @@ public sealed class RealtimeClient : IRealtimeClient
         _conn.On<GatewayStatusDto>(nameof(IMachineClient.GatewayStatusChanged), d => GatewayStatusChanged?.Invoke(d));
         _conn.On<UnclassifiedDowntimeDto>(nameof(IMachineClient.DowntimeNeedsClassification), d => DowntimeNeedsClassification?.Invoke(d));
         _conn.On<OeeSnapshotClosedDto>(nameof(IMachineClient.OeeSnapshotClosed), d => OeeSnapshotClosed?.Invoke(d));
+        _conn.On<SpcAlertDto>(nameof(IMachineClient.SpcAlertRaised), d => SpcAlertRaised?.Invoke(d));
 
         _conn.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
         // New ConnectionId: the server forgot our groups (role groups it re-adds itself, line groups we must join).

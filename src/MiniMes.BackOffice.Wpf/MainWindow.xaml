@@ -18,6 +18,8 @@
         xmlns:matviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Material"
         xmlns:tr="clr-namespace:MiniMes.Client.Core.ViewModels.Traceability;assembly=MiniMes.Client.Core"
         xmlns:trviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Traceability"
+        xmlns:qa="clr-namespace:MiniMes.Client.Core.ViewModels.Quality;assembly=MiniMes.Client.Core"
+        xmlns:qaviews="clr-namespace:MiniMes.BackOffice.Wpf.Views.Quality"
         Title="{x:Static res:Strings.BackOffice_Title}"
         AutomationProperties.Name="{x:Static res:Strings.BackOffice_Title}"
         Width="1200" Height="760" WindowStartupLocation="CenterScreen">
@@ -43,6 +45,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type tr:TraceViewModel}">
             <trviews:TraceView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type qa:ControlChartViewModel}">
+            <qaviews:ControlChartView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:BackOfficeShellViewModel}">
             <views:ShellView />

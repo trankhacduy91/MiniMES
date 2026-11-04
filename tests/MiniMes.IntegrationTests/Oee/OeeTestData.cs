@@ -131,6 +131,7 @@ public sealed class RecordingNotifier : MiniMes.Application.Realtime.IRealtimeNo
     public Task GatewayStatusChangedAsync(MiniMes.Contracts.Realtime.GatewayStatusDto dto, CancellationToken ct = default) => Record(dto);
     public Task DowntimeNeedsClassificationAsync(MiniMes.Contracts.Oee.UnclassifiedDowntimeDto dto, CancellationToken ct = default) => Record(dto);
     public Task OeeSnapshotClosedAsync(MiniMes.Contracts.Oee.OeeSnapshotClosedDto dto, CancellationToken ct = default) => Record(dto);
+    public Task SpcAlertRaisedAsync(MiniMes.Contracts.Quality.SpcAlertDto dto, CancellationToken ct = default) => Record(dto);
 
     private Task Record(object dto)
     {

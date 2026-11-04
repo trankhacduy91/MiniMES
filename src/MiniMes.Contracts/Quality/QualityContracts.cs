@@ -46,3 +46,8 @@ public sealed record SpcWindowStatsDto(int Count, double Mean, double Sigma, dou
 // POST /api/quality/spc/{planId}/limits/recompute (QC, Q3): a new Phase I baseline from the points measured in
 // [From, To), at least 20, with the reason. The previous baseline is kept as history.
 public sealed record RecomputeLimitsRequest(DateTime From, DateTime To, string Reason);
+
+// GET /api/quality/plans: the active characteristics, for the chart's plan picker. Source = "Item + operation" of a
+// station plan (PCB-A / TEST) or the machine tag feeding it (L1-REFLOW-01/peakTemp).
+public sealed record InspectionPlanDto(int Id, string Code, string Name, string Unit, decimal? Lsl, decimal? Usl, decimal? Target,
+    string? ItemCode, string? OperationCode, string? MachineTag, bool HasBaseline);

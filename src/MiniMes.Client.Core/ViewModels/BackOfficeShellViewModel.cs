@@ -9,6 +9,7 @@ using MiniMes.Client.Core.ViewModels.Material;
 using MiniMes.Client.Core.ViewModels.Oee;
 using MiniMes.Client.Core.ViewModels.MasterData;
 using MiniMes.Client.Core.ViewModels.Planning;
+using MiniMes.Client.Core.ViewModels.Quality;
 using MiniMes.Client.Core.ViewModels.Traceability;
 
 namespace MiniMes.Client.Core.ViewModels;
@@ -46,6 +47,9 @@ public partial class BackOfficeShellViewModel(ITokenStore tokens, IAuthClient au
 
     [RelayCommand]
     private Task ShowTraceAsync() => pages.ShowAsync<TraceViewModel>();
+
+    [RelayCommand]
+    private Task ShowSpcChartAsync() => pages.ShowAsync<ControlChartViewModel>();   // M7
 
     [RelayCommand]
     private Task ShowItemsAsync() => pages.ShowAsync<ItemListViewModel>();

@@ -1745,4 +1745,70 @@
   <data name="Packing_LabelMissing" xml:space="preserve">
     <value>Label NOT printed: print it again.</value>
   </data>
+  <data name="Menu_SpcChart" xml:space="preserve">
+    <value>SPC chart</value>
+  </data>
+  <data name="Spc_Title" xml:space="preserve">
+    <value>Control chart (I-MR)</value>
+  </data>
+  <data name="Spc_Plan" xml:space="preserve">
+    <value>Characteristic</value>
+  </data>
+  <data name="Spc_Points" xml:space="preserve">
+    <value>Points</value>
+  </data>
+  <data name="Spc_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Spc_OpenAlerts" xml:space="preserve">
+    <value>Open alerts</value>
+  </data>
+  <data name="Spc_MrTitle" xml:space="preserve">
+    <value>Moving range (MR)</value>
+  </data>
+  <data name="Spc_SampleAxis" xml:space="preserve">
+    <value>Sample #</value>
+  </data>
+  <data name="Spc_FromWindow" xml:space="preserve">
+    <value>(this window)</value>
+  </data>
+  <data name="Spc_Capability" xml:space="preserve">
+    <value>Cp {0}   Cpk {1}</value>
+  </data>
+  <data name="Spc_NotEnoughPoints" xml:space="preserve">
+    <value>Cp / Cpk: not enough points</value>
+  </data>
+  <data name="Spc_Window" xml:space="preserve">
+    <value>Shown: {0} points, mean {1:0.####}, σ {2:0.####}</value>
+  </data>
+  <data name="Spc_Baseline" xml:space="preserve">
+    <value>Baseline: mean {0:0.####}, σ {1:0.####}, UCL {2:0.####}, LCL {3:0.####} ({4:dd/MM/yyyy HH:mm}, {5})</value>
+  </data>
+  <data name="Spc_NoBaseline" xml:space="preserve">
+    <value>No baseline yet: points are shown, no rule is evaluated.</value>
+  </data>
+  <data name="Spc_Legend" xml:space="preserve">
+    <value>Red dashed = control limits (UCL/LCL, from the process). Black solid = specification (USL/LSL, from the customer). Red dot = point that fired a rule.</value>
+  </data>
+  <data name="Spc_AlertOnOtherPlan" xml:space="preserve">
+    <value>New SPC alert {0} on {1}.</value>
+  </data>
+  <data name="Spc_RuleWe1" xml:space="preserve">
+    <value>1 point beyond 3σ</value>
+  </data>
+  <data name="Spc_RuleWe2" xml:space="preserve">
+    <value>2 of 3 points beyond 2σ, same side</value>
+  </data>
+  <data name="Spc_RuleWe3" xml:space="preserve">
+    <value>4 of 5 points beyond 1σ, same side</value>
+  </data>
+  <data name="Spc_RuleWe4" xml:space="preserve">
+    <value>Run: points in a row on one side of the centre line</value>
+  </data>
+  <data name="Spc_RuleOutOfSpec" xml:space="preserve">
+    <value>Machine value outside the specification</value>
+  </data>
+  <data name="Spc_RuleDataGap" xml:space="preserve">
+    <value>Data gap: no value from the machine</value>
+  </data>
 </root>

@@ -1,10 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMes.Application.Common;
 using MiniMes.Application.Quality.Spc;
 using MiniMes.Contracts.Quality;
+using MiniMes.Contracts.Realtime;
 using MiniMes.Domain.Execution;
 using MiniMes.Domain.Planning;
 using MiniMes.Domain.Quality;
@@ -278,6 +281,68 @@ public class InspectionTests(ApiFixture api)
         Assert.Equal(3.418301m, limits.Ucl);                                             // 3.32 + 3 × 0.032767
         var sets = await api.WithDbAsync(db => db.ControlLimitSets.Where(c => c.InspectionPlanId == plan.Id).OrderBy(c => c.Id).ToListAsync());
         Assert.Equal([(3.302m, false), (3.32m, true)], sets.Select(s => (s.Mean, s.IsActive)));
+    }
+
+    // Step 7: the chart's plan picker. A station plan says item + operation, a machine plan the tag feeding it.
+    [Fact]
+    public async Task Plans_list_the_active_characteristics_with_where_they_come_from()
+    {
+        var qc = await api.LoginAsync("qc01");
+
+        var plans = (await qc.GetFromJsonAsync<List<InspectionPlanDto>>("/api/quality/plans"))!;
+
+        var rail = plans.Single(p => p.Code == QualitySeeder.RailPlan);
+        Assert.Equal(("PCB-A", "TEST", (string?)null, true, (decimal?)3.465m), (rail.ItemCode, rail.OperationCode, rail.MachineTag, rail.HasBaseline, rail.Usl));
+        Assert.Equal("L1-REFLOW-01/peakTemp", plans.Single(p => p.Code == QualitySeeder.ReflowPlan).MachineTag);
+        Assert.Equal(HttpStatusCode.Forbidden, (await (await api.LoginOperatorAsync()).GetAsync("/api/quality/plans")).StatusCode);
+    }
+
+    // Step 7: a new alert is pushed after the commit to the people who watch charts (QC / Supervisor / Admin role
+    // groups), so an open chart reloads at once; an operator's connection does not get it.
+    [Fact]
+    public async Task A_new_alert_is_pushed_to_qc_and_not_to_operators()
+    {
+        var plan = await PlanAsync();
+        var (op, boards) = await AtTestAsync(1);
+        await using var qcHub = await HubAsync(await api.LoginAsync("qc01"));
+        await using var opHub = await HubAsync(op);
+        var toQc = Next<SpcAlertDto>(qcHub);
+        var toOperator = Next<SpcAlertDto>(opHub);
+
+        var r = await InspectAsync(op, boards[0], (plan.Code, 3.440m));
+
+        var pushed = await toQc.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal((r.Alerts[0].Id, plan.Code, "WE1", "Open"), (pushed.Id, pushed.PlanCode, pushed.Rule, pushed.Status));
+        Assert.False(await Task.WhenAny(toOperator, Task.Delay(1000)) == toOperator, "an operator got the SPC alert");
+    }
+
+    private async Task<HubConnection> HubAsync(HttpClient client)
+    {
+        var token = client.DefaultRequestHeaders.Authorization!.Parameter!;
+        var server = api.Factory.Server;
+        var hub = new HubConnectionBuilder()
+            .WithUrl(new Uri(server.BaseAddress, RealtimeHub.Path.TrimStart('/')), o =>
+            {
+                o.Transports = HttpTransportType.WebSockets;
+                o.HttpMessageHandlerFactory = _ => server.CreateHandler();
+                o.WebSocketFactory = async (ctx, ct) =>
+                {
+                    var ws = server.CreateWebSocketClient();
+                    ws.ConfigureRequest = r => r.Headers.Authorization = "Bearer " + token;
+                    return await ws.ConnectAsync(ctx.Uri, ct);
+                };
+                o.AccessTokenProvider = () => Task.FromResult<string?>(token);
+            })
+            .Build();
+        await hub.StartAsync();
+        return hub;
+    }
+
+    private static Task<T> Next<T>(HubConnection hub)
+    {
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        hub.On<T>(nameof(IMachineClient.SpcAlertRaised), d => tcs.TrySetResult(d));
+        return tcs.Task;
     }
 
     // ---------- helpers ----------

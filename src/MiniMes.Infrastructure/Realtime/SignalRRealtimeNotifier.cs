@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MiniMes.Application.Realtime;
 using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Oee;
+using MiniMes.Contracts.Quality;
 using MiniMes.Contracts.Realtime;
 
 namespace MiniMes.Infrastructure.Realtime;
@@ -43,6 +44,15 @@ public sealed class SignalRRealtimeNotifier(IHubContext<MachineHub, IMachineClie
 
     public Task OeeSnapshotClosedAsync(OeeSnapshotClosedDto dto, CancellationToken ct = default)
         => SafeAsync(dto.Line, c => c.OeeSnapshotClosed(dto), dto.Machine);
+
+    // [M7] Not tied to a line (a plan can be a machine's or a step's): the people who watch the charts.
+    public static readonly string[] SpcWatchers = ["QC", "Supervisor", "Admin"];
+
+    public async Task SpcAlertRaisedAsync(SpcAlertDto dto, CancellationToken ct = default)
+    {
+        try { await hub.Clients.Groups(SpcWatchers.Select(RealtimeHub.RoleGroup).ToList()).SpcAlertRaised(dto); }
+        catch (Exception ex) { log.LogWarning(ex, "SignalR push for SPC alert {AlertId} failed", dto.Id); }
+    }
 
     private async Task SafeAsync(string line, Func<IMachineClient, Task> push, string machine)
     {

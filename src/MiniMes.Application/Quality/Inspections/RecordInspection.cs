@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using MiniMes.Application.Common;
 using MiniMes.Application.Execution;
 using MiniMes.Application.Quality.Spc;
+using MiniMes.Application.Realtime;
 using MiniMes.Contracts.Execution;
 using MiniMes.Contracts.Quality;
 using MiniMes.Domain.Common;
@@ -49,7 +50,7 @@ public sealed class RecordInspectionValidator : AbstractValidator<RecordInspecti
 }
 
 public sealed class RecordInspectionHandler(IAppDbContext db, ScanExecutor scans, ISpcEvaluator spc, ICurrentUser user,
-    TimeProvider time, ILogger<RecordInspectionHandler> log) : IRequestHandler<RecordInspectionCommand, InspectionResponse>
+    TimeProvider time, IRealtimeNotifier notifier, ILogger<RecordInspectionHandler> log) : IRequestHandler<RecordInspectionCommand, InspectionResponse>
 {
     public async Task<InspectionResponse> Handle(RecordInspectionCommand cmd, CancellationToken ct)
     {
@@ -97,6 +98,9 @@ public sealed class RecordInspectionHandler(IAppDbContext db, ScanExecutor scans
                     alerts.Select(a => QualityDtos.Alert(a, codes[a.InspectionPlanId])).ToList());
             }
         }
+        // After the commit: an open chart refreshes at once (step 7). A failed push is the notifier's problem, not
+        // the measurement's.
+        foreach (var alert in response.Alerts) await notifier.SpcAlertRaisedAsync(alert, ct);
 
         log.LogInformation("Inspection {SerialNo} at station {StationId}: {InspectionResult} {ReasonCode} values={ValueCount} alerts={AlertCount} duplicate={Duplicate} in {ElapsedMs} ms",
             serialNo, cmd.StationId, response.Result, response.ReasonCode, cmd.Values.Count, response.Alerts.Count, response.Duplicate,

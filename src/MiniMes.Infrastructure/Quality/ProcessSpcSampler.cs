@@ -7,6 +7,8 @@ using Microsoft.Extensions.Options;
 using MiniMes.Application.Andon;
 using MiniMes.Application.Common;
 using MiniMes.Application.Quality.Spc;
+using MiniMes.Application.Realtime;
+using MiniMes.Contracts.Quality;
 using MiniMes.Domain.Andon;
 using MiniMes.Domain.Common;
 using MiniMes.Domain.Machines;
@@ -82,8 +84,11 @@ public sealed class ProcessSpcSampler(IServiceScopeFactory scopes, TimeProvider 
             case SampleDecision.NotDue: return SampleOutcome.NotDue;
             case SampleDecision.Wait: return SampleOutcome.Waiting;
             case SampleDecision.Gap:
-                if (await RaiseAloneAsync(scope, db, plan.Id, SpcRuleCode.DataGap, ct) is not null)
+                if (await RaiseAloneAsync(scope, db, plan.Id, SpcRuleCode.DataGap, ct) is { } gapAlert)
+                {
                     log.LogWarning("SPC data gap on {PlanCode}: no Good value of tag {TagId} since {LastSample:o}", plan.Code, tag.Id, last);
+                    await PushAsync(scope, gapAlert, plan.Code, ct);
+                }
                 return SampleOutcome.Gap;
         }
 
@@ -113,7 +118,10 @@ public sealed class ProcessSpcSampler(IServiceScopeFactory scopes, TimeProvider 
         }
 
         foreach (var a in opened)
+        {
             log.LogWarning("SPC alert {RuleCode} on {PlanCode} at {Value} {Unit} ({SourceTs:o})", a.RuleCode, plan.Code, point.Value, plan.Unit, point.SourceTs);
+            await PushAsync(scope, a, plan.Code, ct);
+        }
         // After the commit, its own transaction: the point is kept even if the Andon cannot be raised. RaiseAndon
         // answers the open call when one is there already, so a long excursion is one call, not one per sample.
         if (point.Result == MeasureResult.Ng)
@@ -121,6 +129,10 @@ public sealed class ProcessSpcSampler(IServiceScopeFactory scopes, TimeProvider 
                 .Send(new RaiseAndonCommand(tag.MachineId, nameof(AndonType.Quality), Auto: true), ct);
         return SampleOutcome.Taken;
     }
+
+    private static Task PushAsync(AsyncServiceScope scope, SpcAlert a, string planCode, CancellationToken ct)
+        => scope.ServiceProvider.GetRequiredService<IRealtimeNotifier>().SpcAlertRaisedAsync(
+            new SpcAlertDto(a.Id, a.InspectionPlanId, planCode, a.RuleCode.ToString(), a.MeasurementId, a.RaisedAt, a.Status.ToString(), a.NcrId), ct);
 
     private static async Task<SpcAlert?> RaiseAloneAsync(AsyncServiceScope scope, IAppDbContext db, int planId, SpcRuleCode rule, CancellationToken ct)
     {

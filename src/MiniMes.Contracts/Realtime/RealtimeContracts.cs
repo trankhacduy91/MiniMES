@@ -1,6 +1,7 @@
 using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Machines;
 using MiniMes.Contracts.Oee;
+using MiniMes.Contracts.Quality;
 
 namespace MiniMes.Contracts.Realtime;
 
@@ -16,6 +17,7 @@ public interface IMachineClient
     Task GatewayStatusChanged(GatewayStatusDto dto);         // [M4b] to every dashboard: a handful of gateways
     Task DowntimeNeedsClassification(UnclassifiedDowntimeDto dto);   // [M5] a stop ended without a reason, to the line
     Task OeeSnapshotClosed(OeeSnapshotClosedDto dto);        // [M5] the job closed hours of a machine: once a minute at most
+    Task SpcAlertRaised(SpcAlertDto dto);                    // [M7] a new SPC alert, to the QC / Supervisor / Admin role groups
 }
 
 public static class RealtimeHub

@@ -1,5 +1,6 @@
 using MiniMes.Contracts.Andon;
 using MiniMes.Contracts.Oee;
+using MiniMes.Contracts.Quality;
 using MiniMes.Contracts.Realtime;
 
 namespace MiniMes.Application.Realtime;
@@ -16,4 +17,5 @@ public interface IRealtimeNotifier
     Task GatewayStatusChangedAsync(GatewayStatusDto dto, CancellationToken ct = default);                  // [M4b] everyone
     Task DowntimeNeedsClassificationAsync(UnclassifiedDowntimeDto dto, CancellationToken ct = default);   // [M5] line group
     Task OeeSnapshotClosedAsync(OeeSnapshotClosedDto dto, CancellationToken ct = default);                // [M5] line group
+    Task SpcAlertRaisedAsync(SpcAlertDto dto, CancellationToken ct = default);                            // [M7] role groups
 }

@@ -25,6 +25,10 @@ public class QualityController(ISender sender) : ControllerBase
         => sender.Send(new RecordInspectionCommand(r.StationId, r.SerialNo, r.Values ?? [], r.Source, r.ClientRequestId), ct);
 
     [Authorize(Roles = ChartReaders)]
+    [HttpGet("plans")]
+    public Task<IReadOnlyList<InspectionPlanDto>> Plans(CancellationToken ct) => sender.Send(new GetInspectionPlansQuery(), ct);
+
+    [Authorize(Roles = ChartReaders)]
     [HttpGet("spc/{planId:int}/chart")]
     public Task<SpcChartDto> Chart(int planId, [FromQuery] int take = 100, CancellationToken ct = default)
         => sender.Send(new GetSpcChartQuery(planId, take), ct);
