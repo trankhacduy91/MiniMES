@@ -1081,7 +1081,7 @@ Thứ ba, "scan chậm thì kiểm tra gì?": đo trước, không đoán. Kiể
 - [x] `RouteCheck` có ít nhất 12 case (dự án này: 19, gồm 4 case FAI) và pass; thứ tự kiểm tra được bảo vệ bằng test. *(34 test, mutation thứ tự.)*
 - [x] **[v2]** Cổng FAI: WO `RequireFai` chỉ cho 1 serial mẫu đi qua đến khi QC duyệt; hai trạm scan đồng thời không tạo hai mẫu (integration test).
 - [x] **[v2]** Kiosk chọn WO từ dispatch list (M2); nút SOP mở đúng tài liệu của bước, đóng xong scan tiếp được ngay.
-- [ ] `POST /stations/{id}/scan` trả `{ result, message, nextStep }` (cùng `reasonCode`, `duplicate`) và Simulator vai trạm test gọi được đúng endpoint đó. *(Endpoint xong, `source = "Machine"` có sẵn; phần "Simulator gọi được" chờ M4.)*
+- [x] `POST /stations/{id}/scan` trả `{ result, message, nextStep }` (cùng `reasonCode`, `duplicate`) và Simulator vai trạm test gọi được đúng endpoint đó. *(Endpoint xong ở M3; Simulator gọi đúng endpoint này từ M4 bước 9: `MachineSimulator/Stations/AutoStationClient.cs` login JWT, `POST api/stations/{id}/scan` OK/NG + DefectCode, chạy thật theo kịch bản demo bước 4–6.)*
 - [x] Scan lặp không ghi trùng; hai request đồng thời cùng serial chỉ ghi một bản ghi (integration test).
 - [x] `ScanLog` ghi cùng transaction với thay đổi `Serial` và bộ đếm `QtyGood/QtyNg`.
 - [x] Kiosk: ô scan luôn giữ focus, nền xanh/đỏ + âm báo + chữ to, toàn màn hình, banner Offline chặn scan khi API mất, chuỗi UI trong `.resx`. *(Chưa thử máy quét thật.)*
